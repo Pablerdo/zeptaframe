@@ -23,6 +23,7 @@ export const users = pgTable("user", {
 
 export const usersRelations = relations(users, ({ many }) => ({
   projects: many(projects),
+  uploads: many(uploads),
 }));
 
 export const accounts = pgTable(
@@ -138,3 +139,25 @@ export const subscriptions = pgTable("subscription", {
   createdAt: timestamp("createdAt", { mode: "date" }).notNull(),
   updatedAt: timestamp("updatedAt", { mode: "date" }).notNull(),
 });
+
+export const uploads = pgTable("upload", {
+  id: text("id")
+    .primaryKey()
+    .$defaultFn(() => crypto.randomUUID()),
+  url: text("url").notNull(),
+  name: text("name"),
+  userId: text("userId")
+    .notNull()
+    .references(() => users.id, {
+      onDelete: "cascade"
+    }),
+  createdAt: timestamp("createdAt", { mode: "date" }).notNull(),
+  updatedAt: timestamp("updatedAt", { mode: "date" }).notNull(),
+});
+
+export const uploadsRelations = relations(uploads, ({ one }) => ({
+  user: one(users, {
+    fields: [uploads.userId],
+    references: [users.id],
+  }),
+}));
