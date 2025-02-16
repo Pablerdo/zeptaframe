@@ -51,19 +51,19 @@ export const Editor = ({ initialData }: EditorProps) => {
 
   // eslint-disable-next-line react-hooks/exhaustive-deps
 
-  const handleSegmentedObjectChange = (objectId: string, path: CoordinatePath) => {
-    setSegmentedObjects(prev => prev.map(obj => 
-      obj.id === objectId 
-        ? { ...obj, coordinatePath: path }
-        : obj
-    ));
+  // const handleSegmentedObjectChange = (objectId: string, path: CoordinatePath) => {
+  //   setSegmentedObjects(prev => prev.map(obj => 
+  //     obj.id === objectId 
+  //       ? { ...obj, coordinatePath: path }
+  //       : obj
+  //   ));
     
-    mutate({
-      width: initialData.width,
-      height: initialData.height,
-      json: initialData.json
-    });
-  };   
+  //   mutate({
+  //     width: initialData.width,
+  //     height: initialData.height,
+  //     json: initialData.json
+  //   });
+  // };   
 
   const debouncedSave = useCallback(
     debounce(
@@ -112,7 +112,7 @@ export const Editor = ({ initialData }: EditorProps) => {
       // editor?.clearSegmentationPoints();
       editor?.disableSegmentationMode();
 
-      clearSegmentation();
+      // clearSegmentation();
     }
 
     if (tool === activeTool) {
@@ -122,17 +122,17 @@ export const Editor = ({ initialData }: EditorProps) => {
     setActiveTool(tool);
   }, [activeTool, editor]);
 
-  const clearSegmentation = () => {
-    if (editor?.canvas) {
-      const existingPoints = editor.canvas.getObjects().filter(obj => obj.data?.type === 'segmentation-point');
-      existingPoints.forEach(point => editor.canvas.remove(point));
-      editor.canvas.renderAll();
-    }
-    setSegmentationPoints([]);
-    setMouseCoordinates(null);
-    setMouseRealCoordinates(null);
-    setActiveTool("select");
-  };
+  // const clearSegmentation = () => {
+  //   if (editor?.canvas) {
+  //     const existingPoints = editor.canvas.getObjects().filter(obj => obj.data?.type === 'segmentation-point');
+  //     existingPoints.forEach(point => editor.canvas.remove(point));
+  //     editor.canvas.renderAll();
+  //   }
+  //   setSegmentationPoints([]);
+  //   setMouseCoordinates(null);
+  //   setMouseRealCoordinates(null);
+  //   setActiveTool("select");
+  // };
 
   useEffect(() => {
     if (!editor?.canvas || activeTool !== "segment") return;
@@ -254,7 +254,7 @@ export const Editor = ({ initialData }: EditorProps) => {
           activeTool={activeTool}
           onChangeActiveTool={onChangeActiveTool}
           segmentationPoints={segmentationPoints}
-          onCancelSegmentation={clearSegmentation}
+          // onCancelSegmentation={clearSegmentation}
         />
         <ShapeSidebar
           editor={editor}
@@ -321,7 +321,7 @@ export const Editor = ({ initialData }: EditorProps) => {
           activeTool={activeTool}
           onChangeActiveTool={onChangeActiveTool}
           segmentedObjects={segmentedObjects}
-          onSegmentedObjectChange={handleSegmentedObjectChange}
+          // onSegmentedObjectChange={handleSegmentedObjectChange}
         />
         <DrawSidebar
           editor={editor}
