@@ -1,4 +1,4 @@
-  import { useRef, useEffect } from "react";
+  import { useRef, useEffect, useState } from "react";
   import {
     resizeCanvas,
     mergeMasks,
@@ -42,64 +42,95 @@
   }: SegmentationSidebarProps) => {
 
     const samWorker = useRef<Worker | null>(null);
+    const [loading, setLoading] = useState(false);
+    const [status, setStatus] = useState("");
+    const [imageEncoded, setImageEncoded] = useState(false);
+    const [device, setDevice] = useState(null);
+    const [imageSize, setImageSize] = useState({ w: 1024, h: 1024 });
+    const [maskSize, setMaskSize] = useState({ w: 256, h: 256 });
+    const [prevMaskArray, setPrevMaskArray] = useState<Float32Array | null>(null);
+    const [mask, setMask] = useState<HTMLCanvasElement | null>(null);
+    const pointsRef = useRef<Array<{ x: number; y: number; label: number }>>([]);
 
     // Start encoding image
     const encodeImageClick = async () => {
-      if (!samWorker.current) return;
+      if (!samWorker.current || !editor?.canvas) return;
       
+      const workspace = editor.getWorkspace();
+      if (!workspace) return;
+
+      // Get the workspace dimensions
+      const workspaceWidth = workspace.width || 1024;
+      const workspaceHeight = workspace.height || 1024;
+      
+      setImageSize({ w: workspaceWidth, h: workspaceHeight });
+      
+      // TODO: Get actual image data from workspace
       samWorker.current.postMessage({
         type: "encodeImage",
-        data: canvasToFloat32Array(resizeCanvas(image, imageSize)),
+        // data: canvasToFloat32Array(resizeCanvas(image, imageSize)),
       });
 
       setLoading(true);
       setStatus("Encoding");
     };
 
-        // Start decoding, prompt with mouse coords
-    const imageClick = (event) => {
-      if (!imageEncoded) return;
+    // Start decoding, prompt with mouse coords
+    const imageClick = (e: fabric.IEvent<MouseEvent>) => {
+      if (!imageEncoded || !editor?.canvas) return;
 
-      event.preventDefault();
-      console.log(event.button);
+      const pointer = editor.canvas.getPointer(e.e);
+      const workspace = editor.getWorkspace();
+      if (!workspace) return;
 
-      const canvas = canvasEl.current;
-      const rect = event.target.getBoundingClientRect();
+      // Get the workspace object's position
+      const workspaceLeft = workspace.left || 0;
+      const workspaceTop = workspace.top || 0;
 
-      // input image will be resized to 1024x1024 -> normalize mouse pos to 1024x1024
-      const point = {
-        x: ((event.clientX - rect.left) / canvas.width) * imageSize.w,
-        y: ((event.clientY - rect.top) / canvas.height) * imageSize.h,
-        label: event.button === 0 ? 1 : 0,
-      };
-      pointsRef.current.push(point);
+      // Calculate relative coordinates within the workspace
+      const relativeX = Math.round(pointer.x - workspaceLeft);
+      const relativeY = Math.round(pointer.y - workspaceTop);
 
-      // do we have a mask already? ie. a refinement click?
-      if (prevMaskArray) {
-        const maskShape = [1, 1, maskSize.w, maskSize.h]
+      // Only process click if within workspace bounds
+      if (relativeX >= 0 && relativeX <= imageSize.w && relativeY >= 0 && relativeY <= imageSize.h) {
+        const point = {
+          x: relativeX,
+          y: relativeY,
+          label: e.e.button === 0 ? 1 : 0,
+        };
 
-        samWorker.current?.postMessage({
-          type: "decodeMask",
-          data: {
-            points: pointsRef.current,
-            maskArray: prevMaskArray,
-            maskShape: maskShape,
-          }
-        });      
-      } else {
-        samWorker.current?.postMessage({
-          type: "decodeMask",
-          data: {
-            points: pointsRef.current,
-            maskArray: null,
-            maskShape: null,
-          }
-        });      
+        pointsRef.current.push(point);
+
+        // do we have a mask already? ie. a refinement click?
+        if (prevMaskArray) {
+          const maskShape = [1, 1, maskSize.w, maskSize.h];
+
+          samWorker.current?.postMessage({
+            type: "decodeMask",
+            data: {
+              points: pointsRef.current,
+              maskArray: prevMaskArray,
+              maskShape: maskShape,
+            }
+          });      
+        } else {
+          samWorker.current?.postMessage({
+            type: "decodeMask",
+            data: {
+              points: pointsRef.current,
+              maskArray: null,
+              maskShape: null,
+            }
+          });      
+        }
       }
-    }
+    };
 
     
-    const handleDecodingResults = (decodingResults) => {
+    const handleDecodingResults = (decodingResults: { 
+      masks: { dims: number[]; }; 
+      iou_predictions: { cpuData: number[]; }; 
+    }) => {
       // SAM2 returns 3 mask along with scores -> select best one
       const maskTensors = decodingResults.masks;
       const [bs, noMasks, width, height] = maskTensors.dims;
@@ -115,7 +146,7 @@
 
 
     // Handle web worker messages
-    const onWorkerMessage = (event) => {
+    const onWorkerMessage = (event: MessageEvent) => {
       const { type, data } = event.data;
 
       if (type == "pong") {
@@ -140,8 +171,6 @@
         handleDecodingResults(data);
         setLoading(false);
         setStatus("Ready. Click on image");
-      } else if (type == "stats") {
-        setStats(data);
       }
     };
 
