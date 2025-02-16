@@ -18,7 +18,7 @@ import {
   AlignRight,
   Trash,
   SquareSplitHorizontal,
-  Copy
+  Copy,
 } from "lucide-react";
 
 import { isTextType } from "@/features/editor/utils";

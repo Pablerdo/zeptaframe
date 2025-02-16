@@ -107,7 +107,9 @@ export type ActiveTool =
   | "settings"
   | "ai"
   | "remove-bg"
-  | "templates";
+  | "templates"
+  | "control-motion"
+  | "segment";
 
 export const FILL_COLOR = "rgba(0,0,0,1)";
 export const STROKE_COLOR = "rgba(0,0,0,1)";
@@ -180,6 +182,7 @@ export interface EditorHookProps {
   }) => void;
 };
 
+
 export type BuildEditorProps = {
   undo: () => void;
   redo: () => void;
@@ -203,6 +206,23 @@ export type BuildEditorProps = {
   setFontFamily: (value: string) => void;
 };
 
+export interface Coordinate {
+  x: number;
+  y: number;
+}
+
+export interface CoordinatePath {
+  coordinates: Coordinate[];
+}
+
+export interface SegmentedObject {
+  id: string;
+  url: string;
+  canvasId: string;  // Reference to the canvas/project
+  coordinatePath: CoordinatePath;
+  // Add any other properties needed for segmentation
+}
+
 export interface Editor {
   savePng: () => void;
   saveJpg: () => void;
@@ -221,6 +241,10 @@ export interface Editor {
   changeSize: (value: { width: number; height: number }) => void;
   enableDrawingMode: () => void;
   disableDrawingMode: () => void;
+  enableSegmentationMode: () => void;
+  disableSegmentationMode: () => void;
+  // addSegmentationPoint: (x: number, y: number) => void;
+  // clearSegmentationPoints: () => void;
   onCopy: () => void;
   onPaste: () => void;
   changeImageFilter: (value: string) => void;

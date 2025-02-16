@@ -9,6 +9,8 @@ import { useUpdateProject } from "@/features/projects/api/use-update-project";
 
 import { 
   ActiveTool, 
+  CoordinatePath, 
+  SegmentedObject, 
   selectionDependentTools
 } from "@/features/editor/types";
 import { Navbar } from "@/features/editor/components/navbar";
@@ -26,10 +28,14 @@ import { FontSidebar } from "@/features/editor/components/font-sidebar";
 import { ImageSidebar } from "@/features/editor/components/image-sidebar";
 import { FilterSidebar } from "@/features/editor/components/filter-sidebar";
 import { DrawSidebar } from "@/features/editor/components/draw-sidebar";
+import { ControlMotionSidebar } from "@/features/editor/components/control-motion-sidebar";
 import { AiSidebar } from "@/features/editor/components/ai-sidebar";
 import { TemplateSidebar } from "@/features/editor/components/template-sidebar";
 import { RemoveBgSidebar } from "@/features/editor/components/remove-bg-sidebar";
 import { SettingsSidebar } from "@/features/editor/components/settings-sidebar";
+import { SegmentationSidebar } from "@/features/editor/components/segmentation-sidebar";
+import { ChevronDown } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 interface EditorProps {
   initialData: ResponseType["data"];
@@ -37,8 +43,28 @@ interface EditorProps {
 
 export const Editor = ({ initialData }: EditorProps) => {
   const { mutate } = useUpdateProject(initialData.id);
+  const [segmentedObjects, setSegmentedObjects] = useState<SegmentedObject[]>([]);
+  const [segmentationPoints, setSegmentationPoints] = useState<{ x: number; y: number }[]>([]);
+  const [mouseCoordinates, setMouseCoordinates] = useState<{ x: number; y: number } | null>(null);
+  const [mouseRealCoordinates, setMouseRealCoordinates] = useState<{ x: number; y: number } | null>(null);
+  const [segmentationMarkers, setSegmentationMarkers] = useState<fabric.Circle[]>([]);
 
   // eslint-disable-next-line react-hooks/exhaustive-deps
+
+  const handleSegmentedObjectChange = (objectId: string, path: CoordinatePath) => {
+    setSegmentedObjects(prev => prev.map(obj => 
+      obj.id === objectId 
+        ? { ...obj, coordinatePath: path }
+        : obj
+    ));
+    
+    mutate({
+      width: initialData.width,
+      height: initialData.height,
+      json: initialData.json
+    });
+  };   
+
   const debouncedSave = useCallback(
     debounce(
       (values: { 
@@ -51,6 +77,7 @@ export const Editor = ({ initialData }: EditorProps) => {
     500
   ), [mutate]);
 
+  const [timelineCollapsed, setTimelineCollapsed] = useState(false);
   const [activeTool, setActiveTool] = useState<ActiveTool>("select");
 
   const onClearSelection = useCallback(() => {
@@ -67,6 +94,7 @@ export const Editor = ({ initialData }: EditorProps) => {
     saveCallback: debouncedSave,
   });
 
+
   const onChangeActiveTool = useCallback((tool: ActiveTool) => {
     if (tool === "draw") {
       editor?.enableDrawingMode();
@@ -76,12 +104,113 @@ export const Editor = ({ initialData }: EditorProps) => {
       editor?.disableDrawingMode();
     }
 
+    if (tool === "segment") {
+      editor?.enableSegmentationMode();
+    }
+
+    if (activeTool === "segment") {
+      // editor?.clearSegmentationPoints();
+      editor?.disableSegmentationMode();
+
+      clearSegmentation();
+    }
+
     if (tool === activeTool) {
       return setActiveTool("select");
     }
-    
+
     setActiveTool(tool);
   }, [activeTool, editor]);
+
+  const clearSegmentation = () => {
+    if (editor?.canvas) {
+      const existingPoints = editor.canvas.getObjects().filter(obj => obj.data?.type === 'segmentation-point');
+      existingPoints.forEach(point => editor.canvas.remove(point));
+      editor.canvas.renderAll();
+    }
+    setSegmentationPoints([]);
+    setMouseCoordinates(null);
+    setMouseRealCoordinates(null);
+    setActiveTool("select");
+  };
+
+  useEffect(() => {
+    if (!editor?.canvas || activeTool !== "segment") return;
+
+    const handleMouseMove = (e: fabric.IEvent) => {
+      const pointer = editor.canvas.getPointer(e.e);
+      const workspace = editor.getWorkspace();
+      if (!workspace) return;
+
+      // Get the workspace object's position and dimensions
+      const workspaceLeft = workspace.left || 0;
+      const workspaceTop = workspace.top || 0;
+
+      // Calculate relative coordinates within the workspace
+      const relativeX = Math.round(pointer.x - workspaceLeft);
+      const relativeY = Math.round(pointer.y - workspaceTop);
+
+      // Get the canvas element's bounding rectangle
+      const canvasEl = editor.canvas.getElement();
+      const rect = canvasEl.getBoundingClientRect();
+      const scale = editor.canvas.getZoom();
+
+      // Calculate real coordinates relative to the canvas container
+      const realX = (pointer.x - rect.left);
+      const realY = (pointer.y - rect.top);
+
+      // Only update coordinates if within workspace bounds
+      if (relativeX >= 0 && relativeX <= 720 && relativeY >= 0 && relativeY <= 480) {
+        setMouseCoordinates({ x: relativeX, y: relativeY });
+        setMouseRealCoordinates({ x: pointer.x, y: pointer.y });
+      } else {
+        setMouseCoordinates(null);
+        setMouseRealCoordinates(null);
+      }
+    };
+
+    const handleSegmentClick = (e: fabric.IEvent) => {
+      if (activeTool !== "segment") return;
+
+      const pointer = editor.canvas.getPointer(e.e);
+      const workspace = editor.getWorkspace();
+      if (!workspace) return;
+
+      // Get the workspace object's position
+      const workspaceLeft = workspace.left || 0;
+      const workspaceTop = workspace.top || 0;
+
+      // Calculate relative coordinates within the workspace
+      const relativeX = Math.round(pointer.x - workspaceLeft);
+      const relativeY = Math.round(pointer.y - workspaceTop);
+
+      const circle = new fabric.Circle({
+        left: pointer.x - 5, // Use absolute coordinates for visual marker
+        top: pointer.y - 5,
+        radius: 5,
+        fill: 'red',
+        selectable: false,
+        evented: false
+      });
+
+      editor.canvas.add(circle);
+
+      // Only add point if within workspace bounds
+      if (relativeX >= 0 && relativeX <= 720 && relativeY >= 0 && relativeY <= 480) {
+        const point = { x: relativeX, y: relativeY };
+        setSegmentationPoints(prev => [...prev, point]);
+      }
+    };
+
+    editor.canvas.on('mouse:move', handleMouseMove);
+    editor.canvas.on('mouse:down', handleSegmentClick);
+
+    return () => {
+      editor.canvas.off('mouse:move', handleMouseMove);
+      editor.canvas.off('mouse:down', handleSegmentClick);
+    };
+  }, [editor?.canvas, activeTool]);
+
 
   const canvasRef = useRef(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -102,6 +231,11 @@ export const Editor = ({ initialData }: EditorProps) => {
     };
   }, [init]);
 
+  const onAddButtonClick = () => {
+    // TODO: Implement add functionality
+    console.log("Add button clicked");
+  };
+
   return (
     <div className="h-full flex flex-col">
       <Navbar
@@ -114,6 +248,13 @@ export const Editor = ({ initialData }: EditorProps) => {
         <Sidebar
           activeTool={activeTool}
           onChangeActiveTool={onChangeActiveTool}
+        />
+        <SegmentationSidebar
+          editor={editor}
+          activeTool={activeTool}
+          onChangeActiveTool={onChangeActiveTool}
+          segmentationPoints={segmentationPoints}
+          onCancelSegmentation={clearSegmentation}
         />
         <ShapeSidebar
           editor={editor}
@@ -175,6 +316,13 @@ export const Editor = ({ initialData }: EditorProps) => {
           activeTool={activeTool}
           onChangeActiveTool={onChangeActiveTool}
         />
+        <ControlMotionSidebar
+          editor={editor}
+          activeTool={activeTool}
+          onChangeActiveTool={onChangeActiveTool}
+          segmentedObjects={segmentedObjects}
+          onSegmentedObjectChange={handleSegmentedObjectChange}
+        />
         <DrawSidebar
           editor={editor}
           activeTool={activeTool}
@@ -190,11 +338,64 @@ export const Editor = ({ initialData }: EditorProps) => {
             editor={editor}
             activeTool={activeTool}
             onChangeActiveTool={onChangeActiveTool}
-            key={JSON.stringify(editor?.canvas.getActiveObject())}
           />
-          <div className="flex-1 h-[calc(100%-124px)] bg-muted" ref={containerRef}>
-            <canvas ref={canvasRef} />
+          <div className="flex-1 h-[calc(100%-124px)] bg-muted relative" ref={containerRef}>
+            <canvas 
+              ref={canvasRef} 
+              className={activeTool === "segment" ? "cursor-crosshair" : "cursor-default"}
+            />
+            {mouseRealCoordinates && activeTool === "segment" && mouseCoordinates && (
+              <div 
+                style={{
+                  position: 'absolute',
+                  left: mouseCoordinates.x + 15,
+                  top: mouseCoordinates.y + 15,
+                  background: 'rgba(0, 0, 0, 0.7)',
+                  color: 'white',
+                  padding: '4px 8px',
+                  borderRadius: '4px',
+                  fontSize: '12px',
+                  pointerEvents: 'none',
+                  zIndex: 1000
+                }}
+              >
+                {`x: ${mouseCoordinates.x}, y: ${mouseCoordinates.y}`}
+              </div>
+            )}
+            <button
+              onClick={onAddButtonClick}
+              className="absolute right-6 top-1/2 -translate-y-1/2 w-16 h-16 rounded-xl border-2 border-black/80 flex items-center justify-center bg-white shadow-lg hover:shadow-xl hover:scale-105 hover:bg-zinc-50 transition-all duration-200 group"
+            >
+              <span className="text-4xl font-bold text-black/80 group-hover:text-black transition-colors">+</span>
+            </button>
           </div>
+          <div className={cn(
+            "bg-zinc-800 flex flex-col transition-all duration-300 absolute bottom-0 left-0 right-0",
+            timelineCollapsed ? "h-[96px]" : "h-[400px]"  // Adjust total height
+          )}>
+            <div 
+              className="flex items-center justify-between p-4 border-b border-zinc-700 cursor-pointer hover:bg-zinc-750"
+              onClick={() => setTimelineCollapsed(!timelineCollapsed)}
+            >
+              <span className="text-zinc-400 text-xs font-medium tracking-wide uppercase">
+                Generated video timeline
+              </span>
+              <ChevronDown 
+                className={cn(
+                  "h-4 w-4 text-zinc-400 transition-all",
+                  timelineCollapsed && "rotate-180"
+                )}
+              />
+            </div>
+            <div className={cn(
+              "flex-1 overflow-x-auto border-t border-zinc-700 transition-all",
+              timelineCollapsed && "h-0"
+            )}>
+            <div className="min-w-[800px] h-full p-4">
+              {/* Timeline content will go here */}
+            </div>
+          </div>
+        </div>
           <Footer editor={editor} />
         </main>
       </div>

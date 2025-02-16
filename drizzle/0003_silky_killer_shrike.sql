@@ -1,0 +1,1 @@
+ALTER TABLE "segmented_object" ADD COLUMN "url" text NOT NULL;

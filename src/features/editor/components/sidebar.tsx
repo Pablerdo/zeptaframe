@@ -8,7 +8,10 @@ import {
   Shapes,
   Sparkles,
   Type,
+  ArrowUpRight,
+  Crosshair,
 } from "lucide-react";
+
 
 import { ActiveTool } from "@/features/editor/types";
 import { SidebarItem } from "@/features/editor/components/sidebar-item";
@@ -25,12 +28,12 @@ export const Sidebar = ({
   return (
     <aside className="bg-white flex flex-col w-[100px] h-full border-r overflow-y-auto">
       <ul className="flex flex-col">
-        <SidebarItem
+        {/* <SidebarItem
           icon={LayoutTemplate}
           label="Design"
           isActive={activeTool === "templates"}
           onClick={() => onChangeActiveTool("templates")}
-        />
+        /> */}
         <SidebarItem
           icon={ImageIcon}
           label="Image"
@@ -55,11 +58,23 @@ export const Sidebar = ({
           isActive={activeTool === "draw"}
           onClick={() => onChangeActiveTool("draw")}
         />
-        <SidebarItem
+        {/* <SidebarItem
           icon={Sparkles}
           label="AI"
           isActive={activeTool === "ai"}
           onClick={() => onChangeActiveTool("ai")}
+        /> */}
+        <SidebarItem
+          icon={Crosshair}
+          label="Segment"
+          isActive={activeTool === "segment"}
+          onClick={() => onChangeActiveTool("segment")}
+        />
+        <SidebarItem
+          icon={ArrowUpRight}
+          label="Control Motion"
+          isActive={activeTool === "control-motion"}
+          onClick={() => onChangeActiveTool("control-motion")}
         />
         <SidebarItem
           icon={Settings}

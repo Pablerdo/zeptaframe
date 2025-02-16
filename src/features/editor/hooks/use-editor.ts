@@ -607,6 +607,26 @@ const buildEditor = ({
       return value;
     },
     selectedObjects,
+    enableSegmentationMode: () => {
+      canvas.discardActiveObject();
+      canvas.renderAll();
+      canvas.selection = false; // Disable group selection
+      canvas.defaultCursor = 'crosshair';
+      // Disable all object interactions while in segmentation mode
+      canvas.forEachObject((obj) => {
+        obj.selectable = false;
+        obj.evented = false;
+      });
+    },
+    disableSegmentationMode: () => {
+      canvas.selection = true;
+      canvas.defaultCursor = 'default';
+      // Re-enable object interactions
+      canvas.forEachObject((obj) => {
+        obj.selectable = true;
+        obj.evented = true;
+      });
+    },
   };
 };
 

@@ -14,8 +14,8 @@ import "./globals.css";
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "The Canvas",
-  description: "Build Something Great!",
+  title: "Septaframe",
+  description: "AI-native controllable video editor",
 };
 
 export default async function RootLayout({
