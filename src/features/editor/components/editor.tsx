@@ -44,26 +44,22 @@ interface EditorProps {
 export const Editor = ({ initialData }: EditorProps) => {
   const { mutate } = useUpdateProject(initialData.id);
   const [segmentedObjects, setSegmentedObjects] = useState<SegmentedObject[]>([]);
-  const [segmentationPoints, setSegmentationPoints] = useState<{ x: number; y: number }[]>([]);
-  const [mouseCoordinates, setMouseCoordinates] = useState<{ x: number; y: number } | null>(null);
-  const [mouseRealCoordinates, setMouseRealCoordinates] = useState<{ x: number; y: number } | null>(null);
-  const [segmentationMarkers, setSegmentationMarkers] = useState<fabric.Circle[]>([]);
 
   // eslint-disable-next-line react-hooks/exhaustive-deps
 
-  // const handleSegmentedObjectChange = (objectId: string, path: CoordinatePath) => {
-  //   setSegmentedObjects(prev => prev.map(obj => 
-  //     obj.id === objectId 
-  //       ? { ...obj, coordinatePath: path }
-  //       : obj
-  //   ));
+  const handleSegmentedObjectChange = (objectId: string, path: CoordinatePath) => {
+    setSegmentedObjects(prev => prev.map(obj => 
+      obj.id === objectId 
+        ? { ...obj, coordinatePath: path }
+        : obj
+    ));
     
-  //   mutate({
-  //     width: initialData.width,
-  //     height: initialData.height,
-  //     json: initialData.json
-  //   });
-  // };   
+    mutate({
+      width: initialData.width,
+      height: initialData.height,
+      json: initialData.json
+    });
+  };
 
   const debouncedSave = useCallback(
     debounce(
@@ -122,96 +118,6 @@ export const Editor = ({ initialData }: EditorProps) => {
     setActiveTool(tool);
   }, [activeTool, editor]);
 
-  // const clearSegmentation = () => {
-  //   if (editor?.canvas) {
-  //     const existingPoints = editor.canvas.getObjects().filter(obj => obj.data?.type === 'segmentation-point');
-  //     existingPoints.forEach(point => editor.canvas.remove(point));
-  //     editor.canvas.renderAll();
-  //   }
-  //   setSegmentationPoints([]);
-  //   setMouseCoordinates(null);
-  //   setMouseRealCoordinates(null);
-  //   setActiveTool("select");
-  // };
-
-  useEffect(() => {
-    if (!editor?.canvas || activeTool !== "segment") return;
-
-    const handleMouseMove = (e: fabric.IEvent) => {
-      const pointer = editor.canvas.getPointer(e.e);
-      const workspace = editor.getWorkspace();
-      if (!workspace) return;
-
-      // Get the workspace object's position and dimensions
-      const workspaceLeft = workspace.left || 0;
-      const workspaceTop = workspace.top || 0;
-
-      // Calculate relative coordinates within the workspace
-      const relativeX = Math.round(pointer.x - workspaceLeft);
-      const relativeY = Math.round(pointer.y - workspaceTop);
-
-      // Get the canvas element's bounding rectangle
-      const canvasEl = editor.canvas.getElement();
-      const rect = canvasEl.getBoundingClientRect();
-      const scale = editor.canvas.getZoom();
-
-      // Calculate real coordinates relative to the canvas container
-      const realX = (pointer.x - rect.left);
-      const realY = (pointer.y - rect.top);
-
-      // Only update coordinates if within workspace bounds
-      if (relativeX >= 0 && relativeX <= 720 && relativeY >= 0 && relativeY <= 480) {
-        setMouseCoordinates({ x: relativeX, y: relativeY });
-        setMouseRealCoordinates({ x: pointer.x, y: pointer.y });
-      } else {
-        setMouseCoordinates(null);
-        setMouseRealCoordinates(null);
-      }
-    };
-
-    const handleSegmentClick = (e: fabric.IEvent) => {
-      if (activeTool !== "segment") return;
-
-      const pointer = editor.canvas.getPointer(e.e);
-      const workspace = editor.getWorkspace();
-      if (!workspace) return;
-
-      // Get the workspace object's position
-      const workspaceLeft = workspace.left || 0;
-      const workspaceTop = workspace.top || 0;
-
-      // Calculate relative coordinates within the workspace
-      const relativeX = Math.round(pointer.x - workspaceLeft);
-      const relativeY = Math.round(pointer.y - workspaceTop);
-
-      const circle = new fabric.Circle({
-        left: pointer.x - 5, // Use absolute coordinates for visual marker
-        top: pointer.y - 5,
-        radius: 5,
-        fill: 'red',
-        selectable: false,
-        evented: false
-      });
-
-      editor.canvas.add(circle);
-
-      // Only add point if within workspace bounds
-      if (relativeX >= 0 && relativeX <= 720 && relativeY >= 0 && relativeY <= 480) {
-        const point = { x: relativeX, y: relativeY };
-        setSegmentationPoints(prev => [...prev, point]);
-      }
-    };
-
-    editor.canvas.on('mouse:move', handleMouseMove);
-    editor.canvas.on('mouse:down', handleSegmentClick);
-
-    return () => {
-      editor.canvas.off('mouse:move', handleMouseMove);
-      editor.canvas.off('mouse:down', handleSegmentClick);
-    };
-  }, [editor?.canvas, activeTool]);
-
-
   const canvasRef = useRef(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -253,7 +159,6 @@ export const Editor = ({ initialData }: EditorProps) => {
           editor={editor}
           activeTool={activeTool}
           onChangeActiveTool={onChangeActiveTool}
-          segmentationPoints={segmentationPoints}
           // onCancelSegmentation={clearSegmentation}
         />
         <ShapeSidebar
@@ -321,7 +226,7 @@ export const Editor = ({ initialData }: EditorProps) => {
           activeTool={activeTool}
           onChangeActiveTool={onChangeActiveTool}
           segmentedObjects={segmentedObjects}
-          // onSegmentedObjectChange={handleSegmentedObjectChange}
+          onSegmentedObjectChange={handleSegmentedObjectChange}
         />
         <DrawSidebar
           editor={editor}
@@ -344,24 +249,6 @@ export const Editor = ({ initialData }: EditorProps) => {
               ref={canvasRef} 
               className={activeTool === "segment" ? "cursor-crosshair" : "cursor-default"}
             />
-            {mouseRealCoordinates && activeTool === "segment" && mouseCoordinates && (
-              <div 
-                style={{
-                  position: 'absolute',
-                  left: mouseCoordinates.x + 15,
-                  top: mouseCoordinates.y + 15,
-                  background: 'rgba(0, 0, 0, 0.7)',
-                  color: 'white',
-                  padding: '4px 8px',
-                  borderRadius: '4px',
-                  fontSize: '12px',
-                  pointerEvents: 'none',
-                  zIndex: 1000
-                }}
-              >
-                {`x: ${mouseCoordinates.x}, y: ${mouseCoordinates.y}`}
-              </div>
-            )}
             <button
               onClick={onAddButtonClick}
               className="absolute right-6 top-1/2 -translate-y-1/2 w-16 h-16 rounded-xl border-2 border-black/80 flex items-center justify-center bg-white shadow-lg hover:shadow-xl hover:scale-105 hover:bg-zinc-50 transition-all duration-200 group"

@@ -1,4 +1,6 @@
   import { useRef, useEffect, useState } from "react";
+  import { fabric } from "fabric";
+
   import {
     resizeCanvas,
     mergeMasks,
@@ -29,16 +31,12 @@
     editor: Editor | undefined;
     activeTool: ActiveTool;
     onChangeActiveTool: (tool: ActiveTool) => void;
-    segmentationPoints: { x: number; y: number }[];
-    onCancelSegmentation: () => void;
   };
   
   export const SegmentationSidebar = ({
     editor,
     activeTool,
     onChangeActiveTool,
-    segmentationPoints,
-    onCancelSegmentation,
   }: SegmentationSidebarProps) => {
 
     const samWorker = useRef<Worker | null>(null);
@@ -52,6 +50,86 @@
     const [mask, setMask] = useState<HTMLCanvasElement | null>(null);
     const pointsRef = useRef<Array<{ x: number; y: number; label: number }>>([]);
 
+    const [mouseCoordinates, setMouseCoordinates] = useState<{ x: number; y: number } | null>(null);
+    const [mouseRealCoordinates, setMouseRealCoordinates] = useState<{ x: number; y: number } | null>(null);
+
+    useEffect(() => {
+      // Call encodeImageClick when entering segmentation mode
+      if (activeTool === "segment" && editor?.canvas) {
+        encodeImageClick();
+        console.log("called encodeImageClick");
+      }
+    }, [activeTool, editor?.canvas]);
+
+    useEffect(() => {
+      // useEffect to handle mouse movement and click events for segmentation
+      console.log("useEffect canvas");
+      if (!editor?.canvas || activeTool !== "segment") return;
+      console.log("useEffect canvas after if");
+
+      // Start decoding, prompt with mouse coords
+      const imageClick = (e: fabric.IEvent) => {
+        if (!imageEncoded || !editor?.canvas) return;
+  
+        const pointer = editor.canvas.getPointer(e.e);
+        const workspace = editor.getWorkspace();
+        if (!workspace) return;
+  
+        // Get the workspace object's position
+        const workspaceLeft = workspace.left || 0;
+        const workspaceTop = workspace.top || 0;
+  
+        // Calculate relative coordinates within the workspace
+        const relativeX = Math.round(pointer.x - workspaceLeft);
+        const relativeY = Math.round(pointer.y - workspaceTop);
+        
+        console.log("Clicked on image");
+        console.log("relativeX", relativeX);
+        console.log("relativeY", relativeY);
+        console.log("imageSize.w", imageSize.w);
+        console.log("imageSize.h", imageSize.h);
+        // Only process click if within workspace bounds
+        if (relativeX >= 0 && relativeX <= imageSize.w && relativeY >= 0 && relativeY <= imageSize.h) {
+          const point = {
+            x: relativeX,
+            y: relativeY,
+            label: 1, /// Check again
+          };
+  
+          pointsRef.current.push(point);
+  
+          // do we have a mask already? ie. a refinement click?
+          if (prevMaskArray) {
+            const maskShape = [1, 1, maskSize.w, maskSize.h];
+  
+            samWorker.current?.postMessage({
+              type: "decodeMask",
+              data: {
+                points: pointsRef.current,
+                maskArray: prevMaskArray,
+                maskShape: maskShape,
+              }
+            });      
+          } else {
+            samWorker.current?.postMessage({
+              type: "decodeMask",
+              data: {
+                points: pointsRef.current,
+                maskArray: null,
+                maskShape: null,
+              }
+            });      
+          }
+        }
+      };
+  
+      editor.canvas.on('mouse:down', imageClick);
+  
+      return () => {
+        editor.canvas.off('mouse:down', imageClick);
+      };
+    }, [editor?.canvas, activeTool]);
+
     // Start encoding image
     const encodeImageClick = async () => {
       if (!samWorker.current || !editor?.canvas) return;
@@ -60,72 +138,41 @@
       if (!workspace) return;
 
       // Get the workspace dimensions
-      const workspaceWidth = workspace.width || 1024;
-      const workspaceHeight = workspace.height || 1024;
+      const workspaceWidth = workspace.width || 720;
+      const workspaceHeight = workspace.height || 480;
       
-      setImageSize({ w: workspaceWidth, h: workspaceHeight });
+      // Create a temporary canvas with the workspace content
+      const tempCanvas = document.createElement('canvas');
+      tempCanvas.width = workspaceWidth;
+      tempCanvas.height = workspaceHeight;
+      const tempCtx = tempCanvas.getContext('2d');
       
-      // TODO: Get actual image data from workspace
-      samWorker.current.postMessage({
-        type: "encodeImage",
-        // data: canvasToFloat32Array(resizeCanvas(image, imageSize)),
+      // Draw the workspace content onto the temp canvas
+      const workspaceImage = editor.canvas.toDataURL({
+        format: 'png',
+        quality: 1,
+        left: workspace.left || 0,
+        top: workspace.top || 0,
+        width: workspaceWidth,
+        height: workspaceHeight
       });
 
-      setLoading(true);
-      setStatus("Encoding");
+      const img = new Image();
+      img.onload = () => {
+        tempCtx?.drawImage(img, 0, 0, workspaceWidth, workspaceHeight);
+        
+        samWorker.current?.postMessage({
+          type: "encodeImage",
+          data: canvasToFloat32Array(resizeCanvas(tempCanvas, imageSize)),
+        });
+
+        setLoading(true);
+        setStatus("Encoding");
+        console.log("Encoding image");
+      };
+
+      img.src = workspaceImage;
     };
-
-    // Start decoding, prompt with mouse coords
-    const imageClick = (e: fabric.IEvent<MouseEvent>) => {
-      if (!imageEncoded || !editor?.canvas) return;
-
-      const pointer = editor.canvas.getPointer(e.e);
-      const workspace = editor.getWorkspace();
-      if (!workspace) return;
-
-      // Get the workspace object's position
-      const workspaceLeft = workspace.left || 0;
-      const workspaceTop = workspace.top || 0;
-
-      // Calculate relative coordinates within the workspace
-      const relativeX = Math.round(pointer.x - workspaceLeft);
-      const relativeY = Math.round(pointer.y - workspaceTop);
-
-      // Only process click if within workspace bounds
-      if (relativeX >= 0 && relativeX <= imageSize.w && relativeY >= 0 && relativeY <= imageSize.h) {
-        const point = {
-          x: relativeX,
-          y: relativeY,
-          label: e.e.button === 0 ? 1 : 0,
-        };
-
-        pointsRef.current.push(point);
-
-        // do we have a mask already? ie. a refinement click?
-        if (prevMaskArray) {
-          const maskShape = [1, 1, maskSize.w, maskSize.h];
-
-          samWorker.current?.postMessage({
-            type: "decodeMask",
-            data: {
-              points: pointsRef.current,
-              maskArray: prevMaskArray,
-              maskShape: maskShape,
-            }
-          });      
-        } else {
-          samWorker.current?.postMessage({
-            type: "decodeMask",
-            data: {
-              points: pointsRef.current,
-              maskArray: null,
-              maskShape: null,
-            }
-          });      
-        }
-      }
-    };
-
     
     const handleDecodingResults = (decodingResults: { 
       masks: { dims: number[]; }; 
@@ -142,6 +189,36 @@
   
       setMask(bestMaskCanvas);
       setPrevMaskArray(bestMaskArray);
+
+      // Add mask to canvas if in segment mode
+      if (activeTool === "segment" && editor?.canvas) {
+        const workspace = editor.getWorkspace();
+        if (!workspace) return;
+
+        // Convert the mask canvas to a Fabric image
+        fabric.Image.fromURL(bestMaskCanvas.toDataURL(), (maskImage) => {
+          // Position the mask at the workspace coordinates
+          maskImage.set({
+            left: workspace.left || 0,
+            top: workspace.top || 0,
+            width: workspace.width,
+            height: workspace.height,
+            selectable: false,
+            evented: false,
+            opacity: 0.5
+          });
+
+          // Remove any existing mask before adding the new one
+          const existingMasks = editor.canvas.getObjects().filter(obj => obj.data?.isMask);
+          existingMasks.forEach(mask => editor.canvas.remove(mask));
+
+          // Add metadata to identify this as a mask
+          maskImage.data = { isMask: true };
+          
+          editor.canvas.add(maskImage);
+          editor.canvas.renderAll();
+        });
+      }
     };
 
 
@@ -164,6 +241,7 @@
         setStatus("Loading model");
       } else if (type == "encodeImageDone") {
         // alert(data.durationMs)
+        console.log("Encode image done");
         setImageEncoded(true);
         setLoading(false);
         setStatus("Ready. Click on image");
@@ -176,12 +254,12 @@
 
     useEffect(() => {
       if (!samWorker.current) {
-        samWorker.current = new Worker(new URL("../../sam/worker.js", import.meta.url), {
+        samWorker.current = new Worker(new URL("../../../sam/worker.js", import.meta.url), {
           type: "module",
         });
         samWorker.current.addEventListener("message", onWorkerMessage);
         samWorker.current.postMessage({ type: "ping" });
-  
+        console.log("Worker started");
         setLoading(true);
       }
     }, [onWorkerMessage, handleDecodingResults]);
@@ -221,7 +299,6 @@
     };
     
     const onClose = () => {
-      onCancelSegmentation();
       onChangeActiveTool("select");
       //editor?.clearSegmentationPoints();
     };
@@ -240,14 +317,14 @@
         <ScrollArea>
           <div className="p-4 space-y-4 border-b">
             <Label className="text-sm">
-              Points placed: {segmentationPoints.length}
+              Points placed: 
             </Label>
           </div>
           
         <div className="shrink-0 h-[56px] border-b bg-white w-full flex items-center overflow-x-auto z-[49] p-2 gap-x-2">
           <div className="flex items-center h-full justify-center">
             <Button
-                onClick={onCancelSegmentation}
+                // onClick={onCancelSegmentation}
                 size="sm"
                 variant="destructive"
                 className="flex items-center gap-x-2"
@@ -258,11 +335,11 @@
           </div>
             <div className="flex items-center h-full justify-center">
               <Button
-                  onClick={() => handleSubmitSegmentation(segmentationPoints)}
+                  // onClick={() => handleSubmitSegmentation(segmentationPoints)}
                   size="sm"
                   variant="default"
                   className="flex items-center gap-x-2"
-                  disabled={segmentationPoints.length === 0}
+                  // disabled={segmentationPoints.length === 0}
               >
                 <Check className="size-4" />
                   Done
