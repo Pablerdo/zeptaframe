@@ -326,28 +326,70 @@
     const handleSaveInProgressMask = () => {
       if (mask) {
         const maskDataUrl = mask.toDataURL('image/png');
-        setSegmentedMasks(prev => {
-          // Get count of actual saved masks (excluding the stub)
-          const savedMasksCount = prev.filter(mask => mask.url).length;
-          
-          return [
-            { id: "", url: '', name: 'New Object', inProgress: false }, // New stub at top
-            ...prev.map((mask, index) => 
-              index === 0 ? 
-              { 
-                ...mask, 
-                id: crypto.randomUUID(), // Add unique ID
-                url: maskDataUrl, 
-                inProgress: false, 
-                isApplied: true,
-                name: `Object ${savedMasksCount + 1}` 
-              } : {
-                ...mask,
-                isApplied: false
-              }
-            ).filter(mask => !mask.inProgress)
-          ];
-        });
+        const newMaskId = crypto.randomUUID();
+        
+        // Get count of actual saved masks (excluding the stub)
+        const savedMasksCount = segmentedMasks.filter(mask => mask.url).length;
+
+        // First update the state
+        setSegmentedMasks(prev => [
+          { id: "", url: '', name: 'New Object', inProgress: false }, // New stub at top
+          ...prev.map((mask, index) => 
+            index === 0 ? 
+            { 
+              ...mask, 
+              id: newMaskId,
+              url: maskDataUrl, 
+              inProgress: false, 
+              isApplied: true,
+              name: `Object ${savedMasksCount + 1}` 
+            } : {
+              ...mask,
+              isApplied: false
+            }
+          ).filter(mask => !mask.inProgress)
+        ]);
+
+        // Then set up the mask in Fabric.js, similar to handleApplyMask
+        if (editor?.canvas) {
+          // Remove any existing masks
+          const existingMasks = editor.canvas.getObjects().filter(obj => obj.data?.isMask);
+          existingMasks.forEach(mask => editor.canvas.remove(mask));
+
+          // Create new mask image
+          fabric.Image.fromURL(maskDataUrl, (maskImage) => {
+            const workspace = editor.getWorkspace();
+            if (!workspace) return;
+
+            // Set all basic properties
+            maskImage.set({
+              left: workspace.left || 0,
+              top: workspace.top || 0,
+              width: workspace.width || 720,
+              height: workspace.height || 480,
+              selectable: false,
+              evented: false,
+              opacity: 0.5
+            });
+
+            // Explicitly set the data property with both isMask and url
+            maskImage.data = { 
+              isMask: true, 
+              url: maskDataUrl 
+            };
+
+            // Add to canvas and ensure data is set
+            editor.canvas.add(maskImage);
+            
+            // Double check the data is set
+            const addedObject = editor.canvas.getObjects().find(obj => obj.data?.isMask);
+            console.log('New mask saved with data:', addedObject?.data);
+            
+            editor.canvas.renderAll();
+          });
+        }
+
+        // Reset the current mask state
         setIsSegmentationActive(false);
         setMask(null);
         setPrevMaskArray(null);
@@ -577,8 +619,7 @@
 
     const handleControlMotion = (maskId: string, maskUrl: string) => {
       console.log('🎮 Starting Control Motion:', { maskId, maskUrl });
-      
-      
+
       if (!editor?.canvas) {
         console.warn('❌ No canvas available');
         return;
@@ -611,6 +652,12 @@
         obj.evented = false;
       });
 
+      // Array to store trajectory points
+      const trajectoryPoints: Array<{x: number, y: number}> = [];
+
+      // Track if we're currently dragging
+      let isDragging = false;
+
       // Enable dragging for the selected mask
       maskObject.set({
         selectable: true,
@@ -621,14 +668,144 @@
         hoverCursor: 'grab',
         moveCursor: 'grabbing'
       });
-      console.log('✨ Enabled dragging for mask:', { 
-        selectable: maskObject.selectable,
-        evented: maskObject.evented,
-        cursor: maskObject.hoverCursor
-      });
+
+      // Add mouse down handler
+      const handleMouseDown = (e: fabric.IEvent) => {
+        if (!maskObject) return;
+        isDragging = true;
+        const pointer = editor.canvas.getPointer(e.e);
+        // Record initial point
+        trajectoryPoints.push({
+          x: maskObject.left! + (maskObject.width! * (maskObject.scaleX || 1)) / 2,
+          y: maskObject.top! + (maskObject.height! * (maskObject.scaleY || 1)) / 2
+        });
+        console.log('👆 Started recording trajectory');
+      };
+
+      // Add mouse move handler
+      const handleMouseMove = (e: fabric.IEvent) => {
+        if (!isDragging || !maskObject) return;
+        const pointer = editor.canvas.getPointer(e.e);
+        // Record point during movement
+        trajectoryPoints.push({
+          x: maskObject.left! + (maskObject.width! * (maskObject.scaleX || 1)) / 2,
+          y: maskObject.top! + (maskObject.height! * (maskObject.scaleY || 1)) / 2
+        });
+      };
+
+      // Add mouse up handler
+      const handleMouseUp = (e: fabric.IEvent) => {
+        if (!isDragging || !maskObject) return;
+        isDragging = false;
+        // Record final point
+        trajectoryPoints.push({
+          x: maskObject.left! + (maskObject.width! * (maskObject.scaleX || 1)) / 2,
+          y: maskObject.top! + (maskObject.height! * (maskObject.scaleY || 1)) / 2
+        });
+        console.log('👆 Finished recording trajectory:', trajectoryPoints.length, 'points');
+        
+        // Store the trajectory points in the mask's data
+        maskObject.data = {
+          ...maskObject.data,
+          trajectoryPoints
+        };
+      };
+
+      // Attach event listeners
+      editor.canvas.on('mouse:down', handleMouseDown);
+      editor.canvas.on('mouse:move', handleMouseMove);
+      editor.canvas.on('mouse:up', handleMouseUp);
+
+      // Store cleanup function in the maskObject's data
+      maskObject.data = {
+        ...maskObject.data,
+        cleanupEvents: () => {
+          editor.canvas.off('mouse:down', handleMouseDown);
+          editor.canvas.off('mouse:move', handleMouseMove);
+          editor.canvas.off('mouse:up', handleMouseUp);
+        }
+      };
       
       editor.canvas.renderAll();
       console.log('🎯 Control motion setup complete');
+    };
+
+    // Add these utility functions at the top of the component
+    const interpolatePoints = (points: Array<{x: number, y: number}>, numPoints: number = 49): Array<{x: number, y: number}> => {
+      if (points.length <= 1) return points;
+      if (points.length === 2) {
+        // Linear interpolation for just two points
+        return Array.from({length: numPoints}, (_, i) => {
+          const t = i / (numPoints - 1);
+          return {
+            x: points[0].x + (points[1].x - points[0].x) * t,
+            y: points[0].y + (points[1].y - points[0].y) * t
+          };
+        });
+      }
+
+      // Calculate the total path length
+      let totalLength = 0;
+      for (let i = 1; i < points.length; i++) {
+        const dx = points[i].x - points[i-1].x;
+        const dy = points[i].y - points[i-1].y;
+        totalLength += Math.sqrt(dx * dx + dy * dy);
+      }
+
+      // Create points at equal distances
+      const result: Array<{x: number, y: number}> = [];
+      const segmentLength = totalLength / (numPoints - 1);
+      let currentDist = 0;
+      let currentIndex = 0;
+
+      result.push(points[0]); // Add first point
+
+      for (let i = 1; i < numPoints - 1; i++) {
+        const targetDist = i * segmentLength;
+
+        // Move to the correct segment
+        while (currentIndex < points.length - 1) {
+          const dx = points[currentIndex + 1].x - points[currentIndex].x;
+          const dy = points[currentIndex + 1].y - points[currentIndex].y;
+          const segDist = Math.sqrt(dx * dx + dy * dy);
+          
+          if (currentDist + segDist >= targetDist) {
+            const t = (targetDist - currentDist) / segDist;
+            result.push({
+              x: points[currentIndex].x + dx * t,
+              y: points[currentIndex].y + dy * t
+            });
+            break;
+          }
+          
+          currentDist += segDist;
+          currentIndex++;
+        }
+      }
+
+      result.push(points[points.length - 1]); // Add last point
+      return result;
+    };
+
+    const smoothTrajectory = (points: Array<{x: number, y: number}>, smoothingFactor: number = 0.2): Array<{x: number, y: number}> => {
+      if (points.length <= 2) return points;
+
+      const smoothed: Array<{x: number, y: number}> = [];
+      smoothed.push(points[0]); // Keep first point
+
+      for (let i = 1; i < points.length - 1; i++) {
+        const prev = points[i - 1];
+        const curr = points[i];
+        const next = points[i + 1];
+
+        smoothed.push({
+          x: curr.x + (next.x - prev.x) * smoothingFactor,
+          y: curr.y + (next.y - prev.y) * smoothingFactor
+        });
+      }
+
+      smoothed.push(points[points.length - 1]); // Keep last point
+      return smoothed;
     };
 
     const handleSaveMotion = () => {
@@ -637,26 +814,52 @@
       const maskObject = editor.canvas.getObjects().find(obj => obj.data?.isMask && obj.data.url === recordingMotion);
       if (!maskObject) return;
 
-      // Calculate final trajectory points
-      const points: Array<{x: number, y: number}> = [{
+      // Clean up event listeners
+      if (maskObject.data?.cleanupEvents) {
+        maskObject.data.cleanupEvents();
+      }
+
+      // Get the recorded trajectory points
+      let points = maskObject.data?.trajectoryPoints || [{
         x: (maskObject.left || 0) + ((maskObject.width || 0) * (maskObject.scaleX || 1)) / 2,
         y: (maskObject.top || 0) + ((maskObject.height || 0) * (maskObject.scaleY || 1)) / 2
       }];
+
+      // Smooth and interpolate the trajectory
+      if (points.length > 1) {
+        points = smoothTrajectory(points); // First smooth the trajectory
+        points = interpolatePoints(points, 49); // Then interpolate to exactly 49 points
+      }
 
       console.log('🛣️ Trajectory saved:', {
         maskUrl: recordingMotion,
         startPoint: points[0],
         endPoint: points[points.length - 1],
-        totalPoints: points.length
+        totalPoints: points.length,
+        isInterpolated: points.length === 49
       });
 
-      // Update mask state with trajectory (hidden by default)
+      // Draw trajectory on canvas
+      const trajectory = new fabric.Polyline(
+        points,
+        {
+          stroke: 'blue',
+          strokeWidth: 2,
+          fill: 'transparent',
+          selectable: false,
+          evented: false
+        }
+      );
+      trajectory.data = { trajectoryFor: recordingMotion };
+      editor.canvas.add(trajectory);
+
+      // Update mask state with trajectory (visible by default when saving)
       setSegmentedMasks(prev => prev.map(mask => 
         mask.url === recordingMotion ? {
           ...mask,
           trajectory: {
             points,
-            isVisible: false // Set to false by default
+            isVisible: true // Set to true by default when saving
           }
         } : mask
       ));
@@ -682,6 +885,11 @@
 
       const maskObject = editor.canvas.getObjects().find(obj => obj.data?.isMask && obj.data.url === recordingMotion);
       if (!maskObject) return;
+
+      // Clean up event listeners
+      if (maskObject.data?.cleanupEvents) {
+        maskObject.data.cleanupEvents();
+      }
 
       // Reset object state and cursor without saving trajectory
       maskObject.set({
@@ -724,11 +932,31 @@
 
       // Toggle trajectory visualization on canvas
       if (editor?.canvas) {
-        const trajectoryObj = editor.canvas.getObjects().find(obj => obj.data?.trajectoryFor === maskUrl);
+        let trajectoryObj = editor.canvas.getObjects().find(obj => obj.data?.trajectoryFor === maskUrl);
+        
         if (trajectoryObj) {
+          // If trajectory exists, toggle visibility
           trajectoryObj.visible = !trajectoryObj.visible;
-          editor.canvas.renderAll();
+        } else {
+          // If trajectory doesn't exist, create it
+          const mask = segmentedMasks.find(m => m.url === maskUrl);
+          if (mask?.trajectory?.points) {
+            trajectoryObj = new fabric.Polyline(
+              mask.trajectory.points,
+              {
+                stroke: 'blue',
+                strokeWidth: 2,
+                fill: 'transparent',
+                selectable: false,
+                evented: false,
+                visible: true
+              }
+            );
+            trajectoryObj.data = { trajectoryFor: maskUrl };
+            editor.canvas.add(trajectoryObj);
+          }
         }
+        editor.canvas.renderAll();
       }
     };
 
@@ -749,6 +977,30 @@
         }
       }
     };
+
+    // Add effect to hide all trajectories when sidebar opens
+    useEffect(() => {
+      if (activeTool === "segment" && editor?.canvas) {
+        // Hide all trajectory objects
+        editor.canvas.getObjects()
+          .filter(obj => obj.data?.trajectoryFor)
+          .forEach(obj => {
+            obj.visible = false;
+          });
+        editor.canvas.renderAll();
+
+        // Update state to reflect hidden trajectories
+        setSegmentedMasks(prev => prev.map(mask => 
+          mask.trajectory ? {
+            ...mask,
+            trajectory: {
+              ...mask.trajectory,
+              isVisible: false
+            }
+          } : mask
+        ));
+      }
+    }, [activeTool, editor?.canvas]);
 
     return (
       <aside

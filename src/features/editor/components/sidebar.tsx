@@ -70,12 +70,12 @@ export const Sidebar = ({
           isActive={activeTool === "segment"}
           onClick={() => onChangeActiveTool("segment")}
         />
-        <SidebarItem
+        {/* <SidebarItem
           icon={ArrowUpRight}
           label="Control Motion"
           isActive={activeTool === "control-motion"}
           onClick={() => onChangeActiveTool("control-motion")}
-        />
+        /> */}
         <SidebarItem
           icon={Settings}
           label="Settings"
