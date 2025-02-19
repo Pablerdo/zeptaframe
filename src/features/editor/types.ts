@@ -223,6 +223,19 @@ export interface SegmentedObject {
   // Add any other properties needed for segmentation
 }
 
+export interface SegmentedMask {
+  id: string;
+  url: string;
+  name: string;
+  isEditing?: boolean;
+  inProgress?: boolean;
+  isApplied?: boolean;
+  trajectory?: {
+    points: Array<{x: number, y: number}>;
+    isVisible: boolean;
+  };
+}
+
 export interface Editor {
   savePng: () => void;
   saveJpg: () => void;

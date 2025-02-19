@@ -1,4 +1,4 @@
-  import { useRef, useEffect, useState } from "react";
+  import { useRef, useEffect, useState, useCallback } from "react";
   import { fabric } from "fabric";
 
   import {
@@ -24,7 +24,8 @@
   import { Label } from "@/components/ui/label";
   import { Button } from "@/components/ui/button";
   import { ScrollArea } from "@/components/ui/scroll-area";
-  import { X, Check } from "lucide-react";
+  import { X, Check, Loader2, Trash2, Pencil, Plus } from "lucide-react";
+  import { Input } from "@/components/ui/input";
 
 
   interface SegmentationSidebarProps {
@@ -33,44 +34,425 @@
     onChangeActiveTool: (tool: ActiveTool) => void;
   };
   
+  interface SegmentedMask {
+    id: string;
+    url: string;
+    name: string;
+    isEditing?: boolean;
+    inProgress?: boolean;
+    isApplied?: boolean;
+    trajectory?: {
+      points: Array<{x: number, y: number}>;
+      isVisible: boolean;
+    };
+  }
+
   export const SegmentationSidebar = ({
     editor,
     activeTool,
     onChangeActiveTool,
   }: SegmentationSidebarProps) => {
 
+    const [imageSize, setImageSize] = useState({ w: 1024, h: 1024 });
+    const [maskSize, setMaskSize] = useState({ w: 256, h: 256 });
+
     const samWorker = useRef<Worker | null>(null);
     const [loading, setLoading] = useState(false);
     const [status, setStatus] = useState("");
     const [imageEncoded, setImageEncoded] = useState(false);
     const [device, setDevice] = useState(null);
-    const [imageSize, setImageSize] = useState({ w: 1024, h: 1024 });
-    const [maskSize, setMaskSize] = useState({ w: 256, h: 256 });
     const [prevMaskArray, setPrevMaskArray] = useState<Float32Array | null>(null);
     const [mask, setMask] = useState<HTMLCanvasElement | null>(null);
     const pointsRef = useRef<Array<{ x: number; y: number; label: number }>>([]);
+    const [segmentedMasks, setSegmentedMasks] = useState<SegmentedMask[]>([]);
+    const [isSegmentationActive, setIsSegmentationActive] = useState(false);
+    const [recordingMotion, setRecordingMotion] = useState<string | null>(null);
 
-    const [mouseCoordinates, setMouseCoordinates] = useState<{ x: number; y: number } | null>(null);
-    const [mouseRealCoordinates, setMouseRealCoordinates] = useState<{ x: number; y: number } | null>(null);
+    const handleDecodingResults = useCallback((decodingResults: { 
+      masks: { dims: number[]; }; 
+      iou_predictions: { cpuData: number[]; }; 
+    }) => {
 
-    useEffect(() => {
-      // Call encodeImageClick when entering segmentation mode
+      // SAM2 returns 3 mask along with scores -> select best one
+      const maskTensors = decodingResults.masks;
+      const [bs, noMasks, width, height] = maskTensors.dims;
+      const maskScores = decodingResults.iou_predictions.cpuData;
+      const bestMaskIdx = maskScores.indexOf(Math.max(...maskScores));
+      const bestMaskArray = sliceTensor(maskTensors, bestMaskIdx)
+      let bestMaskCanvas = float32ArrayToCanvas(bestMaskArray, width, height)
+      bestMaskCanvas = resizeCanvas(bestMaskCanvas, { w: 720, h: 480 });
+      setMask(bestMaskCanvas);
+      setPrevMaskArray(bestMaskArray);
+
+      // Add mask to canvas if in segment mode
       if (activeTool === "segment" && editor?.canvas) {
-        encodeImageClick();
-        console.log("called encodeImageClick");
+        const workspace = editor.getWorkspace();
+        if (!workspace) return;
+
+        // Get workspace dimensions with type assertion since we know these are fabric.Object properties
+        const workspaceWidth = (workspace as fabric.Object).width as number || 720;
+        const workspaceHeight = (workspace as fabric.Object).height as number || 480;
+
+        // Create a temporary canvas to properly scale the mask
+        const tempCanvas = document.createElement('canvas');
+        tempCanvas.width = workspaceWidth;  // Original workspace width
+        tempCanvas.height = workspaceHeight; // Original workspace height
+        const tempCtx = tempCanvas.getContext('2d');
+
+        if (!tempCtx) return;
+
+        // Draw the mask centered and scaled
+        tempCtx.drawImage(
+          bestMaskCanvas,
+          0,
+          0,
+          bestMaskCanvas.width,
+          bestMaskCanvas.height,
+        );
+
+        // Convert the properly scaled mask canvas to a Fabric image
+        fabric.Image.fromURL(tempCanvas.toDataURL(), (maskImage) => {
+          // Position the mask at the workspace coordinates
+          maskImage.set({
+            left: workspace.left || 0,
+            top: workspace.top || 0,
+            width: workspaceWidth,  // Original workspace width
+            height: workspaceHeight, // Original workspace height
+            selectable: false,
+            evented: false,
+            opacity: 0.5
+          });
+
+          // Remove any existing mask before adding the new one
+          const existingMasks = editor.canvas.getObjects().filter(obj => obj.data?.isMask);
+          existingMasks.forEach(mask => editor.canvas.remove(mask));
+
+          // Add metadata to identify this as a mask
+          maskImage.data = { isMask: true };
+          
+          editor.canvas.add(maskImage);
+          editor.canvas.renderAll();
+        });
       }
-    }, [activeTool, editor?.canvas]);
+    }, [activeTool, editor, imageSize]);
+
+    // Handle web worker messages
+    const onWorkerMessage = useCallback((event: MessageEvent) => {
+      const { type, data } = event.data;
+
+      if (type == "pong") {
+        const { success, device } = data;
+
+        if (success) {
+          setLoading(false);
+          setDevice(device);
+          setStatus("Encode image");
+        } else {
+          setStatus("Error (check JS console)");
+        }
+      } else if (type == "downloadInProgress" || type == "loadingInProgress") {
+        setLoading(true);
+        setStatus("Loading model");
+      } else if (type == "encodeImageDone") {
+        // alert(data.durationMs)
+        // console.log("Encode image done");
+        setImageEncoded(true);
+        setLoading(false);
+        setStatus("Ready. Click on image to start new mask");
+      } else if (type == "decodeMaskResult") {
+        handleDecodingResults(data);
+        // console.log("Decoding results");
+        setLoading(false);
+        setStatus("Ready. Click on image");
+      }
+    }, [handleDecodingResults]);
+
+    const initializeSamWorker = useCallback(() => {
+      if (!samWorker.current) {
+        console.log("Initializing SAM worker");
+        samWorker.current = new Worker(new URL("../../../sam/worker.js", import.meta.url), {
+          type: "module",
+        });
+        samWorker.current.addEventListener("message", onWorkerMessage);
+        samWorker.current.postMessage({ type: "ping" });
+        console.log("Worker started");
+        setLoading(true);
+      }
+    }, [onWorkerMessage]);
 
     useEffect(() => {
-      // useEffect to handle mouse movement and click events for segmentation
-      console.log("useEffect canvas");
-      if (!editor?.canvas || activeTool !== "segment") return;
-      console.log("useEffect canvas after if");
+      if (activeTool === "segment") {
+        initializeSamWorker();
+      }
+    }, [activeTool, initializeSamWorker]);
 
-      // Start decoding, prompt with mouse coords
+    // Separate effect for encoding after worker is ready
+    useEffect(() => {
+      if (activeTool === "segment" && editor?.canvas && samWorker.current && device) {
+        encodeImageClick();
+      }
+    }, [activeTool, editor?.canvas, device]);
+
+    // Start encoding image
+    const encodeImageClick = async () => {
+      if (!samWorker.current || !editor?.canvas) return;
+      
+      const workspace = editor.getWorkspace();
+      if (!workspace) return;
+
+      // Get the workspace dimensions and position
+      const workspaceWidth = workspace.width || 720;
+      const workspaceHeight = workspace.height || 480;
+      const workspaceLeft = workspace.left || 0;
+      const workspaceTop = workspace.top || 0;
+      
+      // Create a temporary canvas with the workspace content
+      const tempCanvas = document.createElement('canvas');
+      tempCanvas.width = workspaceWidth;
+      tempCanvas.height = workspaceHeight;
+      const tempCtx = tempCanvas.getContext('2d');
+      
+      // Save current viewport transform and ensure it's not undefined
+      const currentViewportTransform = editor.canvas.viewportTransform || [1, 0, 0, 1, 0, 0];
+      
+      // Reset viewport transform temporarily to get accurate image
+      editor.canvas.setViewportTransform([1, 0, 0, 1, 0, 0]);
+      
+      // Draw the workspace content onto the temp canvas
+      const workspaceImage = editor.canvas.toDataURL({
+        format: 'png',  
+        quality: 1,
+        left: workspaceLeft,
+        top: workspaceTop,
+        width: workspaceWidth,
+        height: workspaceHeight
+      });
+
+      // Restore viewport transform
+      editor.canvas.setViewportTransform(currentViewportTransform);
+
+      const img = new Image();
+      img.onload = () => {
+          const largestDim = Math.max(workspaceWidth, workspaceHeight);
+
+          const box = resizeAndPadBox(
+            { h: workspaceHeight, w: workspaceWidth },
+            { h: largestDim, w: largestDim }
+          );
+          
+          tempCtx?.drawImage(img, 0, 0, 720, 480, box?.x || 0, 0, box?.w, box?.h);
+
+          // tempCtx?.drawImage(img, 0, 0, workspaceWidth, workspaceHeight, box?.x || 0, box?.y || 0, box?.w, box?.h);
+        
+          samWorker.current?.postMessage({
+            type: "encodeImage",
+            data: canvasToFloat32Array(resizeCanvas(tempCanvas, imageSize)),
+          });
+
+          setLoading(true);
+          setStatus("Encoding");
+      };
+
+      img.src = workspaceImage;
+    };
+    
+    const onClose = () => {
+      onChangeActiveTool("select");
+    };
+
+    useEffect(() => {
+      // Cleanup worker when component unmounts
+      return () => {
+        if (samWorker.current) {
+          samWorker.current.terminate();
+          samWorker.current = null;
+        }
+      };
+    }, []);
+
+    // Add this effect to handle canvas interactivity
+    useEffect(() => {
+      if (!editor?.canvas) return;
+      
+      if (activeTool !== "segment") {
+        // Reset to default cursors when sidebar is closed
+        editor.canvas.hoverCursor = 'default';
+        editor.canvas.defaultCursor = 'default';
+        editor.canvas.selection = true;
+        editor.canvas.forEachObject((obj) => {
+          if (!obj.data?.isMask) {
+            obj.selectable = true;
+            obj.evented = true;
+          }
+        });
+      } else if (loading) {
+        // Disable all canvas interactions while loading
+        editor.canvas.selection = false;
+        editor.canvas.forEachObject((obj) => {
+          obj.selectable = false;
+          obj.evented = false;
+        });
+        editor.canvas.hoverCursor = 'progress';
+        editor.canvas.defaultCursor = 'progress';
+      } else {
+        // Disable all interactions when sidebar is open but not actively segmenting
+        editor.canvas.selection = false;
+        editor.canvas.forEachObject((obj) => {
+          obj.selectable = false;
+          obj.evented = false;
+        });
+        editor.canvas.hoverCursor = 'crosshair';
+        editor.canvas.defaultCursor = 'crosshair';
+      }
+      
+      editor.canvas.renderAll();
+    }, [loading, editor?.canvas, activeTool]);
+
+    const handleNewMask = () => {
+      // Deapply all masks from canvas
+      if (editor?.canvas) {
+        const existingMasks = editor.canvas.getObjects().filter(obj => obj.data?.isMask);
+        existingMasks.forEach(mask => editor.canvas.remove(mask));
+        editor.canvas.renderAll();
+      }
+      
+      setIsSegmentationActive(true);
+      setSegmentedMasks(prev => [
+        { id: "", url: '', name: 'New Object', inProgress: true },
+        ...prev.map(mask => ({ ...mask, isApplied: false }))
+      ]);
+    };
+
+    const handleSaveInProgressMask = () => {
+      if (mask) {
+        const maskDataUrl = mask.toDataURL('image/png');
+        setSegmentedMasks(prev => {
+          // Get count of actual saved masks (excluding the stub)
+          const savedMasksCount = prev.filter(mask => mask.url).length;
+          
+          return [
+            { id: "", url: '', name: 'New Object', inProgress: false }, // New stub at top
+            ...prev.map((mask, index) => 
+              index === 0 ? 
+              { 
+                ...mask, 
+                id: crypto.randomUUID(), // Add unique ID
+                url: maskDataUrl, 
+                inProgress: false, 
+                isApplied: true,
+                name: `Object ${savedMasksCount + 1}` 
+              } : {
+                ...mask,
+                isApplied: false
+              }
+            ).filter(mask => !mask.inProgress)
+          ];
+        });
+        setIsSegmentationActive(false);
+        setMask(null);
+        setPrevMaskArray(null);
+        pointsRef.current = [];
+      }
+    };
+
+    const handleCancelInProgressMask = () => {
+      // Remove mask from canvas
+      if (editor?.canvas) {
+        const existingMasks = editor.canvas.getObjects().filter(obj => obj.data?.isMask);
+        existingMasks.forEach(mask => editor.canvas.remove(mask));
+        editor.canvas.renderAll();
+      }
+      
+      // Reset current mask state
+      setMask(null);
+      setPrevMaskArray(null);
+      pointsRef.current = [];
+      setIsSegmentationActive(false);
+      
+      // Reset the top stub to "New Mask" state
+      setSegmentedMasks(prev => [
+        { id: "", url: '', name: 'New Object', inProgress: false },
+        ...prev.filter(mask => !mask.inProgress)
+      ]);
+    };
+
+    const handleApplyMask = (maskUrl: string, index: number) => {
+      if (!editor?.canvas) return;
+
+      // Get the actual index in the full segmentedMasks array
+      const actualIndex = segmentedMasks.findIndex(mask => mask.url === maskUrl);
+      
+      // If the mask is already applied, just remove it and update state
+      if (segmentedMasks[actualIndex].isApplied) {
+        const existingMasks = editor.canvas.getObjects().filter(obj => obj.data?.isMask);
+        existingMasks.forEach(mask => editor.canvas.remove(mask));
+        editor.canvas.renderAll();
+        
+        setSegmentedMasks(prev => prev.map(mask => ({
+          ...mask,
+          isApplied: false
+        })));
+        return;
+      }
+
+      // Otherwise, apply the new mask
+      const existingMasks = editor.canvas.getObjects().filter(obj => obj.data?.isMask);
+      existingMasks.forEach(mask => editor.canvas.remove(mask));
+      
+      setIsSegmentationActive(false);
+      setMask(null);
+      setPrevMaskArray(null);
+      pointsRef.current = [];
+
+      fabric.Image.fromURL(maskUrl, (maskImage) => {
+        const workspace = editor.getWorkspace();
+        if (!workspace) return;
+
+        // Set all basic properties
+        maskImage.set({
+          left: workspace.left || 0,
+          top: workspace.top || 0,
+          width: workspace.width || 720,
+          height: workspace.height || 480,
+          selectable: false,
+          evented: false,
+          opacity: 0.5
+        });
+
+        // Explicitly set the data property with both isMask and url
+        maskImage.data = { 
+          isMask: true, 
+          url: maskUrl 
+        };
+
+        // Add to canvas and ensure data is set
+        editor.canvas.add(maskImage);
+        
+        // Double check the data is set
+        const addedObject = editor.canvas.getObjects().find(obj => obj.data?.isMask);
+        console.log('Mask applied with data:', addedObject?.data);
+        
+        editor.canvas.renderAll();
+
+        // Update state to reflect which mask is applied
+        setSegmentedMasks(prev => prev.map((mask, i) => ({
+          ...mask,
+          isApplied: i === actualIndex,
+          inProgress: false
+        })));
+      });
+    };
+
+    // Update click handling to only work when segmentation is active
+    useEffect(() => {
+      console.log("isSegmentationActive", isSegmentationActive);
+      // Add this isSegmentationActive check
+      if (!editor?.canvas || activeTool !== "segment") return;
+
       const imageClick = (e: fabric.IEvent) => {
-        if (!imageEncoded || !editor?.canvas) return;
-  
+        console.log("imageClick", isSegmentationActive);
+        if (!imageEncoded || !editor?.canvas || !isSegmentationActive) return;
+
         const pointer = editor.canvas.getPointer(e.e);
         const workspace = editor.getWorkspace();
         if (!workspace) return;
@@ -83,21 +465,26 @@
         const relativeX = Math.round(pointer.x - workspaceLeft);
         const relativeY = Math.round(pointer.y - workspaceTop);
         
-        console.log("Clicked on image");
-        console.log("relativeX", relativeX);
-        console.log("relativeY", relativeY);
-        console.log("imageSize.w", imageSize.w);
-        console.log("imageSize.h", imageSize.h);
         // Only process click if within workspace bounds
         if (relativeX >= 0 && relativeX <= imageSize.w && relativeY >= 0 && relativeY <= imageSize.h) {
+
+          // Get workspace dimensions
+          const workspaceWidth = workspace.width || 720;
+          const workspaceHeight = workspace.height || 480;
+
+
+          // Normalize coordinates from workspace dimensions to target size
+          const normalizedX = Math.round((relativeX / workspaceWidth) * imageSize.w);
+          const normalizedY = Math.round((relativeY / workspaceHeight) * imageSize.h);
+          
+
           const point = {
-            x: relativeX,
-            y: relativeY,
-            label: 1, /// Check again
+            x: normalizedX,
+            y: normalizedY,
+            label: 1,
           };
   
           pointsRef.current.push(point);
-  
           // do we have a mask already? ie. a refinement click?
           if (prevMaskArray) {
             const maskShape = [1, 1, maskSize.w, maskSize.h];
@@ -122,187 +509,247 @@
           }
         }
       };
-  
+
       editor.canvas.on('mouse:down', imageClick);
-  
       return () => {
         editor.canvas.off('mouse:down', imageClick);
       };
-    }, [editor?.canvas, activeTool]);
+    }, [editor?.canvas, activeTool, imageEncoded, isSegmentationActive]);
+    // editor?.canvas, activeTool, imageEncoded, imageSize.w, imageSize.h, maskSize.w, maskSize.h
+    // Clear masks when sidebar closes
+    useEffect(() => {
+      if (activeTool !== "segment" && editor?.canvas) {
+        const existingMasks = editor.canvas.getObjects().filter(obj => obj.data?.isMask);
+        existingMasks.forEach(mask => editor.canvas.remove(mask));
+        editor.canvas.renderAll();
+        
+      }
+    }, [activeTool, editor?.canvas]);
 
-    // Start encoding image
-    const encodeImageClick = async () => {
-      if (!samWorker.current || !editor?.canvas) return;
-      
-      const workspace = editor.getWorkspace();
-      if (!workspace) return;
+    const handleRenameMask = (index: number, newName: string) => {
+      setSegmentedMasks(prev => prev.map((mask, i) => 
+        i === index ? { ...mask, name: newName } : mask
+      ));
+    };
 
-      // Get the workspace dimensions
-      const workspaceWidth = workspace.width || 720;
-      const workspaceHeight = workspace.height || 480;
+    const handleDeleteMask = (index: number) => {
+      setSegmentedMasks(prev => prev.filter((_, i) => i !== index));
+      if (editor?.canvas) {
+        const existingMasks = editor.canvas.getObjects().filter(obj => obj.data?.isMask);
+        existingMasks.forEach(mask => editor.canvas.remove(mask));
+        editor.canvas.renderAll();
+      }
+    };
+
+    const handleStartRename = (index: number) => {
+      setSegmentedMasks(prev => prev.map((mask, i) => 
+        i === index ? { ...mask, isEditing: true } : mask
+      ));
+    };
+
+    const handleFinishRename = (index: number, newName: string) => {
+      setSegmentedMasks(prev => prev.map((mask, i) => 
+        i === index ? { ...mask, name: newName, isEditing: false } : mask
+      ));
+    };
+
+    const handleKeyPress = (event: React.KeyboardEvent, index: number, newName: string) => {
+      if (event.key === 'Enter') {
+        handleFinishRename(index, newName);
+      }
+    };
+
+    // Update effect for sidebar open/close
+    useEffect(() => {
+      if (activeTool !== "segment" && editor?.canvas) {
+        // Clear masks from canvas
+        const existingMasks = editor.canvas.getObjects().filter(obj => obj.data?.isMask);
+        existingMasks.forEach(mask => editor.canvas.remove(mask));
+        editor.canvas.renderAll();
+        
+        // Reset all masks' applied status
+        setSegmentedMasks(prev => prev.map(mask => ({
+          ...mask,
+          isApplied: false
+        })));
+      }
+    }, [activeTool, editor?.canvas]);
+
+    const handleControlMotion = (maskId: string, maskUrl: string) => {
+      console.log('🎮 Starting Control Motion:', { maskId, maskUrl });
       
-      // Create a temporary canvas with the workspace content
-      const tempCanvas = document.createElement('canvas');
-      tempCanvas.width = workspaceWidth;
-      tempCanvas.height = workspaceHeight;
-      const tempCtx = tempCanvas.getContext('2d');
       
-      // Draw the workspace content onto the temp canvas
-      const workspaceImage = editor.canvas.toDataURL({
-        format: 'png',
-        quality: 1,
-        left: workspace.left || 0,
-        top: workspace.top || 0,
-        width: workspaceWidth,
-        height: workspaceHeight
+      if (!editor?.canvas) {
+        console.warn('❌ No canvas available');
+        return;
+      }
+
+      setRecordingMotion(maskUrl);
+
+      // First disable all objects and reset cursor
+      editor.canvas.selection = false;
+      editor.canvas.defaultCursor = 'default';
+      editor.canvas.hoverCursor = 'default';
+      
+      // Find the mask object
+      const maskObject = editor.canvas.getObjects().find(obj => obj.data?.isMask && obj.data.url === maskUrl);
+      console.log('🎭 Found mask object:', { 
+        found: !!maskObject,
+        maskData: maskObject?.data,
+        totalObjects: editor.canvas.getObjects().length
+      });
+      
+      if (!maskObject) {
+        console.warn('❌ Mask object not found in canvas');
+        setRecordingMotion(null);
+        return;
+      }
+
+      // Disable all objects
+      editor.canvas.forEachObject(obj => {
+        obj.selectable = false;
+        obj.evented = false;
       });
 
-      const img = new Image();
-      img.onload = () => {
-        tempCtx?.drawImage(img, 0, 0, workspaceWidth, workspaceHeight);
-        
-        samWorker.current?.postMessage({
-          type: "encodeImage",
-          data: canvasToFloat32Array(resizeCanvas(tempCanvas, imageSize)),
-        });
-
-        setLoading(true);
-        setStatus("Encoding");
-        console.log("Encoding image");
-      };
-
-      img.src = workspaceImage;
-    };
-    
-    const handleDecodingResults = (decodingResults: { 
-      masks: { dims: number[]; }; 
-      iou_predictions: { cpuData: number[]; }; 
-    }) => {
-      // SAM2 returns 3 mask along with scores -> select best one
-      const maskTensors = decodingResults.masks;
-      const [bs, noMasks, width, height] = maskTensors.dims;
-      const maskScores = decodingResults.iou_predictions.cpuData;
-      const bestMaskIdx = maskScores.indexOf(Math.max(...maskScores));
-      const bestMaskArray = sliceTensor(maskTensors, bestMaskIdx)
-      let bestMaskCanvas = float32ArrayToCanvas(bestMaskArray, width, height)
-      bestMaskCanvas = resizeCanvas(bestMaskCanvas, imageSize);
-  
-      setMask(bestMaskCanvas);
-      setPrevMaskArray(bestMaskArray);
-
-      // Add mask to canvas if in segment mode
-      if (activeTool === "segment" && editor?.canvas) {
-        const workspace = editor.getWorkspace();
-        if (!workspace) return;
-
-        // Convert the mask canvas to a Fabric image
-        fabric.Image.fromURL(bestMaskCanvas.toDataURL(), (maskImage) => {
-          // Position the mask at the workspace coordinates
-          maskImage.set({
-            left: workspace.left || 0,
-            top: workspace.top || 0,
-            width: workspace.width,
-            height: workspace.height,
-            selectable: false,
-            evented: false,
-            opacity: 0.5
-          });
-
-          // Remove any existing mask before adding the new one
-          const existingMasks = editor.canvas.getObjects().filter(obj => obj.data?.isMask);
-          existingMasks.forEach(mask => editor.canvas.remove(mask));
-
-          // Add metadata to identify this as a mask
-          maskImage.data = { isMask: true };
-          
-          editor.canvas.add(maskImage);
-          editor.canvas.renderAll();
-        });
-      }
-    };
-
-
-    // Handle web worker messages
-    const onWorkerMessage = (event: MessageEvent) => {
-      const { type, data } = event.data;
-
-      if (type == "pong") {
-        const { success, device } = data;
-
-        if (success) {
-          setLoading(false);
-          setDevice(device);
-          setStatus("Encode image");
-        } else {
-          setStatus("Error (check JS console)");
-        }
-      } else if (type == "downloadInProgress" || type == "loadingInProgress") {
-        setLoading(true);
-        setStatus("Loading model");
-      } else if (type == "encodeImageDone") {
-        // alert(data.durationMs)
-        console.log("Encode image done");
-        setImageEncoded(true);
-        setLoading(false);
-        setStatus("Ready. Click on image");
-      } else if (type == "decodeMaskResult") {
-        handleDecodingResults(data);
-        setLoading(false);
-        setStatus("Ready. Click on image");
-      }
-    };
-
-    useEffect(() => {
-      if (!samWorker.current) {
-        samWorker.current = new Worker(new URL("../../../sam/worker.js", import.meta.url), {
-          type: "module",
-        });
-        samWorker.current.addEventListener("message", onWorkerMessage);
-        samWorker.current.postMessage({ type: "ping" });
-        console.log("Worker started");
-        setLoading(true);
-      }
-    }, [onWorkerMessage, handleDecodingResults]);
-
-
-    const handleSubmitSegmentation = (points: { x: number; y: number }[]) => {
-      if (points.length === 0) return;
-  
-      // // Create a new segmented object
-      // const newSegmentedObject: SegmentedObject = {
-      //   id: crypto.randomUUID(),
-      //   url: '', // This would be set after processing the segmentation
-      //   canvasId: initialData.id,
-      //   coordinatePath: {
-      //     coordinates: points
-      //   }
-      // };
-  
-      // // Add to segmented objects
-      // setSegmentedObjects(prev => [...prev, newSegmentedObject]);
-  
-      // // Clear the segmentation mode
-      // clearSegmentation();
-  
-      // // TODO: Here you would typically:
-      // // 1. Send the points to your segmentation API
-      // // 2. Get back the segmented image
-      // // 3. Update the newSegmentedObject with the result
-      // // 4. Update the canvas with the segmented image
+      // Enable dragging for the selected mask
+      maskObject.set({
+        selectable: true,
+        evented: true,
+        hasControls: false,
+        hasBorders: true,
+        lockRotation: true,
+        hoverCursor: 'grab',
+        moveCursor: 'grabbing'
+      });
+      console.log('✨ Enabled dragging for mask:', { 
+        selectable: maskObject.selectable,
+        evented: maskObject.evented,
+        cursor: maskObject.hoverCursor
+      });
       
-      // // For now, we'll just save the current state
-      // mutate({
-      //   width: initialData.width,
-      //   height: initialData.height,
-      //   json: initialData.json
-      // });
+      editor.canvas.renderAll();
+      console.log('🎯 Control motion setup complete');
     };
-    
-    const onClose = () => {
-      onChangeActiveTool("select");
-      //editor?.clearSegmentationPoints();
+
+    const handleSaveMotion = () => {
+      if (!recordingMotion || !editor?.canvas) return;
+
+      const maskObject = editor.canvas.getObjects().find(obj => obj.data?.isMask && obj.data.url === recordingMotion);
+      if (!maskObject) return;
+
+      // Calculate final trajectory points
+      const points: Array<{x: number, y: number}> = [{
+        x: (maskObject.left || 0) + ((maskObject.width || 0) * (maskObject.scaleX || 1)) / 2,
+        y: (maskObject.top || 0) + ((maskObject.height || 0) * (maskObject.scaleY || 1)) / 2
+      }];
+
+      console.log('🛣️ Trajectory saved:', {
+        maskUrl: recordingMotion,
+        startPoint: points[0],
+        endPoint: points[points.length - 1],
+        totalPoints: points.length
+      });
+
+      // Update mask state with trajectory (hidden by default)
+      setSegmentedMasks(prev => prev.map(mask => 
+        mask.url === recordingMotion ? {
+          ...mask,
+          trajectory: {
+            points,
+            isVisible: false // Set to false by default
+          }
+        } : mask
+      ));
+
+      // Reset object state and cursor
+      maskObject.set({
+        hasControls: true,
+        lockRotation: false,
+        selectable: false,
+        evented: false,
+        hoverCursor: 'default'
+      });
+      editor.canvas.defaultCursor = 'default';
+      editor.canvas.hoverCursor = 'default';
+      editor.canvas.renderAll();
+
+      setRecordingMotion(null);
+      console.log('💾 Saved motion trajectory');
     };
-  
+
+    const handleCancelMotion = () => {
+      if (!recordingMotion || !editor?.canvas) return;
+
+      const maskObject = editor.canvas.getObjects().find(obj => obj.data?.isMask && obj.data.url === recordingMotion);
+      if (!maskObject) return;
+
+      // Reset object state and cursor without saving trajectory
+      maskObject.set({
+        hasControls: true,
+        lockRotation: false,
+        selectable: false,
+        evented: false,
+        hoverCursor: 'default'
+      });
+      editor.canvas.defaultCursor = 'default';
+      editor.canvas.hoverCursor = 'default';
+      editor.canvas.renderAll();
+
+      setRecordingMotion(null);
+      console.log('🚫 Cancelled motion recording');
+    };
+
+    const handleToggleTrajectory = (maskUrl: string) => {
+      setSegmentedMasks(prev => {
+        const updatedMasks = prev.map(mask => 
+          mask.url === maskUrl ? {
+            ...mask,
+            trajectory: {
+              ...mask.trajectory!,
+              isVisible: !mask.trajectory!.isVisible
+            }
+          } : mask
+        );
+        
+        // Log the trajectory state after toggle
+        const toggledMask = updatedMasks.find(mask => mask.url === maskUrl);
+        console.log('👁️ Trajectory visibility toggled:', {
+          maskUrl,
+          isVisible: toggledMask?.trajectory?.isVisible,
+          points: toggledMask?.trajectory?.points
+        });
+        
+        return updatedMasks;
+      });
+
+      // Toggle trajectory visualization on canvas
+      if (editor?.canvas) {
+        const trajectoryObj = editor.canvas.getObjects().find(obj => obj.data?.trajectoryFor === maskUrl);
+        if (trajectoryObj) {
+          trajectoryObj.visible = !trajectoryObj.visible;
+          editor.canvas.renderAll();
+        }
+      }
+    };
+
+    const handleRedoTrajectory = (maskUrl: string) => {
+      setSegmentedMasks(prev => prev.map(mask => 
+        mask.url === maskUrl ? {
+          ...mask,
+          trajectory: undefined
+        } : mask
+      ));
+
+      // Remove trajectory from canvas
+      if (editor?.canvas) {
+        const trajectoryObj = editor.canvas.getObjects().find(obj => obj.data?.trajectoryFor === maskUrl);
+        if (trajectoryObj) {
+          editor.canvas.remove(trajectoryObj);
+          editor.canvas.renderAll();
+        }
+      }
+    };
+
     return (
       <aside
         className={cn(
@@ -314,39 +761,188 @@
           title="Segmentation"
           description="Place coordinates to segment the image"
         />
+
         <ScrollArea>
           <div className="p-4 space-y-4 border-b">
             <Label className="text-sm">
-              Points placed: 
+              Segmented Objects 
             </Label>
+            
+            {/* Add loading and status indicator */}
+            <div className="mt-4 space-y-2">
+              {loading && (
+                <div className="flex items-center space-x-2 text-muted-foreground">
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  <span className="text-sm">{status}</span>
+                </div>
+              )}
+              {!loading && status && (
+                <div className="text-sm text-muted-foreground">
+                  {status}
+                </div>
+              )}
+            </div>
+
+            {/* Segmented masks list */}
+            <div className="space-y-2">
+              {/* Always show the "New Object" stub at the top */}
+              <div className="flex items-center justify-between p-2 border rounded-md">
+                <div className="flex items-center space-x-2">
+                  <span className="text-sm">New Object</span>
+                </div>
+                <div className="flex items-center space-x-2">
+                  {isSegmentationActive ? (
+                    <>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={handleSaveInProgressMask}
+                        disabled={!mask}
+                      >
+                        <Check className="w-4 h-4 mr-1" />
+                        Save Mask as Object
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={handleCancelInProgressMask}
+                      >
+                        <X className="w-4 h-4 mr-1" />
+                        Cancel
+                      </Button>
+                    </>
+                  ) : (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={handleNewMask}
+                    >
+                      <Plus className="w-4 h-4 mr-1" />
+                      New Mask
+                    </Button>
+                  )}
+                </div>
+              </div>
+
+              {/* Show saved masks */}
+              {segmentedMasks
+                .filter(mask => !mask.inProgress && mask.url)
+                .map((mask, index) => {
+                  // Get the actual index in the full array
+                  const actualIndex = segmentedMasks.findIndex(m => m.url === mask.url);
+                  
+                  return (
+                    <div key={mask.url} className="flex flex-col p-2 border rounded-md space-y-2">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center space-x-2">
+                          <img 
+                            src={mask.url} 
+                            alt={mask.name} 
+                            className="w-12 h-12 object-contain"
+                          />
+                          {mask.isEditing ? (
+                            <div className="flex items-center space-x-2">
+                              <Input
+                                value={mask.name}
+                                onChange={(e) => handleRenameMask(actualIndex, e.target.value)}
+                                onKeyPress={(e) => handleKeyPress(e, actualIndex, mask.name)}
+                                className="h-8 w-40 text-sm"
+                                autoFocus
+                              />
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => handleFinishRename(actualIndex, mask.name)}
+                                className="h-8 w-8"
+                              >
+                                <Check className="w-4 h-4" />
+                              </Button>
+                            </div>
+                          ) : (
+                            <div className="flex items-center space-x-2">
+                              <span className="text-sm">{mask.name}</span>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => handleStartRename(actualIndex)}
+                                className="h-8 w-8"
+                              >
+                                <Pencil className="w-4 h-4" />
+                              </Button>
+                            </div>
+                          )}
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleApplyMask(mask.url, actualIndex)}
+                          >
+                            {mask.isApplied ? 'Applied' : 'Apply Mask'}
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => handleDeleteMask(actualIndex)}
+                            className="h-8 w-8"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                        </div>
+                      </div>
+                      {mask.trajectory ? (
+                        <div className="flex space-x-2">
+                          <Button
+                            className="flex-1 bg-blue-600 hover:bg-blue-700 text-white"
+                            size="sm"
+                            onClick={() => handleToggleTrajectory(mask.url)}
+                          >
+                            {mask.trajectory.isVisible ? 'Hide' : 'Show'} Trajectory
+                          </Button>
+                          <Button
+                            className="flex-1 bg-purple-600 hover:bg-purple-700 text-white"
+                            size="sm"
+                            onClick={() => handleRedoTrajectory(mask.url)}
+                          >
+                            Redo
+                          </Button>
+                        </div>
+                      ) : recordingMotion === mask.url ? (
+                        <div className="flex space-x-2">
+                          <Button
+                            className="flex-1 bg-green-600 hover:bg-green-700 text-white"
+                            size="sm"
+                            onClick={handleSaveMotion}
+                          >
+                            <Check className="w-4 h-4 mr-1" />
+                            Save Motion
+                          </Button>
+                          <Button
+                            className="flex-1 bg-red-600 hover:bg-red-700 text-white"
+                            size="sm"
+                            onClick={handleCancelMotion}
+                          >
+                            <X className="w-4 h-4 mr-1" />
+                            Cancel
+                          </Button>
+                        </div>
+                      ) : (
+                        <Button
+                          className="w-full bg-purple-600 hover:bg-purple-700 text-white"
+                          size="sm"
+                          disabled={!mask.isApplied}
+                          onClick={() => handleControlMotion(mask.id, mask.url)}
+                        >
+                          Control Motion
+                        </Button>
+                      )}
+                    </div>
+                  );
+                })}
+            </div>
           </div>
-          
-        <div className="shrink-0 h-[56px] border-b bg-white w-full flex items-center overflow-x-auto z-[49] p-2 gap-x-2">
-          <div className="flex items-center h-full justify-center">
-            <Button
-                // onClick={onCancelSegmentation}
-                size="sm"
-                variant="destructive"
-                className="flex items-center gap-x-2"
-            >
-              <X className="size-4" />
-                Cancel
-            </Button>
-          </div>
-            <div className="flex items-center h-full justify-center">
-              <Button
-                  // onClick={() => handleSubmitSegmentation(segmentationPoints)}
-                  size="sm"
-                  variant="default"
-                  className="flex items-center gap-x-2"
-                  // disabled={segmentationPoints.length === 0}
-              >
-                <Check className="size-4" />
-                  Done
-              </Button>
-          </div>
-        </div>
         </ScrollArea>
+        
         <ToolSidebarClose onClick={onClose} />
       </aside>
     );

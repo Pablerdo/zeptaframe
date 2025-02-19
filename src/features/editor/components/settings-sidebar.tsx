@@ -24,40 +24,33 @@ export const SettingsSidebar = ({
 }: SettingsSidebarProps) => {
   const workspace = editor?.getWorkspace();
 
-  const initialWidth = useMemo(() => `${workspace?.width ?? 0}`, [workspace]);
-  const initialHeight = useMemo(() => `${workspace?.height ?? 0}`, [workspace]);
+  // const initialWidth = useMemo(() => `${workspace?.width ?? 0}`, [workspace]);
+  // const initialHeight = useMemo(() => `${workspace?.height ?? 0}`, [workspace]);
   const initialBackground = useMemo(() => workspace?.fill ?? "#ffffff", [workspace]);
 
-  const [width, setWidth] = useState(initialWidth);
-  const [height, setHeight] = useState(initialHeight);
+  // const [width, setWidth] = useState(initialWidth);
+  // const [height, setHeight] = useState(initialHeight);
   const [background, setBackground] = useState(initialBackground);
 
-  useEffect(() => {
-    setWidth(initialWidth);
-    setHeight(initialHeight);
-    setBackground(initialBackground);
-  }, 
-  [
-    initialWidth,
-    initialHeight,
-    initialBackground
-  ]);
+  // useEffect(() => {
+  //   setBackground(initialBackground);
+  // }, [initialBackground]);
 
-  const changeWidth = (value: string) => setWidth(value);
-  const changeHeight = (value: string) => setHeight(value);
+  // const changeWidth = (value: string) => setWidth(value);
+  // const changeHeight = (value: string) => setHeight(value);
   const changeBackground = (value: string) => {
     setBackground(value);
     editor?.changeBackground(value);
   };
 
-  const onSubmit = (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
+  // const onSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+  //   e.preventDefault();
 
-    editor?.changeSize({
-      width: parseInt(width, 10),
-      height: parseInt(height, 10),
-    });
-  }
+  //   editor?.changeSize({
+  //     width: parseInt(width, 10),
+  //     height: parseInt(height, 10),
+  //   });
+  // }
 
   const onClose = () => {
     onChangeActiveTool("select");
@@ -75,30 +68,30 @@ export const SettingsSidebar = ({
         description="Change the look of your workspace"
       />
       <ScrollArea>
-        <form className="space-y-4 p-4" onSubmit={onSubmit}>
+        <form className="space-y-4 p-4"> {/* //</ScrollArea>onSubmit={onSubmit}> */}
           <div className="space-y-2">
-            <Label>
-              Height
-            </Label>
-            <Input
-              placeholder="Height"
-              value={height}
-              type="number"
-              onChange={(e) => changeHeight(e.target.value)}
-            />
-          </div>
           <div className="space-y-2">
             <Label>
               Width
             </Label>
             <Input
               placeholder="Width"
-              value={width}
+              value="720" //locked at 720 for now
               type="number"
-              onChange={(e) => changeWidth(e.target.value)}
+              disabled
             />
           </div>
-          <Button type="submit" className="w-full">
+            <Label>
+              Height
+            </Label>
+            <Input
+              placeholder="Height"
+              value="480" //locked at 480 for now
+              type="number"
+              disabled
+            />
+          </div>
+          <Button type="submit" className="w-full" disabled>
             Resize
           </Button>
         </form>
