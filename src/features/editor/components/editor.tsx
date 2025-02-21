@@ -36,6 +36,7 @@ import { SettingsSidebar } from "@/features/editor/components/settings-sidebar";
 import { SegmentationSidebar } from "@/features/editor/components/segmentation-sidebar";
 import { ChevronDown } from "lucide-react";
 import { cn } from "@/lib/utils";
+import VideoTimeline from "@/features/editor/components/video-timeline";
 
 interface EditorProps {
   initialData: ResponseType["data"];
@@ -279,6 +280,7 @@ export const Editor = ({ initialData }: EditorProps) => {
               timelineCollapsed && "h-0"
             )}>
             <div className="min-w-[800px] h-full p-4">
+              <VideoTimeline onGenerateVideo={() => {}} />
               {/* Timeline content will go here */}
             </div>
           </div>
