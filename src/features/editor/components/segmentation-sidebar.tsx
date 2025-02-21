@@ -67,6 +67,17 @@
     const [segmentedMasks, setSegmentedMasks] = useState<SegmentedMask[]>([]);
     const [isSegmentationActive, setIsSegmentationActive] = useState(false);
     const [recordingMotion, setRecordingMotion] = useState<string | null>(null);
+    const [activeAnimations, setActiveAnimations] = useState<{[key: string]: {
+      stop: () => void;
+      isPlaying: boolean;
+    }}>({});
+
+    const interpolatePosition = (start: {x: number, y: number}, end: {x: number, y: number}, progress: number): {x: number, y: number} => {
+      return {
+        x: start.x + (end.x - start.x) * progress,
+        y: start.y + (end.y - start.y) * progress
+      };
+    };
 
     const handleDecodingResults = useCallback((decodingResults: { 
       masks: { dims: number[]; }; 
@@ -907,7 +918,176 @@
       console.log('🚫 Cancelled motion recording');
     };
 
+    const createTrajectoryAnimation = (
+      editor: Editor, 
+      maskUrl: string, 
+      trajectoryPoints: Array<{x: number, y: number}>
+    ) => {
+      console.log('🎬 Creating animation for mask:', maskUrl);
+      console.log('📍 Trajectory points:', trajectoryPoints);
+
+      if (!editor?.canvas) {
+        console.error('❌ No canvas found in editor');
+        return null;
+      }
+
+      // Create animation canvas with visible debugging style
+      const animationCanvas = document.createElement('canvas');
+      const parentElement = (editor.canvas.getElement() as HTMLCanvasElement).parentElement;
+      
+      // Match parent dimensions
+      animationCanvas.width = parentElement?.offsetWidth || 720;
+      animationCanvas.height = parentElement?.offsetHeight || 480;
+      
+      // Match parent positioning
+      animationCanvas.style.position = 'absolute';
+      animationCanvas.style.left = '0';  // Align with parent
+      animationCanvas.style.top = '0';   // Align with parent
+      animationCanvas.style.width = '100%';
+      animationCanvas.style.height = '100%';
+      animationCanvas.style.pointerEvents = 'none';
+      animationCanvas.style.zIndex = '1000';
+      
+      const ctx = animationCanvas.getContext('2d');
+      if (!ctx) {
+        console.error('❌ Could not get canvas context');
+        return null;
+      }
+
+      if (ctx) {
+        ctx.fillStyle = 'rgba(255, 0, 0, 0.2)'; // Semi-transparent red
+        ctx.fillRect(0, 0, animationCanvas.width, animationCanvas.height);
+      }
+
+      // Load mask image
+      const maskImage = new Image();
+      maskImage.src = maskUrl;
+      console.log('🖼️ Loading mask image:', maskUrl);
+
+      maskImage.onload = () => {
+        console.log('✅ Mask image loaded:', {
+          width: maskImage.width,
+          height: maskImage.height
+        });
+      };
+
+      let animationFrame: number;
+      let progress = 0;
+      const animationDuration = 2000;
+      let startTime: number;
+      
+      const animate = (timestamp: number) => {
+        if (!startTime) {
+          startTime = timestamp;
+          console.log('⏱️ Animation started at:', timestamp);
+        }
+        
+        const elapsed = timestamp - startTime;
+        progress = (elapsed % animationDuration) / animationDuration;
+
+        // Log animation progress every 500ms
+        if (elapsed % 500 < 16) {  // 16ms is roughly one frame
+          console.log('🎭 Animation progress:', {
+            elapsed,
+            progress,
+            timestamp
+          });
+        }
+
+        ctx.clearRect(0, 0, animationCanvas.width, animationCanvas.height);
+
+        const pointIndex = Math.floor(progress * (trajectoryPoints.length - 1));
+        const nextIndex = (pointIndex + 1) % trajectoryPoints.length;
+        const pointProgress = (progress * (trajectoryPoints.length - 1)) % 1;
+
+        const currentPos = interpolatePosition(
+          trajectoryPoints[pointIndex],
+          trajectoryPoints[nextIndex],
+          pointProgress
+        );
+
+        // Log position every 500ms
+        if (elapsed % 500 < 16) {
+          console.log('📍 Current position:', {
+            pointIndex,
+            nextIndex,
+            currentPos,
+            pointProgress
+          });
+        }
+        console.log('🎨 Drawing mask at position:', currentPos);
+        ctx.globalAlpha = 0.5;
+        ctx.drawImage(
+          maskImage,
+          currentPos.x - (parentElement?.offsetWidth || 720) / 2,
+          currentPos.y - (parentElement?.offsetHeight || 480) / 2,
+          parentElement?.offsetWidth || 720,
+          parentElement?.offsetHeight || 480
+        );
+
+        animationFrame = requestAnimationFrame(animate);
+      };
+
+      const start = () => {
+        console.log('▶️ Starting animation');
+        const parent = (editor.canvas.getElement() as HTMLCanvasElement).parentElement;
+        console.log('📌 Canvas parent element:', parent);
+        // parent?.appendChild(activeCanvas);
+
+          // Debug DOM insertion
+        if (!parent) {
+          console.error('❌ No parent element found for canvas');
+          return;
+        }
+
+        // Log parent element details
+        console.log('👆 Parent element details:', {
+          parentId: parent.id,
+          parentClasses: parent.className,
+          parentPosition: window.getComputedStyle(parent).position,
+          parentDimensions: {
+            width: parent.offsetWidth,
+            height: parent.offsetHeight
+          }
+        });
+
+        parent.appendChild(animationCanvas);
+        
+        // Verify canvas was added and its properties
+        console.log('🔍 Animation canvas after append:', {
+          isInDOM: document.contains(animationCanvas),
+          dimensions: {
+            width: animationCanvas.width,
+            height: animationCanvas.height
+          },
+          style: {
+            position: animationCanvas.style.position,
+            left: animationCanvas.style.left,
+            top: animationCanvas.style.top,
+            zIndex: animationCanvas.style.zIndex
+          },
+          computedStyle: animationCanvas ? window.getComputedStyle(animationCanvas) : null
+        });
+        startTime = 0;
+        animate(0);
+      };
+
+      const stop = () => {
+        console.log('⏹️ Stopping animation');
+        cancelAnimationFrame(animationFrame);
+        if (animationCanvas && animationCanvas.parentElement) {
+          console.log('🧹 Cleaning up animation canvas');
+          animationCanvas.parentElement.removeChild(animationCanvas);
+        }
+        // animationCanvas = null;
+      };
+
+      return { start, stop };
+    };
+
     const handleToggleTrajectory = (maskUrl: string) => {
+      console.log('🔄 Toggling trajectory for mask:', maskUrl);
+      
       setSegmentedMasks(prev => {
         const updatedMasks = prev.map(mask => 
           mask.url === maskUrl ? {
@@ -918,45 +1098,38 @@
             }
           } : mask
         );
-        
-        // Log the trajectory state after toggle
-        const toggledMask = updatedMasks.find(mask => mask.url === maskUrl);
-        console.log('👁️ Trajectory visibility toggled:', {
-          maskUrl,
-          isVisible: toggledMask?.trajectory?.isVisible,
-          points: toggledMask?.trajectory?.points
-        });
-        
+        console.log('📝 Updated masks:', updatedMasks);
         return updatedMasks;
       });
 
-      // Toggle trajectory visualization on canvas
       if (editor?.canvas) {
-        let trajectoryObj = editor.canvas.getObjects().find(obj => obj.data?.trajectoryFor === maskUrl);
+        const mask = segmentedMasks.find(m => m.url === maskUrl);
+        console.log('🎭 Found mask:', mask);
         
-        if (trajectoryObj) {
-          // If trajectory exists, toggle visibility
-          trajectoryObj.visible = !trajectoryObj.visible;
-        } else {
-          // If trajectory doesn't exist, create it
-          const mask = segmentedMasks.find(m => m.url === maskUrl);
-          if (mask?.trajectory?.points) {
-            trajectoryObj = new fabric.Polyline(
-              mask.trajectory.points,
-              {
-                stroke: 'blue',
-                strokeWidth: 2,
-                fill: 'transparent',
-                selectable: false,
-                evented: false,
-                visible: true
-              }
-            );
-            trajectoryObj.data = { trajectoryFor: maskUrl };
-            editor.canvas.add(trajectoryObj);
+        if (mask?.trajectory?.points) {
+          if (activeAnimations[maskUrl]) {
+            console.log('⏹️ Stopping existing animation');
+            activeAnimations[maskUrl].stop();
+            setActiveAnimations(prev => {
+              const newAnimations = { ...prev };
+              delete newAnimations[maskUrl];
+              return newAnimations;
+            });
+          } else {
+            console.log('▶️ Creating new animation');
+            const animation = createTrajectoryAnimation(editor, maskUrl, mask.trajectory.points);
+            if (animation) {
+              animation.start();
+              setActiveAnimations(prev => ({
+                ...prev,
+                [maskUrl]: {
+                  stop: animation.stop,
+                  isPlaying: true
+                }
+              }));
+            }
           }
         }
-        editor.canvas.renderAll();
       }
     };
 
@@ -1001,6 +1174,22 @@
         ));
       }
     }, [activeTool, editor?.canvas]);
+
+    // Add cleanup on unmount
+    useEffect(() => {
+      return () => {
+        // Stop all active animations
+        Object.values(activeAnimations).forEach(animation => animation.stop());
+      };
+    }, [activeAnimations]);
+
+    // Add cleanup when sidebar closes
+    useEffect(() => {
+      if (activeTool !== "segment") {
+        Object.values(activeAnimations).forEach(animation => animation.stop());
+        setActiveAnimations({});
+      }
+    }, [activeTool]);
 
     return (
       <aside
