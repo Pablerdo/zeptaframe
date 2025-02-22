@@ -41,24 +41,30 @@ import { cn } from "@/lib/utils";
 import VideoTimeline from "@/features/editor/components/video-timeline";
 import { Button } from "@/components/ui/button";
 import { SegmentedMask } from "@/features/editor/types";
+
 interface EditorProps {
   initialData: ResponseType["data"];
 };
 
+// Add interface for video generation
+interface VideoGeneration {
+  runId: string;
+  status: 'pending' | 'success' | 'error';
+  videoUrl?: string;
+  progress: number;
+}
+
 export const Editor = ({ initialData }: EditorProps) => {
   const { mutate } = useUpdateProject(initialData.id);
+  const [videoGenerations, setVideoGenerations] = useState<VideoGeneration[]>([]);
   const [isGenerating, setIsGenerating] = useState(false);
-
 
   // State for video generation
   const [prompt, setPrompt] = useState("");
   const [workspaceURL, setWorkspaceURL] = useState<string | null>(null);
   const [segmentedMasks, setSegmentedMasks] = useState<SegmentedMask[]>([]);
-  const [maskURLs, setMaskURLs] = useState<string | null>(null);
-
 
   // eslint-disable-next-line react-hooks/exhaustive-deps
-
   const debouncedSave = useCallback(
     debounce(
       (values: { 
@@ -87,7 +93,6 @@ export const Editor = ({ initialData }: EditorProps) => {
     clearSelectionCallback: onClearSelection,
     saveCallback: debouncedSave,
   });
-
 
   const onChangeActiveTool = useCallback((tool: ActiveTool) => {
     if (tool === "draw") {
@@ -140,6 +145,39 @@ export const Editor = ({ initialData }: EditorProps) => {
     console.log("Add button clicked");
   };
 
+  useEffect(() => {
+    const intervals: NodeJS.Timeout[] = [];
+
+    videoGenerations.forEach((gen, index) => {
+      if (gen.status === 'pending') {
+        const intervalId = setInterval(async () => {
+          try {
+            const response = await fetch(`/api/webhook-video?runId=${gen.runId}`);
+            const data = await response.json();
+
+            if (data.status === "success") {
+              setVideoGenerations(prev => prev.map((g, i) => 
+                i === index ? {
+                  ...g,
+                  status: 'success',
+                  videoUrl: data.videoUrl,
+                  progress: 100
+                } : g
+              ));
+              clearInterval(intervalId);
+            }
+          } catch (error) {
+            console.error("Error checking video status:", error);
+          }
+        }, 5000);
+        
+        intervals.push(intervalId);
+      }
+    });
+
+    return () => intervals.forEach(id => clearInterval(id));
+  }, [videoGenerations]);
+
   const handleGenerateVideo = async () => {
     try {
       setIsGenerating(true);
@@ -154,53 +192,66 @@ export const Editor = ({ initialData }: EditorProps) => {
 
       // const formData = new FormData()
 
+      const trajectories = segmentedMasks.map(mask => mask.trajectory);
+      const rotations = segmentedMasks.map(mask => mask.rotation);
+      const masksURL = segmentedMasks.map(mask => mask.url);
+
       const videoGenData = {
         "input_image": workspaceURL,
         "input_masks": masksURL,
         "input_prompt": prompt,
         "input_trajectories": JSON.stringify(trajectories),
         "input_rotations": JSON.stringify(rotations)
-      }
+      };
       
       const response = await fetch("/api/generate-video", {
         method: "POST",
         body: JSON.stringify(videoGenData),
-      })
+      });
 
-      const data = await response.json()
-      console.log(data)
+      const data = await response.json();
+      console.log(data);
 
       if (data.runId) {
-        setVideoRunId(data.runId)
-        setVideoUrl(data.videoUrl)
+        // Add new video generation to array
+        setVideoGenerations(prev => [...prev, {
+          runId: data.runId,
+          status: 'pending',
+          progress: 0
+        }]);
 
-        console.log("Video generation started. Please wait...")
-
-        // Start the progress animation
-        const duration = 7 * 60 * 1000 // 7 minutes in milliseconds
-        const interval = 100 // Update every 100ms
-        const steps = duration / interval
-        let currentStep = 0
+        // Start the progress animation for this generation
+        const duration = 7 * 60 * 1000;
+        const interval = 100;
+        const steps = duration / interval;
+        let currentStep = 0;
 
         const progressInterval = setInterval(() => {
-          currentStep++
-          const progress = (currentStep / steps) * 100
-          setGenerationProgress(Math.min(progress, 100))
+          currentStep++;
+          const progress = (currentStep / steps) * 100;
+          
+          setVideoGenerations(prev => prev.map(gen => 
+            gen.runId === data.runId ? {
+              ...gen,
+              progress: Math.min(progress, 100)
+            } : gen
+          ));
 
           if (currentStep >= steps) {
-            clearInterval(progressInterval)
+            clearInterval(progressInterval);
           }
-        }, interval)
+        }, interval);
+
+        console.log("Video generation started. Please wait...");
       } else {
-        throw new Error("No video runId received")
+        throw new Error("No video runId received");
       }
     } catch (error) {
-      console.error("Error:", error)
-      console.log("Error generating video")
+      console.error("Error:", error);
+      console.log("Error generating video");
     } finally {
       setIsGenerating(false);
     }
-
   };
 
   return (
