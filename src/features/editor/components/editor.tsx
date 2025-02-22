@@ -40,39 +40,24 @@ import { ChevronDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 import VideoTimeline from "@/features/editor/components/video-timeline";
 import { Button } from "@/components/ui/button";
-
+import { SegmentedMask } from "@/features/editor/types";
 interface EditorProps {
   initialData: ResponseType["data"];
 };
 
 export const Editor = ({ initialData }: EditorProps) => {
   const { mutate } = useUpdateProject(initialData.id);
-  const [segmentedObjects, setSegmentedObjects] = useState<SegmentedObject[]>([]);
   const [isGenerating, setIsGenerating] = useState(false);
 
 
   // State for video generation
   const [prompt, setPrompt] = useState("");
   const [workspaceURL, setWorkspaceURL] = useState<string | null>(null);
-  const [masksURL, setMasksURL] = useState<string[]>([]);
-  const [trajectories, setTrajectories] = useState<string[]>([]);
-  const [rotations, setRotations] = useState<string[]>([]);
+  const [segmentedMasks, setSegmentedMasks] = useState<SegmentedMask[]>([]);
+  const [maskURLs, setMaskURLs] = useState<string | null>(null);
+
 
   // eslint-disable-next-line react-hooks/exhaustive-deps
-
-  const handleSegmentedObjectChange = (objectId: string, path: CoordinatePath) => {
-    setSegmentedObjects(prev => prev.map(obj => 
-      obj.id === objectId 
-        ? { ...obj, coordinatePath: path }
-        : obj
-    ));
-    
-    mutate({
-      width: initialData.width,
-      height: initialData.height,
-      json: initialData.json
-    });
-  };
 
   const debouncedSave = useCallback(
     debounce(
@@ -236,13 +221,9 @@ export const Editor = ({ initialData }: EditorProps) => {
           activeTool={activeTool}
           onChangeActiveTool={onChangeActiveTool}
           workspaceURL={workspaceURL}
-          masksURL={masksURL}
-          trajectories={trajectories}
-          rotations={rotations}
           setWorkspaceURL={setWorkspaceURL}
-          setMasksURL={setMasksURL}
-          setTrajectories={setTrajectories}
-          setRotations={setRotations}
+          segmentedMasks={segmentedMasks}
+          setSegmentedMasks={setSegmentedMasks}
           // onCancelSegmentation={clearSegmentation}
         />
         <ShapeSidebar

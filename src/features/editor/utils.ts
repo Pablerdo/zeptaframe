@@ -141,3 +141,89 @@ export const createFilter = (value: string) => {
 
   return effect;
 };
+
+// Add these utility functions at the top of the component
+export const interpolatePoints = (points: Array<{x: number, y: number}>, numPoints: number = 49): Array<{x: number, y: number}> => {
+  if (points.length <= 1) return points;
+  if (points.length === 2) {
+    // Linear interpolation for just two points
+    return Array.from({length: numPoints}, (_, i) => {
+      const t = i / (numPoints - 1);
+      return {
+        x: points[0].x + (points[1].x - points[0].x) * t,
+        y: points[0].y + (points[1].y - points[0].y) * t
+      };
+    });
+  }
+
+  // Calculate the total path length
+  let totalLength = 0;
+  for (let i = 1; i < points.length; i++) {
+    const dx = points[i].x - points[i-1].x;
+    const dy = points[i].y - points[i-1].y;
+    totalLength += Math.sqrt(dx * dx + dy * dy);
+  }
+
+  // Create points at equal distances
+  const result: Array<{x: number, y: number}> = [];
+  const segmentLength = totalLength / (numPoints - 1);
+  let currentDist = 0;
+  let currentIndex = 0;
+
+  result.push(points[0]); // Add first point
+
+  for (let i = 1; i < numPoints - 1; i++) {
+    const targetDist = i * segmentLength;
+
+    // Move to the correct segment
+    while (currentIndex < points.length - 1) {
+      const dx = points[currentIndex + 1].x - points[currentIndex].x;
+      const dy = points[currentIndex + 1].y - points[currentIndex].y;
+      const segDist = Math.sqrt(dx * dx + dy * dy);
+      
+      if (currentDist + segDist >= targetDist) {
+        const t = (targetDist - currentDist) / segDist;
+        result.push({
+          x: points[currentIndex].x + dx * t,
+          y: points[currentIndex].y + dy * t
+        });
+        break;
+      }
+      
+      currentDist += segDist;
+      currentIndex++;
+    }
+  }
+
+  result.push(points[points.length - 1]); // Add last point
+  return result;
+};
+
+export const interpolatePosition = (start: {x: number, y: number}, end: {x: number, y: number}, progress: number): {x: number, y: number} => {
+  return {
+    x: start.x + (end.x - start.x) * progress,
+    y: start.y + (end.y - start.y) * progress
+  };
+};
+
+
+export const smoothTrajectory = (points: Array<{x: number, y: number}>, smoothingFactor: number = 0.2): Array<{x: number, y: number}> => {
+  if (points.length <= 2) return points;
+
+  const smoothed: Array<{x: number, y: number}> = [];
+  smoothed.push(points[0]); // Keep first point
+
+  for (let i = 1; i < points.length - 1; i++) {
+    const prev = points[i - 1];
+    const curr = points[i];
+    const next = points[i + 1];
+
+    smoothed.push({
+      x: curr.x + (next.x - prev.x) * smoothingFactor,
+      y: curr.y + (next.y - prev.y) * smoothingFactor
+    });
+  }
+
+  smoothed.push(points[points.length - 1]); // Keep last point
+  return smoothed;
+};

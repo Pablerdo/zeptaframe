@@ -235,6 +235,7 @@ export interface SegmentedMask {
     points: Array<{x: number, y: number}>;
     isVisible: boolean;
   };
+  rotation?: number;
 }
 
 export interface Editor {
