@@ -32,6 +32,14 @@
     editor: Editor | undefined;
     activeTool: ActiveTool;
     onChangeActiveTool: (tool: ActiveTool) => void;
+    workspaceURL: string | null;
+    setWorkspaceURL: (url: string) => void;
+    masksURL: string[];
+    setMasksURL: (urls: string[]) => void;
+    trajectories: string[];
+    setTrajectories: (trajectories: string[]) => void;
+    rotations: string[];
+    setRotations: (rotations: string[]) => void;
   };
   
   interface SegmentedMask {
@@ -51,6 +59,14 @@
     editor,
     activeTool,
     onChangeActiveTool,
+    workspaceURL,
+    setWorkspaceURL,
+    masksURL,
+    setMasksURL,
+    trajectories,
+    setTrajectories,
+    rotations,
+    setRotations
   }: SegmentationSidebarProps) => {
 
     const [imageSize, setImageSize] = useState({ w: 1024, h: 1024 });
@@ -124,6 +140,11 @@
         // Convert the properly scaled mask canvas to a Fabric image
         fabric.Image.fromURL(tempCanvas.toDataURL(), (maskImage) => {
           // Position the mask at the workspace coordinates
+          const maskURL = tempCanvas.toDataURL();
+          
+          // Add the new mask URL to the array
+          setMasksURL([...masksURL, maskURL]);
+
           maskImage.set({
             left: workspace.left || 0,
             top: workspace.top || 0,
@@ -238,6 +259,8 @@
         width: workspaceWidth,
         height: workspaceHeight
       });
+
+      setWorkspaceURL(workspaceImage);
 
       // Restore viewport transform
       editor.canvas.setViewportTransform(currentViewportTransform);
@@ -1257,6 +1280,7 @@
                       variant="ghost"
                       size="sm"
                       onClick={handleNewMask}
+                      disabled={loading}
                     >
                       <Plus className="w-4 h-4 mr-1" />
                       New Mask
@@ -1319,7 +1343,7 @@
                             size="sm"
                             onClick={() => handleApplyMask(mask.url, actualIndex)}
                           >
-                            {mask.isApplied ? 'Applied' : 'Apply Mask'}
+                            {mask.isApplied ? 'Applied' : 'Apply'}
                           </Button>
                           <Button
                             variant="ghost"
@@ -1344,6 +1368,7 @@
                             className="flex-1 bg-purple-600 hover:bg-purple-700 text-white"
                             size="sm"
                             onClick={() => handleRedoTrajectory(mask.url)}
+                            disabled
                           >
                             Redo
                           </Button>

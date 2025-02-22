@@ -19,12 +19,11 @@ export const VideoBox = ({ video, onGenerateVideo }: VideoBoxProps) => {
           Your browser does not support the video tag.
         </video>
       ) : (
-        <Button
-          className="bg-blue-500 text-white hover:bg-blue-600"
-          onClick={onGenerateVideo}
-        >
-          Generate Video
-        </Button>
+        <div className="w-full h-full bg-gray-200 rounded-lg flex items-center justify-center">
+          <span className="text-gray-500 text-sm font-medium tracking-wide">
+            No video has been generated yet
+          </span>
+        </div>
       )}
     </div>
   );

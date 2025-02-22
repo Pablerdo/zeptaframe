@@ -13,15 +13,17 @@ interface PromptSidebarProps {
   editor: Editor | undefined;
   activeTool: ActiveTool;
   onChangeActiveTool: (tool: ActiveTool) => void;
+  prompt: string;
+  setPrompt: (prompt: string) => void;
 }
 
 export const PromptSidebar = ({
   editor,
   activeTool,
   onChangeActiveTool,
+  prompt,
+  setPrompt,
 }: PromptSidebarProps) => {
-  const [prompt, setPrompt] = useState("");
-
   const onClose = () => {
     onChangeActiveTool("select");
   };

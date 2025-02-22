@@ -3,6 +3,7 @@
 import { fabric } from "fabric";
 import debounce from "lodash.debounce";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { Loader2 } from "lucide-react";
 
 import { ResponseType } from "@/features/projects/api/use-get-project";
 import { useUpdateProject } from "@/features/projects/api/use-update-project";
@@ -38,6 +39,7 @@ import { PromptSidebar } from "@/features/editor/components/prompt-sidebar";
 import { ChevronDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 import VideoTimeline from "@/features/editor/components/video-timeline";
+import { Button } from "@/components/ui/button";
 
 interface EditorProps {
   initialData: ResponseType["data"];
@@ -46,6 +48,15 @@ interface EditorProps {
 export const Editor = ({ initialData }: EditorProps) => {
   const { mutate } = useUpdateProject(initialData.id);
   const [segmentedObjects, setSegmentedObjects] = useState<SegmentedObject[]>([]);
+  const [isGenerating, setIsGenerating] = useState(false);
+
+
+  // State for video generation
+  const [prompt, setPrompt] = useState("");
+  const [workspaceURL, setWorkspaceURL] = useState<string | null>(null);
+  const [masksURL, setMasksURL] = useState<string[]>([]);
+  const [trajectories, setTrajectories] = useState<string[]>([]);
+  const [rotations, setRotations] = useState<string[]>([]);
 
   // eslint-disable-next-line react-hooks/exhaustive-deps
 
@@ -144,6 +155,69 @@ export const Editor = ({ initialData }: EditorProps) => {
     console.log("Add button clicked");
   };
 
+  const handleGenerateVideo = async () => {
+    try {
+      setIsGenerating(true);
+      // TODO: Implement actual video generation logic here
+
+      // ARGS:
+      // 1. Image
+      // 2. Prompt
+      // 3. Masks
+      // 4. Trajectories
+      // 5. Rotations
+
+      // const formData = new FormData()
+
+      const videoGenData = {
+        "input_image": workspaceURL,
+        "input_masks": masksURL,
+        "input_prompt": prompt,
+        "input_trajectories": JSON.stringify(trajectories),
+        "input_rotations": JSON.stringify(rotations)
+      }
+      
+      const response = await fetch("/api/generate-video", {
+        method: "POST",
+        body: JSON.stringify(videoGenData),
+      })
+
+      const data = await response.json()
+      console.log(data)
+
+      if (data.runId) {
+        setVideoRunId(data.runId)
+        setVideoUrl(data.videoUrl)
+
+        console.log("Video generation started. Please wait...")
+
+        // Start the progress animation
+        const duration = 7 * 60 * 1000 // 7 minutes in milliseconds
+        const interval = 100 // Update every 100ms
+        const steps = duration / interval
+        let currentStep = 0
+
+        const progressInterval = setInterval(() => {
+          currentStep++
+          const progress = (currentStep / steps) * 100
+          setGenerationProgress(Math.min(progress, 100))
+
+          if (currentStep >= steps) {
+            clearInterval(progressInterval)
+          }
+        }, interval)
+      } else {
+        throw new Error("No video runId received")
+      }
+    } catch (error) {
+      console.error("Error:", error)
+      console.log("Error generating video")
+    } finally {
+      setIsGenerating(false);
+    }
+
+  };
+
   return (
     <div className="h-full flex flex-col">
       <Navbar
@@ -161,6 +235,14 @@ export const Editor = ({ initialData }: EditorProps) => {
           editor={editor}
           activeTool={activeTool}
           onChangeActiveTool={onChangeActiveTool}
+          workspaceURL={workspaceURL}
+          masksURL={masksURL}
+          trajectories={trajectories}
+          rotations={rotations}
+          setWorkspaceURL={setWorkspaceURL}
+          setMasksURL={setMasksURL}
+          setTrajectories={setTrajectories}
+          setRotations={setRotations}
           // onCancelSegmentation={clearSegmentation}
         />
         <ShapeSidebar
@@ -213,23 +295,6 @@ export const Editor = ({ initialData }: EditorProps) => {
           activeTool={activeTool}
           onChangeActiveTool={onChangeActiveTool}
         />
-        <AiSidebar
-          editor={editor}
-          activeTool={activeTool}
-          onChangeActiveTool={onChangeActiveTool}
-        />
-        <RemoveBgSidebar
-          editor={editor}
-          activeTool={activeTool}
-          onChangeActiveTool={onChangeActiveTool}
-        />
-        <ControlMotionSidebar
-          editor={editor}
-          activeTool={activeTool}
-          onChangeActiveTool={onChangeActiveTool}
-          segmentedObjects={segmentedObjects}
-          onSegmentedObjectChange={handleSegmentedObjectChange}
-        />
         <DrawSidebar
           editor={editor}
           activeTool={activeTool}
@@ -239,6 +304,8 @@ export const Editor = ({ initialData }: EditorProps) => {
           editor={editor}
           activeTool={activeTool}
           onChangeActiveTool={onChangeActiveTool}
+          prompt={prompt}
+          setPrompt={setPrompt}
         />
         <SettingsSidebar
           editor={editor}
@@ -265,21 +332,42 @@ export const Editor = ({ initialData }: EditorProps) => {
           </div>
           <div className={cn(
             "bg-zinc-800 flex flex-col transition-all duration-300 absolute bottom-0 left-0 right-0",
-            timelineCollapsed ? "h-[96px]" : "h-[400px]"  // Adjust total height
+            timelineCollapsed ? "h-[120px]" : "h-[400px]"  // Adjust total height
           )}>
             <div 
               className="flex items-center justify-between p-4 border-b border-zinc-700 cursor-pointer hover:bg-zinc-750"
-              onClick={() => setTimelineCollapsed(!timelineCollapsed)}
-            >
-              <span className="text-zinc-400 text-xs font-medium tracking-wide uppercase">
-                Generated video timeline
-              </span>
-              <ChevronDown 
-                className={cn(
-                  "h-4 w-4 text-zinc-400 transition-all",
-                  timelineCollapsed && "rotate-180"
+              onClick={(e) => {
+                // Prevent timeline collapse when clicking the button
+                if (e.target === e.currentTarget) {
+                  setTimelineCollapsed(!timelineCollapsed);
+                }
+              }}
+            > 
+              <Button 
+                className="bg-blue-500 text-white hover:bg-blue-600 flex items-center gap-2"
+                onClick={handleGenerateVideo}
+                disabled={isGenerating}
+              >
+                {isGenerating ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    Generating...
+                  </>
+                ) : (
+                  'Generate Video'
                 )}
-              />
+              </Button>
+              <div className="flex items-center justify-between">
+                <span className="text-zinc-400 text-m font-medium tracking-wide">
+                  Timeline
+                </span>
+                <ChevronDown 
+                  className={cn(
+                    "h-6 w-6 text-zinc-400 transition-all",
+                    timelineCollapsed && "rotate-180"
+                  )}
+                />
+              </div>
             </div>
             <div className={cn(
               "flex-1 overflow-x-auto border-t border-zinc-700 transition-all",
@@ -287,7 +375,6 @@ export const Editor = ({ initialData }: EditorProps) => {
             )}>
             <div className="min-w-[800px] h-full p-4">
               <VideoTimeline onGenerateVideo={() => {}} />
-              {/* Timeline content will go here */}
             </div>
           </div>
         </div>
