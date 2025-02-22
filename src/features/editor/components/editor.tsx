@@ -34,6 +34,7 @@ import { TemplateSidebar } from "@/features/editor/components/template-sidebar";
 import { RemoveBgSidebar } from "@/features/editor/components/remove-bg-sidebar";
 import { SettingsSidebar } from "@/features/editor/components/settings-sidebar";
 import { SegmentationSidebar } from "@/features/editor/components/segmentation-sidebar";
+import { PromptSidebar } from "@/features/editor/components/prompt-sidebar";
 import { ChevronDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 import VideoTimeline from "@/features/editor/components/video-timeline";
@@ -230,6 +231,11 @@ export const Editor = ({ initialData }: EditorProps) => {
           onSegmentedObjectChange={handleSegmentedObjectChange}
         />
         <DrawSidebar
+          editor={editor}
+          activeTool={activeTool}
+          onChangeActiveTool={onChangeActiveTool}
+        />
+        <PromptSidebar
           editor={editor}
           activeTool={activeTool}
           onChangeActiveTool={onChangeActiveTool}

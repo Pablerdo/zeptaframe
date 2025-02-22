@@ -10,6 +10,7 @@ import {
   Type,
   ArrowUpRight,
   Crosshair,
+  MessageSquare,
 } from "lucide-react";
 
 
@@ -76,6 +77,12 @@ export const Sidebar = ({
           isActive={activeTool === "control-motion"}
           onClick={() => onChangeActiveTool("control-motion")}
         /> */}
+        <SidebarItem
+          icon={MessageSquare}
+          label="Prompt"
+          isActive={activeTool === "prompt"}
+          onClick={() => onChangeActiveTool("prompt")}
+        />
         <SidebarItem
           icon={Settings}
           label="Settings"

@@ -109,7 +109,8 @@ export type ActiveTool =
   | "remove-bg"
   | "templates"
   | "control-motion"
-  | "segment";
+  | "segment"
+  | "prompt";
 
 export const FILL_COLOR = "rgba(0,0,0,1)";
 export const STROKE_COLOR = "rgba(0,0,0,1)";
