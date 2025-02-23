@@ -14,7 +14,7 @@ import "./globals.css";
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "Septaframe",
+  title: "Zeptaframe",
   description: "AI-native controllable video editor",
 };
 
