@@ -6,21 +6,21 @@ const cd = new ComfyDeploy({
 })
 
 export async function POST(req: NextRequest) {
-  const formData = await req.formData()
+  const data = await req.json()
  
   // Log the received data for debugging
-  console.log("Received form data:", Object.fromEntries(formData))
+  console.log("Received data:", data)
 
   try {
     const result = await cd.run.deployment.queue({
-      deploymentId: "f3ca5715-b3d1-440c-a348-511a90f17779",
+      deploymentId: "ee7687e0-afac-470d-a7b3-17df9a6abb0d",
       webhook: `https://${process.env.WEBHOOK_URL}/api/webhook-video`,
       inputs: {
-        input_image: formData.get("input_image") as string,
-        input_mask: formData.get("input_mask") as string,
-        input_prompt: formData.get("input_prompt") as string,
-        input_path: formData.get("input_path") as string,
-        input_coords: formData.get("input_coords") as string,
+        input_image: data.input_image,
+        input_masks: data.input_masks,
+        input_prompt: data.input_prompt,
+        input_trajectories: data.input_trajectories,
+        input_rotations: data.input_rotations,
       },
     })
 

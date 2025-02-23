@@ -15,7 +15,6 @@ import {
 import { 
   ActiveTool, 
   Editor,
-  SegmentedObject, 
 } from "@/features/editor/types";
 import { ToolSidebarClose } from "@/features/editor/components/tool-sidebar-close";
 import { ToolSidebarHeader } from "@/features/editor/components/tool-sidebar-header";
@@ -63,7 +62,7 @@ export const SegmentationSidebar = ({
   const [isSegmentationActive, setIsSegmentationActive] = useState(false);
   const [recordingMotion, setRecordingMotion] = useState<string | null>(null);
   const [activeAnimations, setActiveAnimations] = useState<{[key: string]: {
-    
+
     stop: () => void;
     isPlaying: boolean;
   }}>({});

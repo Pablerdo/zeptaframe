@@ -10,8 +10,6 @@ import { useUpdateProject } from "@/features/projects/api/use-update-project";
 
 import { 
   ActiveTool, 
-  CoordinatePath, 
-  SegmentedObject, 
   selectionDependentTools
 } from "@/features/editor/types";
 import { Navbar } from "@/features/editor/components/navbar";
@@ -29,10 +27,7 @@ import { FontSidebar } from "@/features/editor/components/font-sidebar";
 import { ImageSidebar } from "@/features/editor/components/image-sidebar";
 import { FilterSidebar } from "@/features/editor/components/filter-sidebar";
 import { DrawSidebar } from "@/features/editor/components/draw-sidebar";
-import { ControlMotionSidebar } from "@/features/editor/components/control-motion-sidebar";
-import { AiSidebar } from "@/features/editor/components/ai-sidebar";
 import { TemplateSidebar } from "@/features/editor/components/template-sidebar";
-import { RemoveBgSidebar } from "@/features/editor/components/remove-bg-sidebar";
 import { SettingsSidebar } from "@/features/editor/components/settings-sidebar";
 import { SegmentationSidebar } from "@/features/editor/components/segmentation-sidebar";
 import { PromptSidebar } from "@/features/editor/components/prompt-sidebar";
@@ -152,7 +147,7 @@ export const Editor = ({ initialData }: EditorProps) => {
       if (gen.status === 'pending') {
         const intervalId = setInterval(async () => {
           try {
-            const response = await fetch(`/api/webhook-video?runId=${gen.runId}`);
+            const response = await fetch(`/api/comfydeploy/webhook-video?runId=${gen.runId}`);
             const data = await response.json();
 
             if (data.status === "success") {
@@ -181,6 +176,33 @@ export const Editor = ({ initialData }: EditorProps) => {
   const handleGenerateVideo = async () => {
     try {
       setIsGenerating(true);
+      
+      // Strip base64 prefix from workspace and mask URLs
+      const cleanBase64 = (dataUrl: string) => dataUrl.replace(/^data:image\/(png|jpeg|jpg);base64,/, '');
+      
+      const validMasks = segmentedMasks.filter(mask => mask.id && mask.id.trim() !== '');
+      
+      const trajectories = validMasks.map(mask => mask.trajectory?.points || []);
+      const rotations = validMasks.map(mask => mask.rotation || 0);
+      const maskURLs = validMasks.map(mask => mask.url);
+
+      console.log("videoGenData", {        
+        "input_image": workspaceURL!,
+        "input_masks": maskURLs,
+        "input_prompt": prompt,
+        "input_trajectories": JSON.stringify(trajectories),
+        "input_rotations": JSON.stringify(rotations)
+      });
+
+      const videoGenData = {
+        "input_image": cleanBase64(workspaceURL!),
+        "input_masks": maskURLs.map(cleanBase64),
+        "input_prompt": prompt,
+        "input_trajectories": JSON.stringify(trajectories),
+        "input_rotations": JSON.stringify(rotations)
+      };
+
+      console.log("videoGenData", videoGenData);
       // TODO: Implement actual video generation logic here
 
       // ARGS:
@@ -191,21 +213,23 @@ export const Editor = ({ initialData }: EditorProps) => {
       // 5. Rotations
 
       // const formData = new FormData()
+      // const trajectories = segmentedMasks.map(mask => mask.trajectory);
+      // const rotations = segmentedMasks.map(mask => mask.rotation || 0);
+      // const masksURL = segmentedMasks.map(mask => mask.url);
 
-      const trajectories = segmentedMasks.map(mask => mask.trajectory);
-      const rotations = segmentedMasks.map(mask => mask.rotation);
-      const masksURL = segmentedMasks.map(mask => mask.url);
-
-      const videoGenData = {
-        "input_image": workspaceURL,
-        "input_masks": masksURL,
-        "input_prompt": prompt,
-        "input_trajectories": JSON.stringify(trajectories),
-        "input_rotations": JSON.stringify(rotations)
-      };
+      // const videoGenData = {
+      //   "input_image": workspaceURL,
+      //   "input_masks": masksURL,
+      //   "input_prompt": prompt,
+      //   "input_trajectories": JSON.stringify(trajectories),
+      //   "input_rotations": JSON.stringify(rotations)
+      // };
       
-      const response = await fetch("/api/generate-video", {
+      const response = await fetch("/api/comfydeploy/generate-video", {
         method: "POST",
+        headers: {
+          'Content-Type': 'application/json',
+        },
         body: JSON.stringify(videoGenData),
       });
 
@@ -415,4 +439,4 @@ export const Editor = ({ initialData }: EditorProps) => {
       </div>
     </div>
   );
-};
+}
