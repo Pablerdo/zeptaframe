@@ -225,7 +225,7 @@ export const Editor = ({ initialData }: EditorProps) => {
       //   "input_rotations": JSON.stringify(rotations)
       // };
       
-      const response = await fetch("http://localhost:3000/api/comfydeploy/generate-video", {
+      const response = await fetch("/api/comfydeploy/generate-video", {
         method: "POST",
         headers: {
           'Content-Type': 'application/json',
