@@ -14,7 +14,7 @@ export async function POST(req: NextRequest) {
   try {
     const result = await cd.run.deployment.queue({
       deploymentId: "ee7687e0-afac-470d-a7b3-17df9a6abb0d",
-      webhook: `https://${process.env.WEBHOOK_URL}/api/webhook-video`,
+      webhook: `http://localhost:3000/api/comfydeploy/webhook-video`,
       inputs: {
         input_image: data.input_image,
         input_masks: data.input_masks,
