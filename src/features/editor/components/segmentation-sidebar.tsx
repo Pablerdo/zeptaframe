@@ -249,7 +249,6 @@ export const SegmentationSidebar = ({
         
         tempCtx?.drawImage(img, 0, 0, 720, 480, box?.x || 0, 0, box?.w, box?.h);
 
-
         // tempCtx?.drawImage(img, 0, 0, workspaceWidth, workspaceHeight, box?.x || 0, box?.y || 0, box?.w, box?.h);
       
         samWorker.current?.postMessage({
@@ -397,6 +396,12 @@ export const SegmentationSidebar = ({
           setIsSegmentationActive(false);
           editor.canvas.renderAll();
         });
+        
+        // Reset current mask state
+        setMask(null);
+        setPrevMaskArray(null);
+        pointsRef.current = [];
+        setIsSegmentationActive(false);
       }
     }
   };
