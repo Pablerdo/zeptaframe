@@ -37,18 +37,19 @@ import VideoTimeline from "@/features/editor/components/video-timeline";
 import { Button } from "@/components/ui/button";
 import { SegmentedMask } from "@/features/editor/types";
 import { dataUrlToFile, uploadToUploadThing } from "@/lib/uploadthing";
+import { VideoGeneration } from "@/features/editor/types";
 
 interface EditorProps {
   initialData: ResponseType["data"];
 };
 
 // Add interface for video generation
-interface VideoGeneration {
-  runId: string;
-  status: 'pending' | 'success' | 'error';
-  videoUrl?: string;
-  progress: number;
-}
+// interface VideoGeneration {
+//   runId: string;
+//   status: 'pending' | 'success' | 'error';
+//   videoUrl?: string;
+//   progress: number;
+// }
 
 export const Editor = ({ initialData }: EditorProps) => {
   const { mutate } = useUpdateProject(initialData.id);
@@ -154,6 +155,7 @@ export const Editor = ({ initialData }: EditorProps) => {
             console.log("checking video status", data);
 
             if (data.status === "success") {
+              console.log("video status success");
               setVideoGenerations(prev => prev.map((g, i) => 
                 i === index ? {
                   ...g,
@@ -429,7 +431,7 @@ export const Editor = ({ initialData }: EditorProps) => {
               timelineCollapsed && "h-0"
             )}>
             <div className="min-w-[800px] h-full p-4">
-              <VideoTimeline onGenerateVideo={() => {}} />
+              <VideoTimeline videoGenerations={videoGenerations} onGenerateVideo={() => {}} />
             </div>
           </div>
         </div>

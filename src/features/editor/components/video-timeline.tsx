@@ -4,12 +4,14 @@ import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { ChevronRight, Plus } from 'lucide-react';
 import { VideoBox } from './video-box';
+import { VideoGeneration } from '@/features/editor/types';
 
 interface VideoTimelineProps {
   onGenerateVideo: (index: number) => void;
+  videoGenerations: VideoGeneration[];
 }
 
-const VideoTimeline = ({ onGenerateVideo }: VideoTimelineProps) => {
+const VideoTimeline = ({ onGenerateVideo, videoGenerations }: VideoTimelineProps) => {
   const [videoBoxes] = useState(Array(5).fill(null));
 
   return (

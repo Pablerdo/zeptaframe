@@ -207,6 +207,13 @@ export type BuildEditorProps = {
   setFontFamily: (value: string) => void;
 };
 
+export interface VideoGeneration {
+  runId: string;
+  status: 'pending' | 'success' | 'error';
+  videoUrl?: string;
+  progress: number;
+}
+
 export interface Coordinate {
   x: number;
   y: number;
