@@ -1,3 +1,4 @@
+import { useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 
 interface VideoBoxProps {
@@ -6,14 +7,26 @@ interface VideoBoxProps {
 }
 
 export const VideoBox = ({ video, onGenerateVideo }: VideoBoxProps) => {
+  const videoRef = useRef<HTMLVideoElement>(null);
+  
+  // Auto-play video when it loads
+  useEffect(() => {
+    if (video && videoRef.current) {
+      videoRef.current.load();
+    }
+  }, [video]);
+
   return (
     <div 
-      className="w-[300px] h-[200px] relative border border-gray-300 rounded-lg flex items-center justify-center bg-gray-50"
+      className="w-[720px] h-[480px] relative border border-gray-300 rounded-lg flex items-center justify-center bg-gray-50"
     >
       {video ? (
         <video
+          ref={videoRef}
           className="w-full h-full object-cover"
-          poster={`/path/to/first-frame.jpg`}
+          controls
+          autoPlay
+          loop
         >
           <source src={video} type="video/mp4" />
           Your browser does not support the video tag.

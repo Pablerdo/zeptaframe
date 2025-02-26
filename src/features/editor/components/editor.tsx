@@ -43,13 +43,6 @@ interface EditorProps {
   initialData: ResponseType["data"];
 };
 
-// Add interface for video generation
-// interface VideoGeneration {
-//   runId: string;
-//   status: 'pending' | 'success' | 'error';
-//   videoUrl?: string;
-//   progress: number;
-// }
 
 export const Editor = ({ initialData }: EditorProps) => {
   const { mutate } = useUpdateProject(initialData.id);
@@ -144,18 +137,21 @@ export const Editor = ({ initialData }: EditorProps) => {
 
   useEffect(() => {
     const intervals: NodeJS.Timeout[] = [];
+    console.log("setting up video status check intervals");
 
+    // Only create intervals for pending generations that don't have one yet
     videoGenerations.forEach((gen, index) => {
       if (gen.status === 'pending') {
+        console.log(`Setting up interval for video generation ${gen.runId}`);
+        
         const intervalId = setInterval(async () => {
+          console.log(`Checking status for video generation ${gen.runId}`);
           try {
             const response = await fetch(`/api/comfydeploy/webhook-video?runId=${gen.runId}`);
             const data = await response.json();
             
-            console.log("checking video status", data);
-
             if (data.status === "success") {
-              console.log("video status success");
+              console.log(`Video generation ${gen.runId} completed successfully`);
               setVideoGenerations(prev => prev.map((g, i) => 
                 i === index ? {
                   ...g,
@@ -167,7 +163,7 @@ export const Editor = ({ initialData }: EditorProps) => {
               clearInterval(intervalId);
             }
           } catch (error) {
-            console.error("Error checking video status:", error);
+            console.error(`Error checking status for video ${gen.runId}:`, error);
           }
         }, 5000);
         
@@ -175,8 +171,12 @@ export const Editor = ({ initialData }: EditorProps) => {
       }
     });
 
-    return () => intervals.forEach(id => clearInterval(id));
-  }, [videoGenerations]);
+    // Cleanup function to clear all intervals when component unmounts or dependencies change
+    return () => {
+      console.log(`Cleaning up ${intervals.length} status check intervals`);
+      intervals.forEach(id => clearInterval(id));
+    };
+  }, [videoGenerations.map(gen => gen.runId).join(',')]); // Only depend on the runIds
 
   const handleGenerateVideo = async () => {
     try {
@@ -389,7 +389,7 @@ export const Editor = ({ initialData }: EditorProps) => {
           </div>
           <div className={cn(
             "bg-zinc-800 flex flex-col transition-all duration-300 absolute bottom-0 left-0 right-0",
-            timelineCollapsed ? "h-[120px]" : "h-[400px]"  // Adjust total height
+            timelineCollapsed ? "h-[120px]" : "h-[700px]"  // Adjust total height
           )}>
             <div 
               className="flex items-center justify-between p-4 border-b border-zinc-700 cursor-pointer hover:bg-zinc-750"
@@ -431,7 +431,7 @@ export const Editor = ({ initialData }: EditorProps) => {
               timelineCollapsed && "h-0"
             )}>
             <div className="min-w-[800px] h-full p-4">
-              <VideoTimeline videoGenerations={videoGenerations} onGenerateVideo={() => {}} />
+              <VideoTimeline videoGenerations={videoGenerations} onGenerateVideo={handleGenerateVideo} />
             </div>
           </div>
         </div>
