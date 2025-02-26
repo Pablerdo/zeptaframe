@@ -28,6 +28,7 @@
     "@radix-ui/react-tooltip": "^1.1.2",
     "@tanstack/react-query": "^5.50.1",
     "@uploadthing/react": "^6.7.2",
+    "aws-sdk": "^2.1692.0",
     "bcryptjs": "^2.4.3",
     "class-variance-authority": "^0.7.0",
     "clsx": "^2.1.1",
@@ -58,6 +59,7 @@
     "unsplash-js": "^7.0.19",
     "uploadthing": "^6.13.2",
     "use-file-picker": "^2.1.2",
+    "uuid": "^11.1.0",
     "uuidv4": "^6.2.13",
     "zod": "^3.23.8",
     "zustand": "^4.5.4"

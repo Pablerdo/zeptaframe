@@ -9,7 +9,8 @@ import {
   canvasToFloat32Array,
   float32ArrayToCanvas,
   sliceTensor,
-  maskCanvasToFloat32Array
+  maskCanvasToFloat32Array,
+  float32ArrayToBinaryMask
 } from "@/sam/lib/imageutils";
 
 import { 
@@ -58,6 +59,7 @@ export const SegmentationSidebar = ({
   const [device, setDevice] = useState(null);
   const [prevMaskArray, setPrevMaskArray] = useState<Float32Array | null>(null);
   const [mask, setMask] = useState<HTMLCanvasElement | null>(null);
+  const [maskBinary, setMaskBinary] = useState<HTMLCanvasElement | null>(null);
   const pointsRef = useRef<Array<{ x: number; y: number; label: number }>>([]);
   const [isSegmentationActive, setIsSegmentationActive] = useState(false);
   const [recordingMotion, setRecordingMotion] = useState<string | null>(null);
@@ -79,8 +81,12 @@ export const SegmentationSidebar = ({
     const bestMaskIdx = maskScores.indexOf(Math.max(...maskScores));
     const bestMaskArray = sliceTensor(maskTensors, bestMaskIdx)
     let bestMaskCanvas = float32ArrayToCanvas(bestMaskArray, width, height)
+    let bestMaskBinary = float32ArrayToBinaryMask(bestMaskArray, width, height)
+
     bestMaskCanvas = resizeCanvas(bestMaskCanvas, { w: 720, h: 480 });
+    bestMaskBinary = resizeCanvas(bestMaskBinary, { w: 720, h: 480 });
     setMask(bestMaskCanvas);
+    setMaskBinary(bestMaskBinary);
     setPrevMaskArray(bestMaskArray);
 
     // Add mask to canvas if in segment mode
@@ -119,7 +125,7 @@ export const SegmentationSidebar = ({
           height: workspaceHeight, // Original workspace height
           selectable: false,
           evented: false,
-          opacity: 0.5
+          opacity: 0.9,
         });
 
         // Remove any existing mask before adding the new one
@@ -243,6 +249,7 @@ export const SegmentationSidebar = ({
         
         tempCtx?.drawImage(img, 0, 0, 720, 480, box?.x || 0, 0, box?.w, box?.h);
 
+
         // tempCtx?.drawImage(img, 0, 0, workspaceWidth, workspaceHeight, box?.x || 0, box?.y || 0, box?.w, box?.h);
       
         samWorker.current?.postMessage({
@@ -319,14 +326,15 @@ export const SegmentationSidebar = ({
     
     setIsSegmentationActive(true);
     setSegmentedMasks((prev: SegmentedMask[]): SegmentedMask[] => [
-      { id: "", url: '', name: 'New Object', inProgress: true },
+      { id: "", url: '', binaryUrl: '', name: 'New Object', inProgress: true },
       ...prev.map(mask => ({ ...mask, isApplied: false }))
     ]);
   };
 
   const handleSaveInProgressMask = () => {
-    if (mask) {
+    if (mask && maskBinary) {
       const maskDataUrl = mask.toDataURL('image/png');
+      const maskBinaryDataUrl = maskBinary.toDataURL('image/png');
       const newMaskId = crypto.randomUUID();
       
       // Get count of actual saved masks (excluding the stub)
@@ -334,13 +342,14 @@ export const SegmentationSidebar = ({
 
       // First update the state
       setSegmentedMasks((prev: SegmentedMask[]): SegmentedMask[] => [
-        { id: "", url: '', name: 'New Object', inProgress: false }, // New stub at top
+        { id: "", url: '', binaryUrl: '', name: 'New Object', inProgress: false }, // New stub at top
         ...prev.map((mask, index) => 
           index === 0 ? 
           { 
             ...mask, 
             id: newMaskId,
             url: maskDataUrl, 
+            binaryUrl: maskBinaryDataUrl,
             inProgress: false, 
             isApplied: true,
             name: `Object ${savedMasksCount + 1}` 
@@ -370,7 +379,7 @@ export const SegmentationSidebar = ({
             height: workspace.height || 480,
             selectable: false,
             evented: false,
-            opacity: 0.5
+            opacity: 0.9,
           });
 
           // Explicitly set the data property with both isMask and url
@@ -385,16 +394,10 @@ export const SegmentationSidebar = ({
           // Double check the data is set
           const addedObject = editor.canvas.getObjects().find(obj => obj.data?.isMask);
           console.log('New mask saved with data:', addedObject?.data);
-          
+          setIsSegmentationActive(false);
           editor.canvas.renderAll();
         });
       }
-
-      // Reset the current mask state
-      setIsSegmentationActive(false);
-      setMask(null);
-      setPrevMaskArray(null);
-      pointsRef.current = [];
     }
   };
 
@@ -414,7 +417,7 @@ export const SegmentationSidebar = ({
     
     // Reset the top stub to "New Mask" state
     setSegmentedMasks((prev: SegmentedMask[]): SegmentedMask[] => [
-      { id: "", url: '', name: 'New Object', inProgress: false },
+      { id: "", url: '', binaryUrl: '', name: 'New Object', inProgress: false },
       ...prev.filter(mask => !mask.inProgress)
     ]);
   };
@@ -459,7 +462,7 @@ export const SegmentationSidebar = ({
         height: workspace.height || 480,
         selectable: false,
         evented: false,
-        opacity: 0.5
+        opacity: 0.9
       });
 
       // Explicitly set the data property with both isMask and url
@@ -763,18 +766,18 @@ export const SegmentationSidebar = ({
     });
 
     // Draw trajectory on canvas
-    const trajectory = new fabric.Polyline(
-      points,
-      {
-        stroke: 'blue',
-        strokeWidth: 2,
-        fill: 'transparent',
-        selectable: false,
-        evented: false
-      }
-    );
-    trajectory.data = { trajectoryFor: recordingMotion };
-    editor.canvas.add(trajectory);
+    // const trajectory = new fabric.Polyline(
+    //   points,
+    //   {
+    //     stroke: 'blue',
+    //     strokeWidth: 2,
+    //     fill: 'transparent',
+    //     selectable: false,
+    //     evented: false
+    //   }
+    // );
+    // trajectory.data = { trajectoryFor: recordingMotion };
+    // editor.canvas.add(trajectory);
 
     // Update mask state with trajectory (visible by default when saving)
     setSegmentedMasks((prev: SegmentedMask[]): SegmentedMask[] => prev.map(mask => 
@@ -835,15 +838,22 @@ export const SegmentationSidebar = ({
     maskUrl: string, 
     trajectoryPoints: Array<{x: number, y: number}>
   ) => {
-    console.log('🎬 Creating animation for mask:', maskUrl);
-    console.log('📍 Trajectory points:', trajectoryPoints);
+    // console.log('🎬 Creating animation for mask:', maskUrl);
+    // console.log('📍 Trajectory points:', trajectoryPoints);
 
     if (!editor?.canvas) {
-      console.error('❌ No canvas found in editor');
+      // console.error('❌ No canvas found in editor');
       return null;
     }
 
-    // Create animation canvas with visible debugging style
+    // Get workspace dimensions
+    const workspace = editor.getWorkspace() as fabric.Object;
+    if (!workspace) return null;
+    
+    const workspaceWidth = workspace.width || 720;
+    const workspaceHeight = workspace.height || 480;
+
+    // Create animation canvas
     const animationCanvas = document.createElement('canvas');
     const parentElement = (editor.canvas.getElement() as HTMLCanvasElement).parentElement;
     
@@ -851,10 +861,10 @@ export const SegmentationSidebar = ({
     animationCanvas.width = parentElement?.offsetWidth || 720;
     animationCanvas.height = parentElement?.offsetHeight || 480;
     
-    // Match parent positioning
+    // Position canvas correctly
     animationCanvas.style.position = 'absolute';
-    animationCanvas.style.left = '0';  // Align with parent
-    animationCanvas.style.top = '0';   // Align with parent
+    animationCanvas.style.left = '0';
+    animationCanvas.style.top = '0';
     animationCanvas.style.width = '100%';
     animationCanvas.style.height = '100%';
     animationCanvas.style.pointerEvents = 'none';
@@ -866,21 +876,16 @@ export const SegmentationSidebar = ({
       return null;
     }
 
-    if (ctx) {
-      ctx.fillStyle = 'rgba(255, 0, 0, 0.2)'; // Semi-transparent red
-      ctx.fillRect(0, 0, animationCanvas.width, animationCanvas.height);
-    }
-
     // Load mask image
     const maskImage = new Image();
     maskImage.src = maskUrl;
     console.log('🖼️ Loading mask image:', maskUrl);
 
     maskImage.onload = () => {
-      console.log('✅ Mask image loaded:', {
-        width: maskImage.width,
-        height: maskImage.height
-      });
+      // console.log('✅ Mask image loaded:', {
+      //   width: maskImage.width,
+      //   height: maskImage.height
+      // });
     };
 
     let animationFrame: number;
@@ -891,25 +896,18 @@ export const SegmentationSidebar = ({
     const animate = (timestamp: number) => {
       if (!startTime) {
         startTime = timestamp;
-        console.log('⏱️ Animation started at:', timestamp);
+        // console.log('⏱️ Animation started at:', timestamp);
       }
       
       const elapsed = timestamp - startTime;
       progress = (elapsed % animationDuration) / animationDuration;
 
-      // Log animation progress every 500ms
-      if (elapsed % 500 < 16) {  // 16ms is roughly one frame
-        console.log('🎭 Animation progress:', {
-          elapsed,
-          progress,
-          timestamp
-        });
-      }
-
+      // Clear canvas
       ctx.clearRect(0, 0, animationCanvas.width, animationCanvas.height);
 
+      // Calculate current position on trajectory
       const pointIndex = Math.floor(progress * (trajectoryPoints.length - 1));
-      const nextIndex = (pointIndex + 1) % trajectoryPoints.length;
+      const nextIndex = Math.min(pointIndex + 1, trajectoryPoints.length - 1);
       const pointProgress = (progress * (trajectoryPoints.length - 1)) % 1;
 
       const currentPos = interpolatePosition(
@@ -918,23 +916,31 @@ export const SegmentationSidebar = ({
         pointProgress
       );
 
-      // Log position every 500ms
-      if (elapsed % 500 < 16) {
-        console.log('📍 Current position:', {
-          pointIndex,
-          nextIndex,
-          currentPos,
-          pointProgress
-        });
-      }
-      console.log('🎨 Drawing mask at position:', currentPos);
-      ctx.globalAlpha = 0.5;
+      // Get current viewport transform and zoom
+      const vpt = editor.canvas.viewportTransform || [1, 0, 0, 1, 0, 0];
+      const zoom = editor.canvas.getZoom();
+      
+      // Transform position from object space to screen space
+      const screenX = currentPos.x * vpt[0] + vpt[4];
+      const screenY = currentPos.y * vpt[3] + vpt[5];
+
+      // if (elapsed % 500 < 16) {
+      //   console.log('📍 Current position:', {
+      //     original: currentPos,
+      //     transformed: { x: screenX, y: screenY },
+      //     zoom,
+      //     vpt
+      //   });
+      // }
+
+      // Draw mask centered at the transformed position
+      ctx.globalAlpha = 0.8;
       ctx.drawImage(
         maskImage,
-        currentPos.x - (parentElement?.offsetWidth || 720) / 2,
-        currentPos.y - (parentElement?.offsetHeight || 480) / 2,
-        parentElement?.offsetWidth || 720,
-        parentElement?.offsetHeight || 480
+        screenX - (workspaceWidth * zoom / 2),
+        screenY - (workspaceHeight * zoom / 2),
+        workspaceWidth * zoom,
+        workspaceHeight * zoom
       );
 
       animationFrame = requestAnimationFrame(animate);
@@ -942,44 +948,7 @@ export const SegmentationSidebar = ({
 
     const start = () => {
       console.log('▶️ Starting animation');
-      const parent = (editor.canvas.getElement() as HTMLCanvasElement).parentElement;
-      console.log('📌 Canvas parent element:', parent);
-      // parent?.appendChild(activeCanvas);
-
-        // Debug DOM insertion
-      if (!parent) {
-        console.error('❌ No parent element found for canvas');
-        return;
-      }
-
-      // Log parent element details
-      console.log('👆 Parent element details:', {
-        parentId: parent.id,
-        parentClasses: parent.className,
-        parentPosition: window.getComputedStyle(parent).position,
-        parentDimensions: {
-          width: parent.offsetWidth,
-          height: parent.offsetHeight
-        }
-      });
-
-      parent.appendChild(animationCanvas);
-      
-      // Verify canvas was added and its properties
-      console.log('🔍 Animation canvas after append:', {
-        isInDOM: document.contains(animationCanvas),
-        dimensions: {
-          width: animationCanvas.width,
-          height: animationCanvas.height
-        },
-        style: {
-          position: animationCanvas.style.position,
-          left: animationCanvas.style.left,
-          top: animationCanvas.style.top,
-          zIndex: animationCanvas.style.zIndex
-        },
-        computedStyle: animationCanvas ? window.getComputedStyle(animationCanvas) : null
-      });
+      parentElement?.appendChild(animationCanvas);
       startTime = 0;
       animate(0);
     };
@@ -988,13 +957,11 @@ export const SegmentationSidebar = ({
       console.log('⏹️ Stopping animation');
       cancelAnimationFrame(animationFrame);
       if (animationCanvas && animationCanvas.parentElement) {
-        console.log('🧹 Cleaning up animation canvas');
         animationCanvas.parentElement.removeChild(animationCanvas);
       }
-      // animationCanvas = null;
     };
 
-    return { start, stop };
+    return { start, stop, isPlaying: true };
   };
 
   const handleToggleTrajectory = (maskUrl: string) => {

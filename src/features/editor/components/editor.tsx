@@ -36,6 +36,7 @@ import { cn } from "@/lib/utils";
 import VideoTimeline from "@/features/editor/components/video-timeline";
 import { Button } from "@/components/ui/button";
 import { SegmentedMask } from "@/features/editor/types";
+import { dataUrlToFile, uploadToUploadThing } from "@/lib/uploadthing";
 
 interface EditorProps {
   initialData: ResponseType["data"];
@@ -149,6 +150,8 @@ export const Editor = ({ initialData }: EditorProps) => {
           try {
             const response = await fetch(`/api/comfydeploy/webhook-video?runId=${gen.runId}`);
             const data = await response.json();
+            
+            console.log("checking video status", data);
 
             if (data.status === "success") {
               setVideoGenerations(prev => prev.map((g, i) => 
@@ -177,33 +180,42 @@ export const Editor = ({ initialData }: EditorProps) => {
     try {
       setIsGenerating(true);
       
-      // Strip base64 prefix from workspace and mask URLs
-      const cleanBase64 = (dataUrl: string) => dataUrl.replace(/^data:image\/(png|jpeg|jpg);base64,/, '');
-      
       const validMasks = segmentedMasks.filter(mask => mask.id && mask.id.trim() !== '');
       
       const trajectories = validMasks.map(mask => mask.trajectory?.points || []);
       const rotations = validMasks.map(mask => mask.rotation || 0);
-      const maskURLs = validMasks.map(mask => mask.url);
-
-      console.log("videoGenData", {        
-        "input_image": workspaceURL!,
-        "input_masks": maskURLs,
-        "input_prompt": prompt,
-        "input_trajectories": JSON.stringify(trajectories),
-        "input_rotations": JSON.stringify(rotations)
+      
+      // Upload the workspace image to UploadThing
+      let workspaceImageUrl = "";
+      if (workspaceURL) {
+        const workspaceFile = await dataUrlToFile(workspaceURL, "workspace.png");
+        workspaceImageUrl = await uploadToUploadThing(workspaceFile);
+        console.log("Workspace image uploaded:", workspaceImageUrl);
+      } else {
+        throw new Error("No workspace image available");
+      }
+      
+      // Upload all mask images to UploadThing
+      const maskUploadPromises = validMasks.map(async (mask, index) => {
+        if (!mask.binaryUrl) return "";
+        
+        const maskFile = await dataUrlToFile(mask.binaryUrl, `mask-${index}.png`);
+        return uploadToUploadThing(maskFile);
       });
-
+      
+      const uploadedMaskUrls = await Promise.all(maskUploadPromises);
+      console.log("Masks uploaded:", uploadedMaskUrls);
+      
+      // Now construct the videoGenData with the uploaded URLs
       const videoGenData = {
-        "input_image": cleanBase64(workspaceURL!),
-        "input_masks": maskURLs.map(cleanBase64),
+        "input_image": JSON.stringify([workspaceImageUrl]),
+        "input_masks": JSON.stringify(uploadedMaskUrls),
         "input_prompt": prompt,
         "input_trajectories": JSON.stringify(trajectories),
         "input_rotations": JSON.stringify(rotations)
       };
-
+      
       console.log("videoGenData", videoGenData);
-      // TODO: Implement actual video generation logic here
 
       // ARGS:
       // 1. Image
@@ -212,19 +224,6 @@ export const Editor = ({ initialData }: EditorProps) => {
       // 4. Trajectories
       // 5. Rotations
 
-      // const formData = new FormData()
-      // const trajectories = segmentedMasks.map(mask => mask.trajectory);
-      // const rotations = segmentedMasks.map(mask => mask.rotation || 0);
-      // const masksURL = segmentedMasks.map(mask => mask.url);
-
-      // const videoGenData = {
-      //   "input_image": workspaceURL,
-      //   "input_masks": masksURL,
-      //   "input_prompt": prompt,
-      //   "input_trajectories": JSON.stringify(trajectories),
-      //   "input_rotations": JSON.stringify(rotations)
-      // };
-      
       const response = await fetch("/api/comfydeploy/generate-video", {
         method: "POST",
         headers: {
@@ -232,10 +231,10 @@ export const Editor = ({ initialData }: EditorProps) => {
         },
         body: JSON.stringify(videoGenData),
       });
-
+      
       const data = await response.json();
       console.log(data);
-
+      
       if (data.runId) {
         // Add new video generation to array
         setVideoGenerations(prev => [...prev, {
@@ -243,13 +242,13 @@ export const Editor = ({ initialData }: EditorProps) => {
           status: 'pending',
           progress: 0
         }]);
-
+        
         // Start the progress animation for this generation
         const duration = 7 * 60 * 1000;
         const interval = 100;
         const steps = duration / interval;
         let currentStep = 0;
-
+        
         const progressInterval = setInterval(() => {
           currentStep++;
           const progress = (currentStep / steps) * 100;
@@ -260,12 +259,12 @@ export const Editor = ({ initialData }: EditorProps) => {
               progress: Math.min(progress, 100)
             } : gen
           ));
-
+          
           if (currentStep >= steps) {
             clearInterval(progressInterval);
           }
         }, interval);
-
+        
         console.log("Video generation started. Please wait...");
       } else {
         throw new Error("No video runId received");

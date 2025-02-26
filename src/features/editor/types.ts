@@ -227,6 +227,7 @@ export interface SegmentedObject {
 export interface SegmentedMask {
   id: string;
   url: string;
+  binaryUrl: string;
   name: string;
   isEditing?: boolean;
   inProgress?: boolean;

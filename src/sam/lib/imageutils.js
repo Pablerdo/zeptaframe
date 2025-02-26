@@ -114,15 +114,57 @@ export function sliceTensor(tensor, idx) {
 export function float32ArrayToCanvas(array, width, height) {
   const C = 4; // 4 output channels, RGBA
   const imageData = new Uint8ClampedArray(array.length * C);
-
+  
+  // First pass: identify which pixels are part of the mask
+  const isMasked = new Array(array.length).fill(false);
+  for (let i = 0; i < array.length; i++) {
+    isMasked[i] = array[i] > 0;
+  }
+  
+  // Second pass: identify border pixels (pixels at the edge of the mask)
+  const isBorder = new Array(array.length).fill(false);
+  
+  for (let y = 0; y < height; y++) {
+    for (let x = 0; x < width; x++) {
+      const idx = y * width + x;
+      
+      // Skip if not part of the mask
+      if (!isMasked[idx]) continue;
+      
+      // Check if any neighboring pixel is not masked (8-connected neighbors)
+      const hasNonMaskedNeighbor = 
+        (x > 0 && !isMasked[idx - 1]) ||                     // left
+        (x < width - 1 && !isMasked[idx + 1]) ||             // right
+        (y > 0 && !isMasked[idx - width]) ||                 // top
+        (y < height - 1 && !isMasked[idx + width]) ||        // bottom
+        (x > 0 && y > 0 && !isMasked[idx - width - 1]) ||    // top-left
+        (x < width - 1 && y > 0 && !isMasked[idx - width + 1]) || // top-right
+        (x > 0 && y < height - 1 && !isMasked[idx + width - 1]) || // bottom-left
+        (x < width - 1 && y < height - 1 && !isMasked[idx + width + 1]); // bottom-right
+      
+      isBorder[idx] = hasNonMaskedNeighbor;
+    }
+  }
+  
+  // Third pass: set color values
   for (let srcIdx = 0; srcIdx < array.length; srcIdx++) {
     const trgIdx = srcIdx * C;
-    const maskedPx = array[srcIdx] > 0;
-    imageData[trgIdx] = maskedPx > 0 ? 0x32 : 0;
-    imageData[trgIdx + 1] = maskedPx > 0 ? 0xcd : 0;
-    imageData[trgIdx + 2] = maskedPx > 0 > 0 ? 0x32 : 0;
-    // imageData[trgIdx + 3] = maskedPx > 0 ? 150 : 0 // alpha
-    imageData[trgIdx + 3] = maskedPx > 0 ? 255 : 0; // alpha
+    
+    if (isMasked[srcIdx]) {
+      // All mask pixels get the same light gray color
+      imageData[trgIdx] = 0xaa;     // Red: 170
+      imageData[trgIdx + 1] = 0xaa; // Green: 170
+      imageData[trgIdx + 2] = 0xaa; // Blue: 170
+      
+      // Border pixels get higher opacity than interior pixels
+      imageData[trgIdx + 3] = isBorder[srcIdx] ? 255 : 180;
+    } else {
+      // Background: fully transparent
+      imageData[trgIdx] = 0;
+      imageData[trgIdx + 1] = 0;
+      imageData[trgIdx + 2] = 0;
+      imageData[trgIdx + 3] = 0;
+    }
   }
 
   const canvas = document.createElement("canvas");
@@ -186,4 +228,42 @@ export function maskCanvasToFloat32Array(canvas) {
   }
 
   return float32Array;
+}
+
+/**
+ * Creates a pure binary RGB mask (no alpha channel)
+ * White pixels (255,255,255) represent the segmented object
+ * Black pixels (0,0,0) represent the background
+ * 
+ * @param {Float32Array} array - The mask data from the segmentation model
+ * @param {number} width - Width of the mask
+ * @param {number} height - Height of the mask
+ * @returns {HTMLCanvasElement} - Canvas with the binary mask (RGB only)
+ */
+export function float32ArrayToBinaryMask(array, width, height) {
+  const canvas = document.createElement("canvas");
+  const ctx = canvas.getContext("2d");
+  canvas.width = width;
+  canvas.height = height;
+  
+  // Create image data with RGB values (3 bytes per pixel)
+  const imageData = ctx.createImageData(width, height);
+  const data = imageData.data;
+  
+  for (let srcIdx = 0, dataIdx = 0; srcIdx < array.length; srcIdx++, dataIdx += 4) {
+    // Determine if this pixel is part of the mask
+    const isMasked = array[srcIdx] > 0;
+    
+    // Set RGB values (all channels the same - either 0 or 255)
+    const value = isMasked ? 255 : 0;
+    data[dataIdx] = value;     // R
+    data[dataIdx + 1] = value; // G
+    data[dataIdx + 2] = value; // B
+    data[dataIdx + 3] = 255;   // Alpha always 255 (fully opaque)
+  }
+  
+  // Put the image data on the canvas
+  ctx.putImageData(imageData, 0, 0);
+  
+  return canvas;
 }
