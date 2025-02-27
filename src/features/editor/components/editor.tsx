@@ -280,14 +280,14 @@ export const Editor = ({ initialData }: EditorProps) => {
   };
 
   return (
-    <div className="h-full flex flex-col">
+    <div className="w-full h-full flex flex-col overflow-hidden bg-editor-bg">
       <Navbar
         id={initialData.id}
         editor={editor}
         activeTool={activeTool}
         onChangeActiveTool={onChangeActiveTool}
       />
-      <div className="absolute h-[calc(100%-68px)] w-full top-[68px] flex">
+      <div className="absolute h-[calc(100%-68px)] w-full top-[68px] flex p-2">
         <Sidebar
           activeTool={activeTool}
           onChangeActiveTool={onChangeActiveTool}
@@ -369,30 +369,32 @@ export const Editor = ({ initialData }: EditorProps) => {
           activeTool={activeTool}
           onChangeActiveTool={onChangeActiveTool}
         />
-        <main className="bg-muted flex-1 overflow-auto relative flex flex-col">
+        <main className="bg-editor-bg flex-1 overflow-hidden relative flex flex-col rounded-xl mx-2">
           <Toolbar
             editor={editor}
             activeTool={activeTool}
             onChangeActiveTool={onChangeActiveTool}
           />
-          <div className="flex-1 h-[calc(100%-124px)] bg-muted relative" ref={containerRef}>
+          <div className="flex-1 bg-white rounded-xl shadow-soft relative mx-2 mt-2 mb-4 overflow-hidden" ref={containerRef}>
             <canvas 
               ref={canvasRef} 
               className={activeTool === "segment" ? "cursor-crosshair" : "cursor-default"}
             />
             <button
               onClick={onAddButtonClick}
-              className="absolute right-6 top-1/2 -translate-y-1/2 w-16 h-16 rounded-xl border-2 border-black/80 flex items-center justify-center bg-white shadow-lg hover:shadow-xl hover:scale-105 hover:bg-zinc-50 transition-all duration-200 group"
+              className="absolute right-6 top-1/2 -translate-y-1/2 w-16 h-16 rounded-full border-0 flex items-center justify-center bg-blue-600 shadow-lg hover:shadow-xl hover:scale-105 hover:bg-blue-700 transition-all duration-200 group"
             >
-              <span className="text-4xl font-bold text-black/80 group-hover:text-black transition-colors">+</span>
+              <span className="text-4xl font-bold text-white group-hover:text-white transition-colors">+</span>
             </button>
           </div>
+          
           <div className={cn(
-            "bg-zinc-800 flex flex-col transition-all duration-300 absolute bottom-0 left-0 right-0",
-            timelineCollapsed ? "h-[120px]" : "h-[700px]"  // Adjust total height
+            "bg-editor-timeline rounded-xl flex flex-col transition-all duration-300",
+            timelineCollapsed ? "h-[70px]" : "h-[600px]",
+            "mx-2 mb-2 flex-shrink-0 self-end w-[calc(100%-1rem)]"
           )}>
             <div 
-              className="flex items-center justify-between p-4 border-b border-zinc-700 cursor-pointer hover:bg-zinc-750"
+              className="flex items-center justify-between p-4 border-gray-700 cursor-pointer hover:bg-zinc-750"
               onClick={(e) => {
                 // Prevent timeline collapse when clicking the button
                 if (e.target === e.currentTarget) {
@@ -401,7 +403,7 @@ export const Editor = ({ initialData }: EditorProps) => {
               }}
             > 
               <Button 
-                className="bg-blue-500 text-white hover:bg-blue-600 flex items-center gap-2"
+                className="bg-blue-500 text-white hover:bg-blue-600 flex items-center gap-2 rounded-xl"
                 onClick={handleGenerateVideo}
                 disabled={isGenerating}
               >
@@ -415,26 +417,27 @@ export const Editor = ({ initialData }: EditorProps) => {
                 )}
               </Button>
               <div className="flex items-center justify-between">
-                <span className="text-zinc-400 text-m font-medium tracking-wide">
+                <span className="text-zinc-300 text-m font-medium tracking-wide">
                   Timeline
                 </span>
                 <ChevronDown 
                   className={cn(
-                    "h-6 w-6 text-zinc-400 transition-all",
+                    "h-6 w-6 text-zinc-300 transition-all",
                     timelineCollapsed && "rotate-180"
                   )}
                 />
               </div>
             </div>
             <div className={cn(
-              "flex-1 overflow-x-auto border-t border-zinc-700 transition-all",
+              "flex-1 overflow-x-auto border-zinc-700 transition-all",
               timelineCollapsed && "h-0"
             )}>
-            <div className="min-w-[800px] h-full p-4">
-              <VideoTimeline videoGenerations={videoGenerations} onGenerateVideo={handleGenerateVideo} />
+              <div className="min-w-[800px] h-full p-4">
+                <VideoTimeline videoGenerations={videoGenerations} onGenerateVideo={handleGenerateVideo} />
+              </div>
             </div>
           </div>
-        </div>
+          
           <Footer editor={editor} />
         </main>
       </div>

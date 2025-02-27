@@ -18,7 +18,7 @@ export const VideoBox = ({ video, onGenerateVideo }: VideoBoxProps) => {
 
   return (
     <div 
-      className="w-[720px] h-[480px] relative border border-gray-300 rounded-lg flex items-center justify-center bg-gray-50"
+      className="w-[720px] h-[480px] relative border border-gray-600/30 rounded-xl overflow-hidden flex items-center justify-center bg-gray-800/50 shadow-lg"
     >
       {video ? (
         <video

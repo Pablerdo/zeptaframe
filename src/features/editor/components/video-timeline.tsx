@@ -33,7 +33,7 @@ const VideoTimeline = ({ onGenerateVideo, videoGenerations }: VideoTimelineProps
   }, [videoGenerations]);
 
   return (
-    <div className="w-full overflow-x-auto p-6">
+    <div className="w-full overflow-x-auto px-6">
       <div className="flex items-center space-x-4">
         {videoBoxes.map((videoUrl, index) => (
           <div key={index} className="flex items-center">

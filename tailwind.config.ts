@@ -53,11 +53,24 @@ const config = {
           DEFAULT: "hsl(var(--card))",
           foreground: "hsl(var(--card-foreground))",
         },
+        editor: {
+          bg: "#dfe0e2",
+          sidebar: "#FFFFFF",
+          timeline: "#1E293B",
+          highlight: "#3B82F6",
+        },
       },
       borderRadius: {
         lg: "var(--radius)",
         md: "calc(var(--radius) - 2px)",
         sm: "calc(var(--radius) - 4px)",
+        xl: "1rem",
+        '2xl': "1.5rem",
+      },
+      boxShadow: {
+        'soft': '0 4px 20px 0 rgba(0, 0, 0, 0.05)',
+        'card': '0 8px 30px rgba(0, 0, 0, 0.08)',
+        'highlight': '0 0 0 2px rgba(59, 130, 246, 0.3)',
       },
       keyframes: {
         "accordion-down": {

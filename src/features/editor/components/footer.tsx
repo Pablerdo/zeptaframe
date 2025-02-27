@@ -11,12 +11,12 @@ interface FooterProps {
 
 export const Footer = ({ editor }: FooterProps) => {
   return (
-    <footer className="h-[52px] border-t bg-white w-full flex items-center overflow-x-auto z-[49] p-2 gap-x-1 shrink-0 px-4 flex-row-reverse">
+    <footer className="h-[52px] modern-toolbar w-full flex items-center overflow-x-auto z-[49] p-2 gap-x-1 shrink-0 px-4 flex-row-reverse mx-2 my-2">
       <Hint label="Reset" side="top" sideOffset={10}>
         <Button
           onClick={() => editor?.autoZoom()}
           size="icon"
-          variant="ghost"
+          variant="tool"
           className="h-full"
         >
           <Minimize className="size-4" />
@@ -26,7 +26,7 @@ export const Footer = ({ editor }: FooterProps) => {
         <Button
           onClick={() => editor?.zoomIn()}
           size="icon"
-          variant="ghost"
+          variant="tool"
           className="h-full"
         >
           <ZoomIn className="size-4" />
@@ -36,7 +36,7 @@ export const Footer = ({ editor }: FooterProps) => {
         <Button
           onClick={() => editor?.zoomOut()}
           size="icon"
-          variant="ghost"
+          variant="tool"
           className="h-full"
         >
           <ZoomOut className="size-4" />

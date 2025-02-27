@@ -27,7 +27,7 @@ export const TextSidebar = ({
   return (
     <aside
       className={cn(
-        "bg-white relative border-r z-[40] w-[360px] h-full flex flex-col",
+        "bg-white relative border-r z-[40] rounded-xl w-[360px] h-full flex flex-col",
         activeTool === "text" ? "visible" : "hidden",
       )}
     >

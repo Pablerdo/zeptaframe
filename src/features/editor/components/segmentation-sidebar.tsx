@@ -396,7 +396,7 @@ export const SegmentationSidebar = ({
           setIsSegmentationActive(false);
           editor.canvas.renderAll();
         });
-        
+
         // Reset current mask state
         setMask(null);
         setPrevMaskArray(null);
@@ -1078,7 +1078,7 @@ export const SegmentationSidebar = ({
   return (
     <aside
       className={cn(
-        "bg-white relative border-r z-[40] w-[360px] h-full flex flex-col",
+        "bg-white relative border-r rounded-xl z-[40] w-[360px] h-full flex flex-col",
         activeTool === "segment" ? "visible" : "hidden",
       )}
     >

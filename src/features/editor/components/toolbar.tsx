@@ -156,25 +156,25 @@ export const Toolbar = ({
 
   if (editor?.selectedObjects.length === 0) {
     return (
-      <div className="shrink-0 h-[56px] border-b bg-white w-full flex items-center overflow-x-auto z-[49] p-2 gap-x-2" />
+      <div className="shrink-0 h-[56px] border-b bg-white flex items-center overflow-x-auto z-[49] px-4 gap-x-2 rounded-xl" />
     );
   }
 
   return (
-    <div className="shrink-0 h-[56px] border-b bg-white w-full flex items-center overflow-x-auto z-[49] p-2 gap-x-2">
+    <div className="modern-toolbar h-[56px] flex items-center overflow-x-auto z-[49] px-4 gap-x-2 rounded-xl">
       {!isImage && (
         <div className="flex items-center h-full justify-center">
           <Hint label="Color" side="bottom" sideOffset={5}>
             <Button
               onClick={() => onChangeActiveTool("fill")}
               size="icon"
-              variant="ghost"
+              variant="tool"
               className={cn(
-                activeTool === "fill" && "bg-gray-100"
+                activeTool === "fill" && "bg-blue-50 border-blue-200 text-blue-600"
               )}
             >
               <div
-                className="rounded-sm size-4 border"
+                className="rounded-md size-4 border"
                 style={{ backgroundColor: properties.fillColor }}
               />
             </Button>
@@ -187,15 +187,12 @@ export const Toolbar = ({
             <Button
               onClick={() => onChangeActiveTool("stroke-color")}
               size="icon"
-              variant="ghost"
+              variant="tool"
               className={cn(
-                activeTool === "stroke-color" && "bg-gray-100"
+                activeTool === "stroke-color" && "bg-blue-50 border-blue-200 text-blue-600"
               )}
             >
-              <div
-                className="rounded-sm size-4 border-2 bg-white"
-                style={{ borderColor: properties.strokeColor }}
-              />
+              <BsBorderWidth className="size-4" />
             </Button>
           </Hint>
         </div>
@@ -388,12 +385,12 @@ export const Toolbar = ({
           </Hint>
         </div>
       )}
-      <div className="flex items-center h-full justify-center">
+      <div className="flex items-center h-full justify-center ml-auto">
         <Hint label="Bring forward" side="bottom" sideOffset={5}>
           <Button
             onClick={() => editor?.bringForward()}
             size="icon"
-            variant="ghost"
+            variant="tool"
           >
             <ArrowUp className="size-4" />
           </Button>
@@ -441,8 +438,8 @@ export const Toolbar = ({
           <Button
             onClick={() => editor?.delete()}
             size="icon"
-            variant="ghost"
-            className="text-red-600"
+            variant="tool"
+            className="text-red-600 hover:bg-red-50 hover:border-red-200"
           >
             <Trash className="size-4" />
           </Button>

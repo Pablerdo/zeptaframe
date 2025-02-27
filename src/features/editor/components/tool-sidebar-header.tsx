@@ -1,3 +1,5 @@
+import { cn } from "@/lib/utils";
+
 interface ToolSidebarHeaderProps {
   title: string;
   description?: string;
@@ -5,18 +7,16 @@ interface ToolSidebarHeaderProps {
 
 export const ToolSidebarHeader = ({
   title,
-  description
+  description,
 }: ToolSidebarHeaderProps) => {
   return (
-    <div className="p-4 border-b space-y-1 h-[68px]">
-      <p className="text-sm font-medium">
+    <div className="flex flex-col p-5 border-b">
+      <h2 className="font-semibold text-lg text-foreground">
         {title}
+      </h2>
+      <p className="text-sm text-muted-foreground mt-1">
+        {description}
       </p>
-      {description && (
-        <p className="text-xs text-muted-foreground">
-          {description}
-        </p>
-      )}
     </div>
   );
 };
