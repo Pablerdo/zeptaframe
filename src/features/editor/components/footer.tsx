@@ -11,7 +11,7 @@ interface FooterProps {
 
 export const Footer = ({ editor }: FooterProps) => {
   return (
-    <footer className="h-[52px] modern-toolbar w-full flex items-center overflow-x-auto z-[49] p-2 gap-x-1 shrink-0 px-4 flex-row-reverse mx-2 my-2">
+    <footer className="h-[52px] modern-toolbar flex items-center overflow-x-auto z-[49] p-2 gap-x-1 shrink-0 px-4 flex-row-reverse mx-2 my-2">
       <Hint label="Reset" side="top" sideOffset={10}>
         <Button
           onClick={() => editor?.autoZoom()}
