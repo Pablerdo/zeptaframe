@@ -316,6 +316,10 @@ export const SegmentationSidebar = ({
   }, [loading, editor?.canvas, activeTool]);
 
   const handleNewMask = () => {
+    // Stop all active animations first
+    Object.values(activeAnimations).forEach(animation => animation.stop());
+    setActiveAnimations({});
+    
     // Deapply all masks from canvas
     if (editor?.canvas) {
       const existingMasks = editor.canvas.getObjects().filter(obj => obj.data?.isMask);
@@ -584,6 +588,20 @@ export const SegmentationSidebar = ({
   };
 
   const handleDeleteMask = (index: number) => {
+    // Get the mask URL before removing it from state
+    const maskToDelete = segmentedMasks[index];
+    if (maskToDelete?.url && activeAnimations[maskToDelete.url]) {
+      // Stop the animation for this specific mask
+      activeAnimations[maskToDelete.url].stop();
+      // Remove it from active animations
+      setActiveAnimations(prev => {
+        const newAnimations = { ...prev };
+        delete newAnimations[maskToDelete.url];
+        return newAnimations;
+      });
+    }
+    
+    // Continue with deletion
     setSegmentedMasks((prev: SegmentedMask[]): SegmentedMask[] => prev.filter((_, i) => i !== index));
     if (editor?.canvas) {
       const existingMasks = editor.canvas.getObjects().filter(obj => obj.data?.isMask);
@@ -770,20 +788,6 @@ export const SegmentationSidebar = ({
       isInterpolated: points.length === 49
     });
 
-    // Draw trajectory on canvas
-    // const trajectory = new fabric.Polyline(
-    //   points,
-    //   {
-    //     stroke: 'blue',
-    //     strokeWidth: 2,
-    //     fill: 'transparent',
-    //     selectable: false,
-    //     evented: false
-    //   }
-    // );
-    // trajectory.data = { trajectoryFor: recordingMotion };
-    // editor.canvas.add(trajectory);
-
     // Update mask state with trajectory (visible by default when saving)
     setSegmentedMasks((prev: SegmentedMask[]): SegmentedMask[] => prev.map(mask => 
       mask.url === recordingMotion ? {
@@ -795,6 +799,20 @@ export const SegmentationSidebar = ({
       } : mask
     ));
 
+    // Create and start the animation with the current points
+    console.log('▶️ Creating new animation');
+    const animation = createTrajectoryAnimation(editor, recordingMotion, points);
+    if (animation) {
+      animation.start();
+      setActiveAnimations(prev => ({
+        ...prev,
+        [recordingMotion]: {
+          stop: animation.stop,
+          isPlaying: true
+        }
+      }));
+    }
+    
     // Reset object state and cursor
     maskObject.set({
       hasControls: true,
