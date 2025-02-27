@@ -1078,7 +1078,7 @@ export const SegmentationSidebar = ({
   return (
     <aside
       className={cn(
-        "bg-white relative border-r rounded-xl z-[40] w-[360px] h-full flex flex-col",
+        "bg-white relative border-r rounded-xl z-[40] w-[360px] flex flex-col my-2",
         activeTool === "segment" ? "visible" : "hidden",
       )}
     >
