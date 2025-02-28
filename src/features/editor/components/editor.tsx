@@ -36,7 +36,7 @@ import { cn } from "@/lib/utils";
 import VideoTimeline from "@/features/editor/components/video-timeline";
 import { Button } from "@/components/ui/button";
 import { SegmentedMask } from "@/features/editor/types";
-import { dataUrlToFile, uploadToUploadThing } from "@/lib/uploadthing";
+import { dataUrlToFile, uploadToUploadThing, uploadToUploadThingResidual } from "@/lib/uploadthing";
 import { VideoGeneration } from "@/features/editor/types";
 
 interface EditorProps {
@@ -191,7 +191,7 @@ export const Editor = ({ initialData }: EditorProps) => {
       let workspaceImageUrl = "";
       if (workspaceURL) {
         const workspaceFile = await dataUrlToFile(workspaceURL, "workspace.png");
-        workspaceImageUrl = await uploadToUploadThing(workspaceFile);
+        workspaceImageUrl = await uploadToUploadThingResidual(workspaceFile);
         console.log("Workspace image uploaded:", workspaceImageUrl);
       } else {
         throw new Error("No workspace image available");
@@ -202,7 +202,7 @@ export const Editor = ({ initialData }: EditorProps) => {
         if (!mask.binaryUrl) return "";
         
         const maskFile = await dataUrlToFile(mask.binaryUrl, `mask-${index}.png`);
-        return uploadToUploadThing(maskFile);
+        return uploadToUploadThingResidual(maskFile);
       });
       
       const uploadedMaskUrls = await Promise.all(maskUploadPromises);

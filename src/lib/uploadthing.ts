@@ -38,5 +38,22 @@ export async function uploadToUploadThing(file: File): Promise<string> {
   }
 }
 
+/**
+ * Uploads a file to UploadThing's residualUploader endpoint
+ * @param file - The file to upload
+ * @returns A Promise that resolves to the uploaded file URL
+ */
+export async function uploadToUploadThingResidual(file: File): Promise<string> {
+  try {
+    const res = await uploadFiles("residualUploader", { files: [file] });
+    if (res[0]?.url) {
+      return res[0].url;
+    }
+    throw new Error("Failed to get URL from uploaded file");
+  } catch (error) {
+    console.error("Error uploading file:", error);
+    throw error;
+  }
+}
 
 

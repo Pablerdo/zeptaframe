@@ -70,7 +70,7 @@ export const Navbar = ({
   });
 
   return (
-    <nav className="w-full flex items-center p-4 h-[68px] gap-x-8 border-b lg:pl-[34px] bg-white ">
+    <nav className="w-full flex items-center p-4 h-[68px] gap-x-8 border-b border-black-900 lg:pl-[34px] bg-white ">
       <Logo />
       <div className="w-full flex items-center gap-x-1 h-full">
         <DropdownMenu modal={false}>

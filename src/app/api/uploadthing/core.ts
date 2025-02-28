@@ -28,6 +28,20 @@ export const ourFileRouter = {
       
       return { url: file.url };
     }),
+  residualUploader: f({ image: { maxFileSize: "4MB" } })
+    .middleware(async ({ req }) => {
+      const session = await auth();
+
+      if (!session) throw new UploadThingError("Unauthorized");
+      if (!session.user?.id) throw new UploadThingError("Unauthorized");
+
+      return { userId: session.user.id };
+    })
+    .onUploadComplete(async ({ metadata, file }) => {
+      console.log('▶️ Upload complete:', { metadata, file });
+      return 
+    }),
+
 } satisfies FileRouter;
 
 export type OurFileRouter = typeof ourFileRouter;
