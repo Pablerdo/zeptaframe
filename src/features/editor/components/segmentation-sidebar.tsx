@@ -11,7 +11,7 @@ import {
   sliceTensor,
   maskCanvasToFloat32Array,
   float32ArrayToBinaryMask
-} from "@/sam/lib/imageutils";
+} from "@/app/sam/lib/imageutils";
 
 import { 
   ActiveTool, 
@@ -175,7 +175,7 @@ export const SegmentationSidebar = ({
   const initializeSamWorker = useCallback(() => {
     if (!samWorker.current) {
       console.log("Initializing SAM worker");
-      samWorker.current = new Worker(new URL("../../../sam/worker.js", import.meta.url), {
+      samWorker.current = new Worker(new URL("../../../app/sam/worker.js", import.meta.url), {
         type: "module",
       });
       samWorker.current.addEventListener("message", onWorkerMessage);
