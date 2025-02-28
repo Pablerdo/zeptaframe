@@ -2,7 +2,9 @@ import path from "path";
 
 import * as ort from "onnxruntime-web/all";
 // ort.env.wasm.numThreads=1
-// ort.env.wasm.simd = false;
+// ort.env.wasm.simd = false;'
+ort.env.debug = true;
+
 
 const ENCODER_URL =
   "https://huggingface.co/pablerdo/sam2-tiny/resolve/main/sam2_hiera_tiny_encoder.with_runtime_opt.ort";
