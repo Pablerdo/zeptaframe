@@ -19,7 +19,7 @@ require('dotenv').config();
     // Save the webhook URL to .env.local for your application to use
     fs.writeFileSync(
       '.env.local', 
-      `NEXT_PUBLIC_WEBHOOK_URL=${url}/api/comfydeploy/webhook-video\n`, 
+      `NEXT_PUBLIC_WEBHOOK_URL_NGROK=${url}/api/comfydeploy/webhook-video\n`, 
       { flag: 'a' }
     );
     

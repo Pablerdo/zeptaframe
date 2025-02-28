@@ -10,7 +10,12 @@ export async function POST(req: NextRequest) {
  
   // Log the received data for debugging
   console.log("Received data:", data)
-  const webhookUrl = process.env.NEXT_PUBLIC_WEBHOOK_URL || `http://localhost:3000/api/comfydeploy/webhook-video`;
+
+  const webhookUrl = process.env.DEPLOYMENT_MODE === 'production' 
+  ? process.env.NEXT_PUBLIC_WEBHOOK_URL_PROD
+  : process.env.NEXT_PUBLIC_WEBHOOK_URL_NGROK;
+
+  // const webhookUrl = process.env.NEXT_PUBLIC_WEBHOOK_URL_NGROK;
 
   try {
     const result = await cd.run.deployment.queue({
