@@ -86,7 +86,7 @@ export class SAM2 {
      *  => loop through each ep, catch e if not available and move on
      */
     let session = null;
-    for (let ep of ["webgpu", "cpu"]) {
+    for (let ep of ["cpu"]) { // ["webgpu", "cpu"]) {
       try {
         session = await ort.InferenceSession.create(model, {
           executionProviders: [ep],
