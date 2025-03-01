@@ -3,7 +3,7 @@
 import { fabric } from "fabric";
 import debounce from "lodash.debounce";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Loader2 } from "lucide-react";
+import { Loader2, Plus } from "lucide-react";
 
 import { ResponseType } from "@/features/projects/api/use-get-project";
 import { useUpdateProject } from "@/features/projects/api/use-update-project";
@@ -375,17 +375,23 @@ export const Editor = ({ initialData }: EditorProps) => {
             activeTool={activeTool}
             onChangeActiveTool={onChangeActiveTool}
           />
-          <div className="flex-1 bg-white rounded-xl shadow-soft relative mx-2 mt-2 mb-4 overflow-hidden" ref={containerRef}>
-            <canvas 
-              ref={canvasRef} 
-              className={activeTool === "segment" ? "cursor-crosshair" : "cursor-default"}
-            />
-            <button
-              onClick={onAddButtonClick}
-              className="absolute right-6 top-1/2 -translate-y-1/2 w-16 h-16 rounded-full border-0 flex items-center justify-center bg-blue-600 shadow-lg hover:shadow-xl hover:scale-105 hover:bg-blue-700 transition-all duration-200 group"
-            >
-              <span className="text-4xl font-bold text-white group-hover:text-white transition-colors">+</span>
-            </button>
+          <div className="flex flex-row h-full w-full mb-4 relative overflow-hidden">
+            {/* Main canvas area - takes most of the space */}
+            <div className="flex-1 bg-white rounded-xl shadow-soft relative mx-2 mt-2 overflow-hidden" ref={containerRef}>
+              <canvas 
+                ref={canvasRef} 
+                className={activeTool === "segment" ? "cursor-crosshair" : "cursor-default"}
+              />
+            </div>
+            {/* Slim column for the add button */}
+            <div className="w-16 flex items-center justify-center">
+              <button
+                onClick={onAddButtonClick}
+                className="w-12 h-9 rounded-md flex items-center justify-center bg-blue-500 hover:bg-blue-600 transition-colors duration-200 group relative"
+              >
+                <Plus className="h-5 w-5 text-white" />
+              </button>
+            </div>
           </div>
           
           <div className={cn(
