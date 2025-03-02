@@ -451,11 +451,11 @@ export const Editor = ({ initialData }: EditorProps) => {
           
           <div className={cn(
             "bg-editor-timeline rounded-xl flex flex-col transition-all duration-300",
-            timelineCollapsed ? "h-[70px]" : "h-[600px]",
-            "mx-2 mb-2 flex-shrink-0 self-end w-[calc(100%-1rem)]"
+            timelineCollapsed ? "h-[70px]" : "h-[650px]",
+            "mx-2 mb-1 flex-shrink-0 self-end w-[calc(100%-1rem)]"
           )}>
             <div 
-              className="flex items-center justify-between p-4 border-gray-700 cursor-pointer hover:bg-zinc-750"
+              className="flex items-center justify-between pt-4 px-4 pb-1 border-gray-700 cursor-pointer hover:bg-zinc-750"
               onClick={(e) => {
                 if (e.target === e.currentTarget) {
                   setTimelineCollapsed(!timelineCollapsed);
@@ -492,8 +492,13 @@ export const Editor = ({ initialData }: EditorProps) => {
               "flex-1 overflow-x-auto border-zinc-700 transition-all",
               timelineCollapsed && "h-0"
             )}>
-              <div className="min-w-[800px] h-full p-4">
-                <VideoTimeline videoGenerations={videoGenerations} onGenerateVideo={handleGenerateVideo} />
+              <div className="min-w-[830px] h-full p-4">
+                <VideoTimeline 
+                  videoGenerations={videoGenerations} 
+                  onGenerateVideo={handleGenerateVideo}
+                  workspaceCount={workspaceIds.length}
+                  activeWorkspaceIndex={activeWorkspaceIndex}
+                />
               </div>
             </div>
           </div>

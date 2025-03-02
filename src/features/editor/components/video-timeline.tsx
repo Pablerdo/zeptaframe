@@ -5,60 +5,71 @@ import { Button } from '@/components/ui/button';
 import { ChevronRight, Plus } from 'lucide-react';
 import { VideoBox } from './video-box';
 import { VideoGeneration } from '@/features/editor/types';
+import { cn } from '@/lib/utils';
 
 interface VideoTimelineProps {
   onGenerateVideo: (index: number) => void;
   videoGenerations: VideoGeneration[];
+  workspaceCount: number;
+  activeWorkspaceIndex: number;
 }
 
-const VideoTimeline = ({ onGenerateVideo, videoGenerations }: VideoTimelineProps) => {
-  const [videoBoxes, setVideoBoxes] = useState<(string | null)[]>(Array(5).fill(null));
+const VideoTimeline = ({ 
+  onGenerateVideo, 
+  videoGenerations, 
+  workspaceCount,
+  activeWorkspaceIndex 
+}: VideoTimelineProps) => {
+  const [videoBoxes, setVideoBoxes] = useState<(string | null)[]>([]);
   
-  // Update videoBoxes when videoGenerations changes
+  useEffect(() => {
+    setVideoBoxes(Array(workspaceCount).fill(null));
+  }, [workspaceCount]);
+  
   useEffect(() => {
     if (videoGenerations.length > 0) {
-      // Create a new array with successful videos first
       const newVideoBoxes = [...videoBoxes];
       
-      // Update video boxes with successful video URLs
       videoGenerations.forEach((gen, idx) => {
-        if (gen.status === 'success' && gen.videoUrl) {
-          // Place each successful video in the array, starting from the first position
+        if (gen.status === 'success' && gen.videoUrl && idx < workspaceCount) {
           newVideoBoxes[idx] = gen.videoUrl;
         }
       });
       
       setVideoBoxes(newVideoBoxes);
     }
-  }, [videoGenerations]);
+  }, [videoGenerations, workspaceCount, videoBoxes]);
 
   return (
     <div className="w-full overflow-x-auto px-6">
       <div className="flex items-center space-x-4">
         {videoBoxes.map((videoUrl, index) => (
-          <div key={index} className="flex items-center">
-            <VideoBox
-              video={videoUrl}
-              onGenerateVideo={() => onGenerateVideo(index)}
-            />
-            
-            {index < videoBoxes.length - 1 && (
-              <div className="flex items-center mx-2">
-                <ChevronRight className="w-5 h-5 text-gray-300" />
+          <div key={index} className="flex flex-col items-center">
+            <div className="flex items-center">
+              <div className="relative">
+                <VideoBox
+                  video={videoUrl}
+                  onGenerateVideo={() => onGenerateVideo(index)}
+                />
+                <div 
+                  className={cn(
+                    "h-2 mt-2 w-full absolute -bottom-3 rounded-md transition-colors duration-300",
+                    index === activeWorkspaceIndex ? "bg-blue-500" : "bg-transparent"
+                  )}
+                />
+                
               </div>
-            )}
+              
+              {index < videoBoxes.length - 1 && (
+                <div className="flex items-center mx-2">
+                  <ChevronRight className="w-5 h-5 text-gray-300" />
+                </div>
+              )}
+            </div>
             
-            {index === videoBoxes.length - 1 && (
-              <div className="flex items-center ml-2">
-                <Button
-                  variant="outline"
-                  size="icon"
-                  className="border-dashed border-2"
-                >
-                  <Plus className="w-4 h-4" />
-                </Button>
-              </div>
-            )}
+            <div className="mt-5 text-xs font-medium text-gray-500">
+              Workspace {index + 1}
+            </div>
           </div>
         ))}
       </div>
