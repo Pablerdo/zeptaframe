@@ -1,20 +1,20 @@
 "use client";
-
-import { fabric } from "fabric";
-import debounce from "lodash.debounce";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Loader2, Plus } from "lucide-react";
+import debounce from "lodash.debounce";
+import { ChevronDown, Loader2, Plus } from "lucide-react";
 
 import { ResponseType } from "@/features/projects/api/use-get-project";
 import { useUpdateProject } from "@/features/projects/api/use-update-project";
 
 import { 
   ActiveTool, 
-  selectionDependentTools
+  selectionDependentTools,
+  SegmentedMask,
+  VideoGeneration,
+  Editor as EditorType
 } from "@/features/editor/types";
 import { Navbar } from "@/features/editor/components/navbar";
 import { Footer } from "@/features/editor/components/footer";
-import { useEditor } from "@/features/editor/hooks/use-editor";
 import { Sidebar } from "@/features/editor/components/sidebar";
 import { Toolbar } from "@/features/editor/components/toolbar";
 import { ShapeSidebar } from "@/features/editor/components/shape-sidebar";
@@ -31,30 +31,36 @@ import { TemplateSidebar } from "@/features/editor/components/template-sidebar";
 import { SettingsSidebar } from "@/features/editor/components/settings-sidebar";
 import { SegmentationSidebar } from "@/features/editor/components/segmentation-sidebar";
 import { PromptSidebar } from "@/features/editor/components/prompt-sidebar";
-import { ChevronDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 import VideoTimeline from "@/features/editor/components/video-timeline";
 import { Button } from "@/components/ui/button";
-import { SegmentedMask } from "@/features/editor/types";
-import { dataUrlToFile, uploadToUploadThing, uploadToUploadThingResidual } from "@/lib/uploadthing";
-import { VideoGeneration } from "@/features/editor/types";
+import { dataUrlToFile, uploadToUploadThingResidual } from "@/lib/uploadthing";
+import { Workspace } from "@/features/editor/components/workspace";
 
 interface EditorProps {
   initialData: ResponseType["data"];
-};
-
+}
 
 export const Editor = ({ initialData }: EditorProps) => {
   const { mutate } = useUpdateProject(initialData.id);
   const [videoGenerations, setVideoGenerations] = useState<VideoGeneration[]>([]);
   const [isGenerating, setIsGenerating] = useState(false);
-
-  // State for video generation
-  const [prompt, setPrompt] = useState("");
-  const [workspaceURL, setWorkspaceURL] = useState<string | null>(null);
-  const [segmentedMasks, setSegmentedMasks] = useState<SegmentedMask[]>([]);
-
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const [activeTool, setActiveTool] = useState<ActiveTool>("select");
+  const [timelineCollapsed, setTimelineCollapsed] = useState(false);
+  
+  // Track workspace count
+  const [workspaceCount, setWorkspaceCount] = useState(0);
+  
+  // Track active workspace index
+  const [activeWorkspaceIndex, setActiveWorkspaceIndex] = useState(0);
+  
+  // Store the current active editor instance
+  const [activeEditor, setActiveEditor] = useState<EditorType | undefined>(undefined);
+  
+  // Ref for the scrollable container
+  const editorsContainerRef = useRef<HTMLDivElement>(null);
+  
+  // Save callback with debounce
   const debouncedSave = useCallback(
     debounce(
       (values: { 
@@ -63,78 +69,92 @@ export const Editor = ({ initialData }: EditorProps) => {
         width: number,
       }) => {
         mutate(values);
-    },
-    500
-  ), [mutate]);
-
-  const [timelineCollapsed, setTimelineCollapsed] = useState(false);
-  const [activeTool, setActiveTool] = useState<ActiveTool>("select");
-
+      },
+      500
+    ), 
+    [mutate]
+  );
+  
   const onClearSelection = useCallback(() => {
     if (selectionDependentTools.includes(activeTool)) {
       setActiveTool("select");
     }
   }, [activeTool]);
 
-  const { init, editor } = useEditor({
-    defaultState: initialData.json,
-    defaultWidth: initialData.width,
-    defaultHeight: initialData.height,
-    clearSelectionCallback: onClearSelection,
-    saveCallback: debouncedSave,
-  });
+  // Handle setting active editor when a workspace becomes active
+  const handleSetActiveEditor = useCallback((editor: EditorType, index: number) => {
+    setActiveEditor(editor);
+    setActiveWorkspaceIndex(index);
+    console.log(`Editor from workspace ${index + 1} is now active`);
+  }, []);
+
+  // Add a new workspace
+  const handleAddWorkspace = useCallback(() => {
+    setWorkspaceCount(prev => prev + 1);
+    // Set the new workspace as active after it's created
+    setActiveWorkspaceIndex(workspaceCount);
+  }, [workspaceCount]);
+
+  // Create initial workspace on mount
+  useEffect(() => {
+    if (workspaceCount === 0) {
+      handleAddWorkspace();
+    }
+  }, [handleAddWorkspace, workspaceCount]);
+
+  // Handle scrolling between workspaces
+  useEffect(() => {
+    const container = editorsContainerRef.current;
+    if (!container) return;
+    
+    let scrollTimeout: NodeJS.Timeout;
+    
+    const handleScroll = () => {
+      // Clear previous timeout
+      clearTimeout(scrollTimeout);
+      
+      // Set a new timeout - this will only execute when scrolling stops
+      scrollTimeout = setTimeout(() => {
+        if (!container) return;
+        
+        // Calculate which workspace is most visible based on scroll position
+        const scrollLeft = container.scrollLeft;
+        const workspaceWidth = container.clientWidth;
+        
+        const visibleIndex = Math.round(scrollLeft / workspaceWidth);
+        if (visibleIndex !== activeWorkspaceIndex && visibleIndex < workspaceCount) {
+          setActiveWorkspaceIndex(visibleIndex);
+          console.log(`Workspace ${visibleIndex + 1} is now active after scroll`);
+        }
+      }, 150); // Short delay to ensure scrolling has stopped
+    };
+
+    container.addEventListener('scroll', handleScroll);
+    return () => {
+      container.removeEventListener('scroll', handleScroll);
+      clearTimeout(scrollTimeout);
+    };
+  }, [activeWorkspaceIndex, workspaceCount]);
+
+  // Scroll to active workspace when activeWorkspaceIndex changes
+  useEffect(() => {
+    const container = editorsContainerRef.current;
+    if (!container) return;
+    
+    container.scrollTo({
+      left: activeWorkspaceIndex * container.clientWidth,
+      behavior: 'smooth'
+    });
+  }, [activeWorkspaceIndex]);
 
   const onChangeActiveTool = useCallback((tool: ActiveTool) => {
-    if (tool === "draw") {
-      editor?.enableDrawingMode();
-    }
-
-    if (activeTool === "draw") {
-      editor?.disableDrawingMode();
-    }
-
-    if (tool === "segment") {
-      editor?.enableSegmentationMode();
-    }
-
-    if (activeTool === "segment") {
-      // editor?.clearSegmentationPoints();
-      editor?.disableSegmentationMode();
-
-      // clearSegmentation();
-    }
-
     if (tool === activeTool) {
       return setActiveTool("select");
     }
-
     setActiveTool(tool);
-  }, [activeTool, editor]);
+  }, [activeTool]);
 
-  const canvasRef = useRef(null);
-  const containerRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    const canvas = new fabric.Canvas(canvasRef.current, {
-      controlsAboveOverlay: true,
-      preserveObjectStacking: true,
-    });
-
-    init({
-      initialCanvas: canvas,
-      initialContainer: containerRef.current!,
-    });
-
-    return () => {
-      canvas.dispose();
-    };
-  }, [init]);
-
-  const onAddButtonClick = () => {
-    // TODO: Implement add functionality
-    console.log("Add button clicked");
-  };
-
+  // Check the status of the video generations
   useEffect(() => {
     const intervals: NodeJS.Timeout[] = [];
     console.log("setting up video status check intervals");
@@ -179,18 +199,20 @@ export const Editor = ({ initialData }: EditorProps) => {
   }, [videoGenerations.map(gen => gen.runId).join(',')]); // Only depend on the runIds
 
   const handleGenerateVideo = async () => {
+    if (!activeEditor) return;
+    
     try {
       setIsGenerating(true);
       
-      const validMasks = segmentedMasks.filter(mask => mask.id && mask.id.trim() !== '');
+      const validMasks = activeEditor.segmentedMasks.filter(mask => mask.id && mask.id.trim() !== '');
       
       const trajectories = validMasks.map(mask => mask.trajectory?.points || []);
       const rotations = validMasks.map(mask => mask.rotation || 0);
       
       // Upload the workspace image to UploadThing
       let workspaceImageUrl = "";
-      if (workspaceURL) {
-        const workspaceFile = await dataUrlToFile(workspaceURL, "workspace.png");
+      if (activeEditor.workspaceURL) {
+        const workspaceFile = await dataUrlToFile(activeEditor.workspaceURL, "workspace.png");
         workspaceImageUrl = await uploadToUploadThingResidual(workspaceFile);
         console.log("Workspace image uploaded:", workspaceImageUrl);
       } else {
@@ -212,19 +234,12 @@ export const Editor = ({ initialData }: EditorProps) => {
       const videoGenData = {
         "input_image": JSON.stringify([workspaceImageUrl]),
         "input_masks": JSON.stringify(uploadedMaskUrls),
-        "input_prompt": prompt,
+        "input_prompt": activeEditor.prompt,
         "input_trajectories": JSON.stringify(trajectories),
         "input_rotations": JSON.stringify(rotations)
       };
       
       console.log("videoGenData", videoGenData);
-
-      // ARGS:
-      // 1. Image
-      // 2. Prompt
-      // 3. Masks
-      // 4. Trajectories
-      // 5. Rotations
 
       const response = await fetch("/api/comfydeploy/generate-video", {
         method: "POST",
@@ -283,7 +298,7 @@ export const Editor = ({ initialData }: EditorProps) => {
     <div className="w-full h-full flex flex-col overflow-hidden bg-editor-bg">
       <Navbar
         id={initialData.id}
-        editor={editor}
+        editor={activeEditor}
         activeTool={activeTool}
         onChangeActiveTool={onChangeActiveTool}
       />
@@ -293,103 +308,116 @@ export const Editor = ({ initialData }: EditorProps) => {
           onChangeActiveTool={onChangeActiveTool}
         />
         <SegmentationSidebar
-          editor={editor}
+          editor={activeEditor}
           activeTool={activeTool}
-          onChangeActiveTool={onChangeActiveTool}
-          workspaceURL={workspaceURL}
-          setWorkspaceURL={setWorkspaceURL}
-          segmentedMasks={segmentedMasks}
-          setSegmentedMasks={setSegmentedMasks}
-          // onCancelSegmentation={clearSegmentation}
+          onChangeActiveTool={setActiveTool}
         />
         <ShapeSidebar
-          editor={editor}
+          editor={activeEditor}
           activeTool={activeTool}
           onChangeActiveTool={onChangeActiveTool}
         />
         <FillColorSidebar
-          editor={editor}
+          editor={activeEditor}
           activeTool={activeTool}
           onChangeActiveTool={onChangeActiveTool}
         />
         <StrokeColorSidebar
-          editor={editor}
+          editor={activeEditor}
           activeTool={activeTool}
           onChangeActiveTool={onChangeActiveTool}
         />
         <StrokeWidthSidebar
-          editor={editor}
+          editor={activeEditor}
           activeTool={activeTool}
           onChangeActiveTool={onChangeActiveTool}
         />
         <OpacitySidebar
-          editor={editor}
+          editor={activeEditor}
           activeTool={activeTool}
           onChangeActiveTool={onChangeActiveTool}
         />
         <TextSidebar
-          editor={editor}
+          editor={activeEditor}
           activeTool={activeTool}
           onChangeActiveTool={onChangeActiveTool}
         />
         <FontSidebar
-          editor={editor}
+          editor={activeEditor}
           activeTool={activeTool}
           onChangeActiveTool={onChangeActiveTool}
         />
         <ImageSidebar
-          editor={editor}
+          editor={activeEditor}
           activeTool={activeTool}
           onChangeActiveTool={onChangeActiveTool}
         />
         <TemplateSidebar
-          editor={editor}
+          editor={activeEditor}
           activeTool={activeTool}
           onChangeActiveTool={onChangeActiveTool}
         />
         <FilterSidebar
-          editor={editor}
+          editor={activeEditor}
           activeTool={activeTool}
           onChangeActiveTool={onChangeActiveTool}
         />
         <DrawSidebar
-          editor={editor}
+          editor={activeEditor}
           activeTool={activeTool}
           onChangeActiveTool={onChangeActiveTool}
         />
         <PromptSidebar
-          editor={editor}
+          editor={activeEditor}
           activeTool={activeTool}
           onChangeActiveTool={onChangeActiveTool}
-          prompt={prompt}
-          setPrompt={setPrompt}
         />
         <SettingsSidebar
-          editor={editor}
+          editor={activeEditor}
           activeTool={activeTool}
           onChangeActiveTool={onChangeActiveTool}
         />
         <main className="bg-editor-bg flex-1 overflow-hidden relative flex flex-col rounded-xl mx-2">
           <Toolbar
-            editor={editor}
+            editor={activeEditor}
             activeTool={activeTool}
             onChangeActiveTool={onChangeActiveTool}
           />
           <div className="flex flex-row h-full w-full mb-4 relative overflow-hidden">
-            {/* Main canvas area - takes most of the space */}
-            <div className="flex-1 bg-white rounded-xl shadow-soft relative mx-2 mt-2 overflow-hidden" ref={containerRef}>
-              <canvas 
-                ref={canvasRef} 
-                className={activeTool === "segment" ? "cursor-crosshair" : "cursor-default"}
-              />
+            {/* Scrollable container for workspaces */}
+            <div 
+              ref={editorsContainerRef}
+              className="flex-1 overflow-x-auto mt-2 mx-2 scroll-smooth" 
+              style={{
+                scrollSnapType: "x mandatory",
+                display: "flex",
+                WebkitOverflowScrolling: "touch",
+              }}
+            >
+              {/* Render workspaces based on workspaceCount */}
+              {Array.from({ length: workspaceCount }).map((_, index) => (
+                <Workspace
+                  key={index}
+                  index={index}
+                  isActive={index === activeWorkspaceIndex}
+                  onActive={handleSetActiveEditor}
+                  defaultState={index === 0 ? initialData.json : undefined}
+                  defaultWidth={index === 0 ? initialData.width : undefined}
+                  defaultHeight={index === 0 ? initialData.height : undefined}
+                  clearSelectionCallback={onClearSelection}
+                  saveCallback={debouncedSave}
+                  activeTool={activeTool}
+                />
+              ))}
             </div>
-            {/* Slim column for the add button */}
+            
+            {/* Add workspace button */}
             <div className="w-16 flex items-center justify-center">
               <button
-                onClick={onAddButtonClick}
-                className="w-12 h-9 rounded-md flex items-center justify-center bg-blue-500 hover:bg-blue-600 transition-colors duration-200 group relative"
+                onClick={handleAddWorkspace}
+                className="w-12 h-16 rounded-md flex items-center justify-center bg-editor-timeline hover:bg-blue-600 transition-colors duration-200 group relative"
               >
-                <Plus className="h-5 w-5 text-white" />
+                <Plus className="h-6 w-6 text-white" strokeWidth={3} />
               </button>
             </div>
           </div>
@@ -402,7 +430,6 @@ export const Editor = ({ initialData }: EditorProps) => {
             <div 
               className="flex items-center justify-between p-4 border-gray-700 cursor-pointer hover:bg-zinc-750"
               onClick={(e) => {
-                // Prevent timeline collapse when clicking the button
                 if (e.target === e.currentTarget) {
                   setTimelineCollapsed(!timelineCollapsed);
                 }
@@ -444,7 +471,7 @@ export const Editor = ({ initialData }: EditorProps) => {
             </div>
           </div>
           
-          <Footer editor={editor} />
+          <Footer editor={activeEditor} />
         </main>
       </div>
     </div>

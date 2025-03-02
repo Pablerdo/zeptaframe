@@ -33,20 +33,12 @@ interface SegmentationSidebarProps {
   editor: Editor | undefined;
   activeTool: ActiveTool;
   onChangeActiveTool: (tool: ActiveTool) => void;
-  workspaceURL: string | null;
-  setWorkspaceURL: (url: string) => void;
-  segmentedMasks: SegmentedMask[];
-  setSegmentedMasks: Dispatch<SetStateAction<SegmentedMask[]>>;
 };
 
 export const SegmentationSidebar = ({
   editor,
   activeTool,
   onChangeActiveTool,
-  workspaceURL,
-  setWorkspaceURL,
-  segmentedMasks,
-  setSegmentedMasks
 }: SegmentationSidebarProps) => {
 
   const [imageSize, setImageSize] = useState({ w: 1024, h: 1024 });
@@ -233,7 +225,7 @@ export const SegmentationSidebar = ({
       height: workspaceHeight
     });
 
-    setWorkspaceURL(workspaceImage);
+    editor.setWorkspaceURL(workspaceImage);
 
     // Restore viewport transform
     editor.canvas.setViewportTransform(currentViewportTransform);
@@ -328,25 +320,29 @@ export const SegmentationSidebar = ({
     }
     
     setIsSegmentationActive(true);
-    setSegmentedMasks((prev: SegmentedMask[]): SegmentedMask[] => [
-      { id: "", url: '', binaryUrl: '', name: 'New Object', inProgress: true },
-      ...prev.map(mask => ({ ...mask, isApplied: false }))
-    ]);
+    if (editor) {
+      // Create new array with inProgress mask at the top
+      const updatedMasks = [
+        { id: "", url: '', binaryUrl: '', name: 'New Object', inProgress: true },
+        ...editor.segmentedMasks.map(mask => ({ ...mask, isApplied: false }))
+      ];
+      editor.setSegmentedMasks(updatedMasks);
+    }
   };
 
   const handleSaveInProgressMask = () => {
-    if (mask && maskBinary) {
+    if (mask && maskBinary && editor) {
       const maskDataUrl = mask.toDataURL('image/png');
       const maskBinaryDataUrl = maskBinary.toDataURL('image/png');
       const newMaskId = crypto.randomUUID();
       
       // Get count of actual saved masks (excluding the stub)
-      const savedMasksCount = segmentedMasks.filter(mask => mask.url).length;
+      const savedMasksCount = editor.segmentedMasks.filter(mask => mask.url).length;
 
-      // First update the state
-      setSegmentedMasks((prev: SegmentedMask[]): SegmentedMask[] => [
+      // First update the state with a new array
+      const updatedMasks = [
         { id: "", url: '', binaryUrl: '', name: 'New Object', inProgress: false }, // New stub at top
-        ...prev.map((mask, index) => 
+        ...editor.segmentedMasks.map((mask, index) => 
           index === 0 ? 
           { 
             ...mask, 
@@ -361,10 +357,11 @@ export const SegmentationSidebar = ({
             isApplied: false
           }
         ).filter(mask => !mask.inProgress)
-      ]);
+      ];
+      editor.setSegmentedMasks(updatedMasks);
 
-      // Then set up the mask in Fabric.js, similar to handleApplyMask
-      if (editor?.canvas) {
+      // Then set up the mask in Fabric.js
+      if (editor.canvas) {
         // Remove any existing masks
         const existingMasks = editor.canvas.getObjects().filter(obj => obj.data?.isMask);
         existingMasks.forEach(mask => editor.canvas.remove(mask));
@@ -425,28 +422,32 @@ export const SegmentationSidebar = ({
     setIsSegmentationActive(false);
     
     // Reset the top stub to "New Mask" state
-    setSegmentedMasks((prev: SegmentedMask[]): SegmentedMask[] => [
-      { id: "", url: '', binaryUrl: '', name: 'New Object', inProgress: false },
-      ...prev.filter(mask => !mask.inProgress)
-    ]);
+    if (editor) {
+      const updatedMasks = [
+        { id: "", url: '', binaryUrl: '', name: 'New Object', inProgress: false },
+        ...editor.segmentedMasks.filter(mask => !mask.inProgress)
+      ];
+      editor.setSegmentedMasks(updatedMasks);
+    }
   };
 
   const handleApplyMask = (maskUrl: string, index: number) => {
     if (!editor?.canvas) return;
 
     // Get the actual index in the full segmentedMasks array
-    const actualIndex = segmentedMasks.findIndex(mask => mask.url === maskUrl);
+    const actualIndex = editor.segmentedMasks.findIndex(mask => mask.url === maskUrl);
     
     // If the mask is already applied, just remove it and update state
-    if (segmentedMasks[actualIndex].isApplied) {
+    if (editor.segmentedMasks[actualIndex].isApplied) {
       const existingMasks = editor.canvas.getObjects().filter(obj => obj.data?.isMask);
       existingMasks.forEach(mask => editor.canvas.remove(mask));
       editor.canvas.renderAll();
       
-      setSegmentedMasks((prev: SegmentedMask[]): SegmentedMask[] => prev.map(mask => ({
+      const updatedMasks = editor.segmentedMasks.map(mask => ({
         ...mask,
         isApplied: false
-      })));
+      }));
+      editor.setSegmentedMasks(updatedMasks);
       return;
     }
 
@@ -490,11 +491,12 @@ export const SegmentationSidebar = ({
       editor.canvas.renderAll();
 
       // Update state to reflect which mask is applied
-      setSegmentedMasks((prev: SegmentedMask[]): SegmentedMask[] => prev.map((mask, i) => ({
+      const updatedMasks = editor.segmentedMasks.map((mask, i) => ({
         ...mask,
         isApplied: i === actualIndex,
         inProgress: false
-      })));
+      }));
+      editor.setSegmentedMasks(updatedMasks);
     });
   };
 
@@ -582,14 +584,19 @@ export const SegmentationSidebar = ({
   }, [activeTool, editor?.canvas]);
 
   const handleRenameMask = (index: number, newName: string) => {
-    setSegmentedMasks((prev: SegmentedMask[]): SegmentedMask[] => prev.map((mask, i) => 
-      i === index ? { ...mask, name: newName } : mask
-    ));
+    if (editor) {
+      const updatedMasks = editor.segmentedMasks.map((mask, i) => 
+        i === index ? { ...mask, name: newName } : mask
+      );
+      editor.setSegmentedMasks(updatedMasks);
+    }
   };
 
   const handleDeleteMask = (index: number) => {
+    if (!editor) return;
+    
     // Get the mask URL before removing it from state
-    const maskToDelete = segmentedMasks[index];
+    const maskToDelete = editor.segmentedMasks[index];
     if (maskToDelete?.url && activeAnimations[maskToDelete.url]) {
       // Stop the animation for this specific mask
       activeAnimations[maskToDelete.url].stop();
@@ -602,8 +609,10 @@ export const SegmentationSidebar = ({
     }
     
     // Continue with deletion
-    setSegmentedMasks((prev: SegmentedMask[]): SegmentedMask[] => prev.filter((_, i) => i !== index));
-    if (editor?.canvas) {
+    const updatedMasks = editor.segmentedMasks.filter((_, i) => i !== index);
+    editor.setSegmentedMasks(updatedMasks);
+    
+    if (editor.canvas) {
       const existingMasks = editor.canvas.getObjects().filter(obj => obj.data?.isMask);
       existingMasks.forEach(mask => editor.canvas.remove(mask));
       editor.canvas.renderAll();
@@ -611,15 +620,21 @@ export const SegmentationSidebar = ({
   };
 
   const handleStartRename = (index: number) => {
-    setSegmentedMasks((prev: SegmentedMask[]): SegmentedMask[] => prev.map((mask, i) => 
-      i === index ? { ...mask, isEditing: true } : mask
-    ));
+    if (editor) {
+      const updatedMasks = editor.segmentedMasks.map((mask, i) => 
+        i === index ? { ...mask, isEditing: true } : mask
+      );
+      editor.setSegmentedMasks(updatedMasks);
+    }
   };
 
   const handleFinishRename = (index: number, newName: string) => {
-    setSegmentedMasks((prev: SegmentedMask[]): SegmentedMask[] => prev.map((mask, i) => 
-      i === index ? { ...mask, name: newName, isEditing: false } : mask
-    ));
+    if (editor) {
+      const updatedMasks = editor.segmentedMasks.map((mask, i) => 
+        i === index ? { ...mask, name: newName, isEditing: false } : mask
+      );
+      editor.setSegmentedMasks(updatedMasks);
+    }
   };
 
   const handleKeyPress = (event: React.KeyboardEvent, index: number, newName: string) => {
@@ -637,10 +652,13 @@ export const SegmentationSidebar = ({
       editor.canvas.renderAll();
       
       // Reset all masks' applied status
-      setSegmentedMasks((prev: SegmentedMask[]): SegmentedMask[] => prev.map(mask => ({
-        ...mask,
-        isApplied: false
-      })));
+      if (editor) {
+        const updatedMasks = editor.segmentedMasks.map(mask => ({
+          ...mask,
+          isApplied: false
+        }));
+        editor.setSegmentedMasks(updatedMasks);
+      }
     }
   }, [activeTool, editor?.canvas]);
 
@@ -789,7 +807,7 @@ export const SegmentationSidebar = ({
     });
 
     // Update mask state with trajectory (visible by default when saving)
-    setSegmentedMasks((prev: SegmentedMask[]): SegmentedMask[] => prev.map(mask => 
+    const updatedMasks = editor.segmentedMasks.map(mask => 
       mask.url === recordingMotion ? {
         ...mask,
         trajectory: {
@@ -797,7 +815,8 @@ export const SegmentationSidebar = ({
           isVisible: true // Set to true by default when saving
         }
       } : mask
-    ));
+    );
+    editor.setSegmentedMasks(updatedMasks);
 
     // Create and start the animation with the current points
     console.log('▶️ Creating new animation');
@@ -990,22 +1009,25 @@ export const SegmentationSidebar = ({
   const handleToggleTrajectory = (maskUrl: string) => {
     console.log('🔄 Toggling trajectory for mask:', maskUrl);
     
-    setSegmentedMasks((prev: SegmentedMask[]): SegmentedMask[] => {
-      const updatedMasks = prev.map(mask => 
-        mask.url === maskUrl ? {
+    if (editor) {
+      // Create a new array by mapping the existing masks
+      const updatedMasks = editor.segmentedMasks.map(mask => 
+        mask.url === maskUrl && mask.trajectory ? {
           ...mask,
           trajectory: {
-            ...mask.trajectory!,
-            isVisible: !mask.trajectory!.isVisible
+            ...mask.trajectory,
+            isVisible: !mask.trajectory.isVisible
           }
         } : mask
       );
+      
+      // Set the new array directly
+      editor.setSegmentedMasks(updatedMasks);
       console.log('📝 Updated masks:', updatedMasks);
-      return updatedMasks;
-    });
+    }
 
     if (editor?.canvas) {
-      const mask = segmentedMasks.find(m => m.url === maskUrl);
+      const mask = editor.segmentedMasks.find(m => m.url === maskUrl);
       console.log('🎭 Found mask:', mask);
       
       if (mask?.trajectory?.points) {
@@ -1036,12 +1058,15 @@ export const SegmentationSidebar = ({
   };
 
   const handleRedoTrajectory = (maskUrl: string) => {
-    setSegmentedMasks((prev: SegmentedMask[]): SegmentedMask[] => prev.map(mask => 
-      mask.url === maskUrl ? {
-        ...mask,
-        trajectory: undefined
-      } : mask
-    ));
+    if (editor) {
+      const updatedMasks = editor.segmentedMasks.map(mask => 
+        mask.url === maskUrl ? {
+          ...mask,
+          trajectory: undefined
+        } : mask
+      );
+      editor.setSegmentedMasks(updatedMasks);
+    }
 
     // Remove trajectory from canvas
     if (editor?.canvas) {
@@ -1065,15 +1090,18 @@ export const SegmentationSidebar = ({
       editor.canvas.renderAll();
 
       // Update state to reflect hidden trajectories
-      setSegmentedMasks((prev: SegmentedMask[]): SegmentedMask[] => prev.map(mask => 
-        mask.trajectory ? {
-          ...mask,
-          trajectory: {
-            ...mask.trajectory,
-            isVisible: false
-          }
-        } : mask
-      ));
+      if (editor) {
+        const updatedMasks = editor.segmentedMasks.map(mask => 
+          mask.trajectory ? {
+            ...mask,
+            trajectory: {
+              ...mask.trajectory,
+              isVisible: false
+            }
+          } : mask
+        );
+        editor.setSegmentedMasks(updatedMasks);
+      }
     }
   }, [activeTool, editor?.canvas]);
 
@@ -1169,11 +1197,11 @@ export const SegmentationSidebar = ({
             </div>
 
             {/* Show saved masks */}
-            {segmentedMasks
+            {editor?.segmentedMasks
               .filter(mask => !mask.inProgress && mask.url)
               .map((mask, index) => {
                 // Get the actual index in the full array
-                const actualIndex = segmentedMasks.findIndex(m => m.url === mask.url);
+                const actualIndex = editor?.segmentedMasks.findIndex(m => m.url === mask.url);
                 
                 return (
                   <div key={mask.url} className="flex flex-col p-2 border rounded-md space-y-2">

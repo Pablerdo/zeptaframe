@@ -18,6 +18,7 @@ import {
   FONT_WEIGHT,
   FONT_SIZE,
   JSON_KEYS,
+  SegmentedMask,
 } from "@/features/editor/types";
 import { useHistory } from "@/features/editor/hooks/use-history";
 import { 
@@ -54,6 +55,12 @@ const buildEditor = ({
   selectedObjects,
   strokeDashArray,
   setStrokeDashArray,
+  prompt,
+  setPrompt,
+  workspaceURL,
+  setWorkspaceURL,
+  segmentedMasks,
+  setSegmentedMasks,
 }: BuildEditorProps): Editor => {
   const generateSaveOptions = () => {
     const { width, height, left, top } = getWorkspace() as fabric.Rect;
@@ -627,6 +634,12 @@ const buildEditor = ({
         obj.evented = true;
       });
     },
+    prompt,
+    setPrompt,
+    workspaceURL,
+    setWorkspaceURL,
+    segmentedMasks,
+    setSegmentedMasks,
   };
 };
 
@@ -644,6 +657,10 @@ export const useEditor = ({
   const [canvas, setCanvas] = useState<fabric.Canvas | null>(null);
   const [container, setContainer] = useState<HTMLDivElement | null>(null);
   const [selectedObjects, setSelectedObjects] = useState<fabric.Object[]>([]);
+
+  const [prompt, setPrompt] = useState("");
+  const [workspaceURL, setWorkspaceURL] = useState<string | null>(null);
+  const [segmentedMasks, setSegmentedMasks] = useState<SegmentedMask[]>([]);
 
   const [fontFamily, setFontFamily] = useState(FONT_FAMILY);
   const [fillColor, setFillColor] = useState(FILL_COLOR);
@@ -720,6 +737,12 @@ export const useEditor = ({
         setStrokeDashArray,
         fontFamily,
         setFontFamily,
+        prompt,
+        setPrompt,
+        workspaceURL,
+        setWorkspaceURL,
+        segmentedMasks,
+        setSegmentedMasks,
       });
     }
 
@@ -741,6 +764,9 @@ export const useEditor = ({
     selectedObjects,
     strokeDashArray,
     fontFamily,
+    prompt,
+    workspaceURL,
+    segmentedMasks,
   ]);
 
   const init = useCallback(

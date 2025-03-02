@@ -22,19 +22,26 @@ export const useAutoResize = ({ canvas, container }: UseAutoResizeProps) => {
     const localWorkspace = canvas
       .getObjects()
       .find((object) => object.name === "clip");
+      
+    if (!localWorkspace) return;
 
-    // @ts-ignore
-    const scale = fabric.util.findScaleToFit(localWorkspace, {
+    // Create proper dimension objects for findScaleToFit
+    const objWidth = localWorkspace.width || 0;
+    const objHeight = localWorkspace.height || 0;
+    
+    // @ts-ignore - The fabric.util namespace exists but TypeScript doesn't know about it
+    const scale = fabric.util.findScaleToFit({
+      width: objWidth,
+      height: objHeight
+    }, {
       width: width,
-      height: height,
+      height: height
     });
 
     const zoom = zoomRatio * scale;
 
     canvas.setViewportTransform(fabric.iMatrix.concat());
     canvas.zoomToPoint(new fabric.Point(center.left, center.top), zoom);
-
-    if (!localWorkspace) return;
 
     const workspaceCenter = localWorkspace.getCenterPoint();
     const viewportTransform = canvas.viewportTransform;

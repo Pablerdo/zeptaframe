@@ -183,6 +183,12 @@ export interface EditorHookProps {
   }) => void;
 };
 
+export interface Workspace {
+  id: string;
+  canvasRef: React.RefObject<HTMLCanvasElement> | { current: null };
+  containerRef: React.RefObject<HTMLDivElement> | { current: null };
+  editor?: Editor;
+}
 
 export type BuildEditorProps = {
   undo: () => void;
@@ -205,6 +211,12 @@ export type BuildEditorProps = {
   setStrokeColor: (value: string) => void;
   setStrokeWidth: (value: number) => void;
   setFontFamily: (value: string) => void;
+  prompt: string;
+  setPrompt: (value: string) => void;
+  workspaceURL: string | null;
+  setWorkspaceURL: (value: string | null) => void;
+  segmentedMasks: SegmentedMask[];
+  setSegmentedMasks: (value: SegmentedMask[]) => void;
 };
 
 export interface VideoGeneration {
@@ -308,4 +320,10 @@ export interface Editor {
   getActiveStrokeWidth: () => number;
   getActiveStrokeDashArray: () => number[];
   selectedObjects: fabric.Object[];
+  prompt: string;
+  setPrompt: (value: string) => void;
+  workspaceURL: string | null;
+  setWorkspaceURL: (value: string | null) => void;
+  segmentedMasks: SegmentedMask[];
+  setSegmentedMasks: (value: SegmentedMask[]) => void;
 };

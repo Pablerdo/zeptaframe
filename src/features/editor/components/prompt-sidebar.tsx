@@ -13,16 +13,12 @@ interface PromptSidebarProps {
   editor: Editor | undefined;
   activeTool: ActiveTool;
   onChangeActiveTool: (tool: ActiveTool) => void;
-  prompt: string;
-  setPrompt: (prompt: string) => void;
 }
 
 export const PromptSidebar = ({
   editor,
   activeTool,
   onChangeActiveTool,
-  prompt,
-  setPrompt,
 }: PromptSidebarProps) => {
   const onClose = () => {
     onChangeActiveTool("select");
@@ -54,8 +50,8 @@ export const PromptSidebar = ({
           <Textarea
             placeholder="Enter your prompt here..."
             className="min-h-[400px] resize-none"
-            value={prompt}
-            onChange={(e) => setPrompt(e.target.value)}
+            value={editor?.prompt}
+            onChange={(e) => editor?.setPrompt(e.target.value)}
           />
           <div className="flex gap-2">
             <Button 
