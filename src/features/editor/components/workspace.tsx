@@ -109,7 +109,7 @@ export const Workspace = ({
   return (
     <div 
       ref={containerRef}
-      className="relative min-w-full max-w-full flex-shrink-0 h-full bg-white rounded-xl shadow-soft overflow-hidden px-4"
+      className="relative min-w-full max-w-full flex-shrink-0 h-full bg-white rounded-xl shadow-soft overflow-hidden mx-4"
       style={{
         scrollSnapAlign: "start",
         opacity: isActive ? 1 : 0.98,
@@ -130,6 +130,10 @@ export const Workspace = ({
         className="absolute bottom-2 right-2 bg-red-500 hover:bg-red-600 text-white p-2 rounded-full transition-colors duration-200"
         title="Delete workspace"
         disabled={!canDelete}
+        style={{
+          opacity: canDelete ? 1 : 0.5,
+          cursor: canDelete ? 'pointer' : 'not-allowed'
+        }}
       >
         <Trash2 className="h-4 w-4" />
       </button>
