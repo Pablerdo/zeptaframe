@@ -21,10 +21,10 @@ export const SidebarItem = ({
       variant="ghost"
       onClick={onClick}
       className={cn(
-        "w-full h-full aspect-video p-3 py-4 flex flex-col rounded-xl transition-all duration-200",
+        "w-full h-full aspect-video p-3 py-4 flex flex-col rounded-xl transition-all duration-200 border",
         isActive 
-          ? "bg-blue-50 text-blue-600 border border-blue-100" 
-          : "hover:bg-gray-50"
+          ? "bg-blue-50 text-blue-600 border-blue-100" 
+          : "hover:bg-gray-50 border-gray-200"
       )}
     >
       <Icon className={cn(

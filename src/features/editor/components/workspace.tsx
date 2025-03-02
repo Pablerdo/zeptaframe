@@ -2,6 +2,7 @@
 
 import { fabric } from "fabric";
 import { useEffect, useRef } from "react";
+import { Trash2 } from "lucide-react";
 import { useEditor } from "@/features/editor/hooks/use-editor";
 import { ActiveTool, Editor as EditorType } from "@/features/editor/types";
 
@@ -19,6 +20,8 @@ interface WorkspaceProps {
   index: number;
   onActive: (editor: EditorType, index: number) => void;
   activeTool: ActiveTool;
+  onDelete: (index: number) => void;
+  canDelete: boolean;
 }
 
 export const Workspace = ({
@@ -30,7 +33,9 @@ export const Workspace = ({
   isActive,
   index,
   onActive,
-  activeTool
+  activeTool,
+  onDelete,
+  canDelete
 }: WorkspaceProps) => {
   // Create refs for canvas and container
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -93,10 +98,18 @@ export const Workspace = ({
     }
   };
 
+  // Handle delete button click
+  const handleDelete = (e: React.MouseEvent) => {
+    e.stopPropagation(); // Prevent container click
+    if (canDelete) {
+      onDelete(index);
+    }
+  };
+
   return (
     <div 
       ref={containerRef}
-      className="relative min-w-full max-w-full flex-shrink-0 h-full bg-white rounded-xl shadow-soft overflow-hidden mx-4"
+      className="relative min-w-full max-w-full flex-shrink-0 h-full bg-white rounded-xl shadow-soft overflow-hidden px-4"
       style={{
         scrollSnapAlign: "start",
         opacity: isActive ? 1 : 0.98,
@@ -111,6 +124,16 @@ export const Workspace = ({
       <div className="absolute top-2 right-2 bg-blue-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs font-bold">
         {index + 1}
       </div>
+            
+      <button
+        onClick={handleDelete}
+        className="absolute bottom-2 right-2 bg-red-500 hover:bg-red-600 text-white p-2 rounded-full transition-colors duration-200"
+        title="Delete workspace"
+        disabled={!canDelete}
+      >
+        <Trash2 className="h-4 w-4" />
+      </button>
+      
     </div>
   );
 }; 

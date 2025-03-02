@@ -48,8 +48,8 @@ export const Editor = ({ initialData }: EditorProps) => {
   const [activeTool, setActiveTool] = useState<ActiveTool>("select");
   const [timelineCollapsed, setTimelineCollapsed] = useState(false);
   
-  // Track workspace count
-  const [workspaceCount, setWorkspaceCount] = useState(0);
+  // Use workspace IDs array instead of just a count
+  const [workspaceIds, setWorkspaceIds] = useState<string[]>([]);
   
   // Track active workspace index
   const [activeWorkspaceIndex, setActiveWorkspaceIndex] = useState(0);
@@ -90,17 +90,22 @@ export const Editor = ({ initialData }: EditorProps) => {
 
   // Add a new workspace
   const handleAddWorkspace = useCallback(() => {
-    setWorkspaceCount(prev => prev + 1);
+    // Generate a unique ID for the new workspace
+    const newId = `workspace-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
+    setWorkspaceIds(prev => [...prev, newId]);
+    
     // Set the new workspace as active after it's created
-    setActiveWorkspaceIndex(workspaceCount);
-  }, [workspaceCount]);
+    const newIndex = workspaceIds.length;
+    setActiveWorkspaceIndex(newIndex);
+  }, [workspaceIds.length]);
 
   // Create initial workspace on mount
   useEffect(() => {
-    if (workspaceCount === 0) {
-      handleAddWorkspace();
+    if (workspaceIds.length === 0) {
+      const initialId = `workspace-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
+      setWorkspaceIds([initialId]);
     }
-  }, [handleAddWorkspace, workspaceCount]);
+  }, []);
 
   // Handle scrolling between workspaces
   useEffect(() => {
@@ -122,7 +127,7 @@ export const Editor = ({ initialData }: EditorProps) => {
         const workspaceWidth = container.clientWidth;
         
         const visibleIndex = Math.round(scrollLeft / workspaceWidth);
-        if (visibleIndex !== activeWorkspaceIndex && visibleIndex < workspaceCount) {
+        if (visibleIndex !== activeWorkspaceIndex && visibleIndex < workspaceIds.length) {
           setActiveWorkspaceIndex(visibleIndex);
           console.log(`Workspace ${visibleIndex + 1} is now active after scroll`);
         }
@@ -134,7 +139,7 @@ export const Editor = ({ initialData }: EditorProps) => {
       container.removeEventListener('scroll', handleScroll);
       clearTimeout(scrollTimeout);
     };
-  }, [activeWorkspaceIndex, workspaceCount]);
+  }, [activeWorkspaceIndex, workspaceIds.length]);
 
   // Scroll to active workspace when activeWorkspaceIndex changes
   useEffect(() => {
@@ -294,6 +299,26 @@ export const Editor = ({ initialData }: EditorProps) => {
     }
   };
 
+  // Handle deleting a workspace
+  const handleDeleteWorkspace = useCallback((indexToDelete: number) => {
+    // Don't allow deleting if it's the last workspace
+    if (workspaceIds.length <= 1) return;
+    
+    // Create a new array without the deleted workspace
+    setWorkspaceIds(prev => prev.filter((_, i) => i !== indexToDelete));
+    
+    // If deleting the active workspace, set the previous one as active
+    // If deleting the first workspace, set the new first one as active
+    if (indexToDelete === activeWorkspaceIndex) {
+      const newActiveIndex = indexToDelete === 0 ? 0 : indexToDelete - 1;
+      setActiveWorkspaceIndex(newActiveIndex);
+    } 
+    // If deleting a workspace before the active one, shift the active index
+    else if (indexToDelete < activeWorkspaceIndex) {
+      setActiveWorkspaceIndex(prev => prev - 1);
+    }
+  }, [workspaceIds.length, activeWorkspaceIndex]);
+
   return (
     <div className="w-full h-full flex flex-col overflow-hidden bg-editor-bg">
       <Navbar
@@ -394,13 +419,15 @@ export const Editor = ({ initialData }: EditorProps) => {
                 WebkitOverflowScrolling: "touch",
               }}
             >
-              {/* Render workspaces based on workspaceCount */}
-              {Array.from({ length: workspaceCount }).map((_, index) => (
+              {/* Render workspaces based on workspace IDs array */}
+              {workspaceIds.map((id, index) => (
                 <Workspace
-                  key={index}
+                  key={id}
                   index={index}
                   isActive={index === activeWorkspaceIndex}
                   onActive={handleSetActiveEditor}
+                  onDelete={handleDeleteWorkspace}
+                  canDelete={workspaceIds.length > 1}
                   defaultState={index === 0 ? initialData.json : undefined}
                   defaultWidth={index === 0 ? initialData.width : undefined}
                   defaultHeight={index === 0 ? initialData.height : undefined}
