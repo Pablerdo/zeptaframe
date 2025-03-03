@@ -22,35 +22,35 @@ export class SAM2 {
   constructor() {}
 
   async downloadModels() {
-    this.bufferEncoder = await this.downloadModel(ENCODER_URL);
-    this.bufferDecoder = await this.downloadModel(DECODER_URL);
+    this.bufferEncoder = await this.alwaysDownloadModel(ENCODER_URL);
+    this.bufferDecoder = await this.alwaysDownloadModel(DECODER_URL);
   }
 
-  // async alwaysDownloadModel(url) {
-  //   console.log("Directly downloading model from " + url);
-  //   let buffer = null;
+  async alwaysDownloadModel(url) {
+    console.log("Directly downloading model from " + url);
+    let buffer = null;
 
-  //   const controller = new AbortController();
-  //   const timeoutId = setTimeout(() => controller.abort(), 60000); // 60 seconds timeout
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 60000); // 60 seconds timeout
     
-  //   try {
-  //     buffer = await fetch(url, {
-  //       // headers: new Headers({
-  //       //   Origin: location.origin,
-  //       // }),
-  //       mode: "cors",
-  //       redirect: "follow",
-  //       signal: controller.signal,
-  //     }).then((response) => response.arrayBuffer());
-  //     console.log("Download completed, buffer size:", buffer.byteLength);
-  //     return buffer;
-  //   } catch (e) {
-  //     console.error("Download of " + url + " failed: ", e);
-  //     return null;
-  //   } finally {
-  //     clearTimeout(timeoutId);
-  //   }
-  // }
+    try {
+      buffer = await fetch(url, {
+        // headers: new Headers({
+        //   Origin: location.origin,
+        // }),
+        mode: "cors",
+        redirect: "follow",
+        signal: controller.signal,
+      }).then((response) => response.arrayBuffer());
+      console.log("Download completed, buffer size:", buffer.byteLength);
+      return buffer;
+    } catch (e) {
+      console.error("Download of " + url + " failed: ", e);
+      return null;
+    } finally {
+      clearTimeout(timeoutId);
+    }
+  }
 
   async downloadModel(url) {
     // step 1: check if cached
@@ -76,8 +76,6 @@ export class SAM2 {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 60000); // 60 seconds timeout
     try {
-
-      
       buffer = await fetch(url, {
         // headers: new Headers({
         //   Origin: location.origin,
