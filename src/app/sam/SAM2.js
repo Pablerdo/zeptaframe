@@ -8,9 +8,9 @@ import * as ort from "onnxruntime-web/all";
 
 
 const ENCODER_URL =
-  "https://huggingface.co/g-ronimo/sam2-tiny/resolve/main/sam2_hiera_tiny_encoder.with_runtime_opt.ort";
+  "https://huggingface.co/pablerdo/sam2-tiny/resolve/main/sam2_hiera_tiny_encoder.with_runtime_opt.ort";
 const DECODER_URL =
-  "https://huggingface.co/g-ronimo/sam2-tiny/resolve/main/sam2_hiera_tiny_decoder_pr1.onnx";
+  "https://huggingface.co/pablerdo/sam2-tiny/resolve/main/sam2_hiera_tiny_decoder_pr1.onnx";
 
 export class SAM2 {
   bufferEncoder = null;
@@ -22,35 +22,35 @@ export class SAM2 {
   constructor() {}
 
   async downloadModels() {
-    this.bufferEncoder = await this.alwaysDownloadModel(ENCODER_URL);
-    this.bufferDecoder = await this.alwaysDownloadModel(DECODER_URL);
+    this.bufferEncoder = await this.downloadModel(ENCODER_URL);
+    this.bufferDecoder = await this.downloadModel(DECODER_URL);
   }
 
-  async alwaysDownloadModel(url) {
-    console.log("Directly downloading model from " + url);
-    let buffer = null;
+  // async alwaysDownloadModel(url) {
+  //   console.log("Directly downloading model from " + url);
+  //   let buffer = null;
 
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 60000); // 60 seconds timeout
+  //   const controller = new AbortController();
+  //   const timeoutId = setTimeout(() => controller.abort(), 60000); // 60 seconds timeout
     
-    try {
-      buffer = await fetch(url, {
-        // headers: new Headers({
-        //   Origin: location.origin,
-        // }),
-        mode: "cors",
-        redirect: "follow",
-        signal: controller.signal,
-      }).then((response) => response.arrayBuffer());
-      console.log("Download completed, buffer size:", buffer.byteLength);
-      return buffer;
-    } catch (e) {
-      console.error("Download of " + url + " failed: ", e);
-      return null;
-    } finally {
-      clearTimeout(timeoutId);
-    }
-  }
+  //   try {
+  //     buffer = await fetch(url, {
+  //       // headers: new Headers({
+  //       //   Origin: location.origin,
+  //       // }),
+  //       mode: "cors",
+  //       redirect: "follow",
+  //       signal: controller.signal,
+  //     }).then((response) => response.arrayBuffer());
+  //     console.log("Download completed, buffer size:", buffer.byteLength);
+  //     return buffer;
+  //   } catch (e) {
+  //     console.error("Download of " + url + " failed: ", e);
+  //     return null;
+  //   } finally {
+  //     clearTimeout(timeoutId);
+  //   }
+  // }
 
   async downloadModel(url) {
     // step 1: check if cached
@@ -73,16 +73,24 @@ export class SAM2 {
     // console.log("File " + filename + " not in cache, downloading from " + url);
     console.log("File not in cache, downloading from " + url);
     let buffer = null;
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 60000); // 60 seconds timeout
     try {
+
+      
       buffer = await fetch(url, {
-        headers: new Headers({
-          Origin: location.origin,
-        }),
+        // headers: new Headers({
+        //   Origin: location.origin,
+        // }),
         mode: "cors",
+        redirect: "follow",
+        signal: controller.signal,
       }).then((response) => response.arrayBuffer());
     } catch (e) {
       console.error("Download of " + url + " failed: ", e);
       return null;
+    } finally {
+      clearTimeout(timeoutId);
     }
 
     // step 3: store
@@ -118,7 +126,7 @@ export class SAM2 {
      *  => loop through each ep, catch e if not available and move on
      */
     let session = null;
-    for (let ep of ["cpu"]) { // ["webgpu", "cpu"]) {
+    for (let ep of ["webgpu", "cpu"]) {
       try {
         session = await ort.InferenceSession.create(model, {
           executionProviders: [ep],
