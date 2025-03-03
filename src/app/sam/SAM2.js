@@ -8,9 +8,9 @@ import * as ort from "onnxruntime-web/all";
 
 
 const ENCODER_URL =
-  "https://huggingface.co/pablerdo/sam2-tiny/resolve/main/sam2_hiera_tiny_encoder.with_runtime_opt.ort";
+  "https://huggingface.co/g-ronimo/sam2-tiny/resolve/main/sam2_hiera_tiny_encoder.with_runtime_opt.ort";
 const DECODER_URL =
-  "https://huggingface.co/pablerdo/sam2-tiny/resolve/main/sam2_hiera_tiny_decoder_pr1.onnx";
+  "https://huggingface.co/g-ronimo/sam2-tiny/resolve/main/sam2_hiera_tiny_decoder_pr1.onnx";
 
 export class SAM2 {
   bufferEncoder = null;
