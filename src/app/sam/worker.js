@@ -1,3 +1,5 @@
+"use client"
+
 import { SAM2 } from "./SAM2";
 import { Tensor } from "onnxruntime-web";
 

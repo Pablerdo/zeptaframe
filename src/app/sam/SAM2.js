@@ -1,3 +1,5 @@
+"use client"
+
 import path from "path";
 
 import * as ort from "onnxruntime-web/all";
