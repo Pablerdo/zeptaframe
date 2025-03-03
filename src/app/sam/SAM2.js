@@ -22,8 +22,8 @@ export class SAM2 {
   constructor() {}
 
   async downloadModels() {
-    this.bufferEncoder = await this.alwaysDownloadModel(ENCODER_URL);
-    this.bufferDecoder = await this.alwaysDownloadModel(DECODER_URL);
+    this.bufferEncoder = await this.downloadModel(ENCODER_URL);
+    this.bufferDecoder = await this.downloadModel(DECODER_URL);
   }
 
   async alwaysDownloadModel(url) {
