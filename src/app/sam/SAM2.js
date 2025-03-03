@@ -5,7 +5,6 @@ import path from "path";
 import * as ort from "onnxruntime-web/all";
 // ort.env.wasm.numThreads=1
 // ort.env.wasm.simd = false;'
-ort.env.debug = true;
 
 
 const ENCODER_URL =
@@ -23,8 +22,34 @@ export class SAM2 {
   constructor() {}
 
   async downloadModels() {
-    this.bufferEncoder = await this.downloadModel(ENCODER_URL);
-    this.bufferDecoder = await this.downloadModel(DECODER_URL);
+    this.bufferEncoder = await this.alwaysDownloadModel(ENCODER_URL);
+    this.bufferDecoder = await this.alwaysDownloadModel(DECODER_URL);
+  }
+
+  async alwaysDownloadModel(url) {
+    console.log("Directly downloading model from " + url);
+    let buffer = null;
+
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 60000); // 60 seconds timeout
+    
+    try {
+      buffer = await fetch(url, {
+        // headers: new Headers({
+        //   Origin: location.origin,
+        // }),
+        mode: "cors",
+        redirect: "follow",
+        signal: controller.signal,
+      }).then((response) => response.arrayBuffer());
+      console.log("Download completed, buffer size:", buffer.byteLength);
+      return buffer;
+    } catch (e) {
+      console.error("Download of " + url + " failed: ", e);
+      return null;
+    } finally {
+      clearTimeout(timeoutId);
+    }
   }
 
   async downloadModel(url) {
@@ -32,10 +57,13 @@ export class SAM2 {
     const root = await navigator.storage.getDirectory();
     const filename = path.basename(url);
 
+    console.log("Checking if file exists: " + filename);
+
     let fileHandle = await root
       .getFileHandle(filename)
       .catch((e) => console.error("File does not exist:", filename, e));
 
+    console.log("File handle: " + fileHandle);
     if (fileHandle) {
       const file = await fileHandle.getFile();
       if (file.size > 0) return await file.arrayBuffer();
