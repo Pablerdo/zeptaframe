@@ -42,7 +42,6 @@ export const Workspace = ({
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const isInitializedRef = useRef(false);
-  const gridRef = useRef<fabric.Object | null>(null);
   
   // Initialize the editor with useEditor hook (at component top level)
   const { init, editor } = useEditor({
@@ -54,86 +53,6 @@ export const Workspace = ({
   });
 
   // Function to create and add grid to canvas
-  const createGrid = (canvas: fabric.Canvas) => {
-    // Get the workspace dimensions
-    const workspace = canvas.getObjects().find(obj => obj.name === "clip");
-    if (!workspace) return;
-    
-    const width = workspace.width || 720;
-    const height = workspace.height || 480;
-    
-    // Create a grid pattern
-    const gridSize = 30;
-    const gridPattern = new fabric.Rect({
-      width: width,
-      height: height,
-      fill: 'transparent',
-      stroke: 'rgba(240, 240, 240, 0.5)',
-      strokeWidth: 0.5,
-      strokeUniform: true,
-      objectCaching: false,
-      selectable: false,
-      evented: false,
-      name: 'grid-background',
-    });
-    
-    // Add grid pattern behind all objects
-    canvas.add(gridPattern);
-    canvas.sendToBack(gridPattern);
-    gridRef.current = gridPattern;
-    
-    // Create grid lines manually
-    const gridLines: fabric.Line[] = [];
-    
-    // Vertical lines
-    for (let i = gridSize; i < width; i += gridSize) {
-      const line = new fabric.Line([i, 0, i, height], {
-        stroke: 'rgba(240, 240, 240, 0.5)',
-        strokeWidth: 0.5,
-        selectable: false,
-        evented: false,
-        name: 'grid-line',
-      });
-      gridLines.push(line);
-    }
-    
-    // Horizontal lines
-    for (let i = gridSize; i < height; i += gridSize) {
-      const line = new fabric.Line([0, i, width, i], {
-        stroke: 'rgba(240, 240, 240, 0.5)',
-        strokeWidth: 0.5,
-        selectable: false,
-        evented: false,
-        name: 'grid-line',
-      });
-      gridLines.push(line);
-    }
-    
-    // Add grid lines to canvas
-    gridLines.forEach(line => {
-      canvas.add(line);
-      canvas.sendToBack(line);
-    });
-    
-    // Update grid pattern position to match workspace
-    const workspacePosition = workspace.getCenterPoint();
-    gridPattern.set({
-      left: workspacePosition.x - width/2,
-      top: workspacePosition.y - height/2,
-    });
-    
-    // Update grid lines positions
-    gridLines.forEach(line => {
-      line.set({
-        x1: line.x1 || 0 + workspacePosition.x - width/2,
-        y1: line.y1 || 0 + workspacePosition.y - height/2,
-        x2: line.x2 || 0 + workspacePosition.x - width/2,
-        y2: line.y2 || 0 + workspacePosition.y - height/2,
-      });
-    });
-    
-    canvas.renderAll();
-  };
 
   // Initialize canvas when component mounts
   useEffect(() => {
@@ -151,16 +70,6 @@ export const Workspace = ({
       isInitializedRef.current = true;
     }
   }, [init]);
-
-  // Add grid after canvas and workspace is initialized
-  useEffect(() => {
-    if (editor?.canvas && isInitializedRef.current && !gridRef.current) {
-      // Use a timeout to ensure the workspace is fully initialized
-      setTimeout(() => {
-        createGrid(editor.canvas);
-      }, 100);
-    }
-  }, [editor?.canvas, isInitializedRef.current]);
 
   // Notify parent component when editor is ready or when active status changes
   useEffect(() => {

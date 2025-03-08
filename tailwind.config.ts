@@ -56,7 +56,7 @@ const config = {
         editor: {
           bg: {
             DEFAULT: "#dfe0e2",
-            dark: "#545e6d"
+            dark: "#323841"
           },
           canvas: "hsl(var(--component-bg))",
           sidebar: "hsl(var(--component-bg))",
@@ -75,7 +75,7 @@ const config = {
         'soft': '0 4px 20px 0 rgba(0, 0, 0, 0.05)',
         'card': '0 8px 30px rgba(0, 0, 0, 0.08)',
         'highlight': '0 0 0 2px rgba(59, 130, 246, 0.3)',
-        'dark-raised': '0 6px 16px -5px rgba(0, 0, 0, 0.3), 0 0 3px 0 rgba(0, 0, 0, 0.2), 0 0 0 1px rgba(255, 255, 255, 0.05)',
+        'dark-raised': '0 6px 16px -5px rgba(30, 34, 41, 0.45), 0 0 3px 0 rgba(20, 22, 30, 0.3), 0 0 0 1px rgba(70, 76, 91, 0.15)',
       },
       keyframes: {
         "accordion-down": {
