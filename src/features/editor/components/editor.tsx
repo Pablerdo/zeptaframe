@@ -2,6 +2,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import debounce from "lodash.debounce";
 import { ChevronDown, Loader2, Plus } from "lucide-react";
+import { ThemeProvider } from "next-themes";
 
 import { ResponseType } from "@/features/projects/api/use-get-project";
 import { useUpdateProject } from "@/features/projects/api/use-update-project";
@@ -320,192 +321,194 @@ export const Editor = ({ initialData }: EditorProps) => {
   }, [workspaceIds.length, activeWorkspaceIndex]);
 
   return (
-    <div className="w-full h-full flex flex-col overflow-hidden bg-editor-bg dark:bg-editor-bg-dark">
-      <Navbar
-        id={initialData.id}
-        editor={activeEditor}
-        activeTool={activeTool}
-        onChangeActiveTool={onChangeActiveTool}
-      />
-      <div className="absolute h-[calc(100%-68px)] w-full top-[68px] flex p-2">
-        <Sidebar
-          activeTool={activeTool}
-          onChangeActiveTool={onChangeActiveTool}
-        />
-        <SegmentationSidebar
-          editor={activeEditor}
-          activeTool={activeTool}
-          onChangeActiveTool={setActiveTool}
-        />
-        <ShapeSidebar
+    <ThemeProvider attribute="class" defaultTheme="light" enableSystem>
+      <div className="w-full h-full flex flex-col overflow-hidden bg-editor-bg dark:bg-editor-bg-dark">
+        <Navbar
+          id={initialData.id}
           editor={activeEditor}
           activeTool={activeTool}
           onChangeActiveTool={onChangeActiveTool}
         />
-        <FillColorSidebar
-          editor={activeEditor}
-          activeTool={activeTool}
-          onChangeActiveTool={onChangeActiveTool}
-        />
-        <StrokeColorSidebar
-          editor={activeEditor}
-          activeTool={activeTool}
-          onChangeActiveTool={onChangeActiveTool}
-        />
-        <StrokeWidthSidebar
-          editor={activeEditor}
-          activeTool={activeTool}
-          onChangeActiveTool={onChangeActiveTool}
-        />
-        <OpacitySidebar
-          editor={activeEditor}
-          activeTool={activeTool}
-          onChangeActiveTool={onChangeActiveTool}
-        />
-        <TextSidebar
-          editor={activeEditor}
-          activeTool={activeTool}
-          onChangeActiveTool={onChangeActiveTool}
-        />
-        <FontSidebar
-          editor={activeEditor}
-          activeTool={activeTool}
-          onChangeActiveTool={onChangeActiveTool}
-        />
-        <ImageSidebar
-          editor={activeEditor}
-          activeTool={activeTool}
-          onChangeActiveTool={onChangeActiveTool}
-        />
-        <TemplateSidebar
-          editor={activeEditor}
-          activeTool={activeTool}
-          onChangeActiveTool={onChangeActiveTool}
-        />
-        <FilterSidebar
-          editor={activeEditor}
-          activeTool={activeTool}
-          onChangeActiveTool={onChangeActiveTool}
-        />
-        <DrawSidebar
-          editor={activeEditor}
-          activeTool={activeTool}
-          onChangeActiveTool={onChangeActiveTool}
-        />
-        <PromptSidebar
-          editor={activeEditor}
-          activeTool={activeTool}
-          onChangeActiveTool={onChangeActiveTool}
-        />
-        <SettingsSidebar
-          editor={activeEditor}
-          activeTool={activeTool}
-          onChangeActiveTool={onChangeActiveTool}
-        />
-        <main className="bg-editor-bg dark:bg-editor-bg-dark flex-1 overflow-hidden relative flex flex-col rounded-xl mx-2">
-          <Toolbar
+        <div className="absolute h-[calc(100%-68px)] w-full top-[68px] flex p-2">
+          <Sidebar
+            activeTool={activeTool}
+            onChangeActiveTool={onChangeActiveTool}
+          />
+          <SegmentationSidebar
+            editor={activeEditor}
+            activeTool={activeTool}
+            onChangeActiveTool={setActiveTool}
+          />
+          <ShapeSidebar
             editor={activeEditor}
             activeTool={activeTool}
             onChangeActiveTool={onChangeActiveTool}
           />
-          <div className="flex flex-row h-full w-full mb-4 relative overflow-hidden">
-            {/* Scrollable container for workspaces */}
-            <div 
-              ref={editorsContainerRef}
-              className="flex-1 overflow-x-auto mt-2 mx-2 scroll-smooth" 
-              style={{
-                scrollSnapType: "x mandatory",
-                display: "flex",
-                WebkitOverflowScrolling: "touch",
-              }}
-            >
-              {/* Render workspaces based on workspace IDs array */}
-              {workspaceIds.map((id, index) => (
-                <Workspace
-                  key={id}
-                  index={index}
-                  isActive={index === activeWorkspaceIndex}
-                  onActive={handleSetActiveEditor}
-                  onDelete={handleDeleteWorkspace}
-                  canDelete={workspaceIds.length > 1}
-                  defaultState={index === 0 ? initialData.json : undefined}
-                  defaultWidth={index === 0 ? initialData.width : undefined}
-                  defaultHeight={index === 0 ? initialData.height : undefined}
-                  clearSelectionCallback={onClearSelection}
-                  saveCallback={debouncedSave}
-                  activeTool={activeTool}
-                />
-              ))}
+          <FillColorSidebar
+            editor={activeEditor}
+            activeTool={activeTool}
+            onChangeActiveTool={onChangeActiveTool}
+          />
+          <StrokeColorSidebar
+            editor={activeEditor}
+            activeTool={activeTool}
+            onChangeActiveTool={onChangeActiveTool}
+          />
+          <StrokeWidthSidebar
+            editor={activeEditor}
+            activeTool={activeTool}
+            onChangeActiveTool={onChangeActiveTool}
+          />
+          <OpacitySidebar
+            editor={activeEditor}
+            activeTool={activeTool}
+            onChangeActiveTool={onChangeActiveTool}
+          />
+          <TextSidebar
+            editor={activeEditor}
+            activeTool={activeTool}
+            onChangeActiveTool={onChangeActiveTool}
+          />
+          <FontSidebar
+            editor={activeEditor}
+            activeTool={activeTool}
+            onChangeActiveTool={onChangeActiveTool}
+          />
+          <ImageSidebar
+            editor={activeEditor}
+            activeTool={activeTool}
+            onChangeActiveTool={onChangeActiveTool}
+          />
+          <TemplateSidebar
+            editor={activeEditor}
+            activeTool={activeTool}
+            onChangeActiveTool={onChangeActiveTool}
+          />
+          <FilterSidebar
+            editor={activeEditor}
+            activeTool={activeTool}
+            onChangeActiveTool={onChangeActiveTool}
+          />
+          <DrawSidebar
+            editor={activeEditor}
+            activeTool={activeTool}
+            onChangeActiveTool={onChangeActiveTool}
+          />
+          <PromptSidebar
+            editor={activeEditor}
+            activeTool={activeTool}
+            onChangeActiveTool={onChangeActiveTool}
+          />
+          <SettingsSidebar
+            editor={activeEditor}
+            activeTool={activeTool}
+            onChangeActiveTool={onChangeActiveTool}
+          />
+          <main className="bg-editor-bg dark:bg-editor-bg-dark flex-1 overflow-hidden relative flex flex-col rounded-xl mx-2">
+            <Toolbar
+              editor={activeEditor}
+              activeTool={activeTool}
+              onChangeActiveTool={onChangeActiveTool}
+            />
+            <div className="flex flex-row h-full w-full mb-4 relative overflow-hidden">
+              {/* Scrollable container for workspaces */}
+              <div 
+                ref={editorsContainerRef}
+                className="flex-1 overflow-x-auto mt-2 mx-2 scroll-smooth" 
+                style={{
+                  scrollSnapType: "x mandatory",
+                  display: "flex",
+                  WebkitOverflowScrolling: "touch",
+                }}
+              >
+                {/* Render workspaces based on workspace IDs array */}
+                {workspaceIds.map((id, index) => (
+                  <Workspace
+                    key={id}
+                    index={index}
+                    isActive={index === activeWorkspaceIndex}
+                    onActive={handleSetActiveEditor}
+                    onDelete={handleDeleteWorkspace}
+                    canDelete={workspaceIds.length > 1}
+                    defaultState={index === 0 ? initialData.json : undefined}
+                    defaultWidth={index === 0 ? initialData.width : undefined}
+                    defaultHeight={index === 0 ? initialData.height : undefined}
+                    clearSelectionCallback={onClearSelection}
+                    saveCallback={debouncedSave}
+                    activeTool={activeTool}
+                  />
+                ))}
+              </div>
+              
+              {/* Add workspace button */}
+              <div className="w-16 flex items-center justify-center">
+                <button
+                  onClick={handleAddWorkspace}
+                  className={cn("bg-editor-sidebar rounded-xl p-2")}
+                >
+                  <Plus className="h-6 w-6" strokeWidth={3} />
+                </button>
+              </div>
             </div>
             
-            {/* Add workspace button */}
-            <div className="w-16 flex items-center justify-center">
-              <button
-                onClick={handleAddWorkspace}
-                className={cn("bg-editor-sidebar rounded-xl p-2")}
-              >
-                <Plus className="h-6 w-6" strokeWidth={3} />
-              </button>
-            </div>
-          </div>
-          
-          <div className={cn(
-            "modern-timeline rounded-xl flex flex-col transition-all duration-300",
-            timelineCollapsed ? "h-[70px]" : "h-[650px]",
-            "mx-2 mb-1 flex-shrink-0 self-end w-[calc(100%-1rem)]"
-          )}>
-            <div 
-              className="flex items-center justify-between pt-4 px-4 pb-1 border-gray-700 cursor-pointer hover:bg-zinc-750"
-              onClick={(e) => {
-                if (e.target === e.currentTarget) {
-                  setTimelineCollapsed(!timelineCollapsed);
-                }
-              }}
-            > 
-              <Button 
-                className="bg-blue-500 text-white hover:bg-blue-600 flex items-center gap-2 rounded-xl"
-                onClick={handleGenerateVideo}
-                disabled={isGenerating}
-              >
-                {isGenerating ? (
-                  <>
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                    Generating...
-                  </>
-                ) : (
-                  'Generate Video'
-                )}
-              </Button>
-              <div className="flex items-center justify-between">
-                <span className="text-zinc-300 text-m font-medium tracking-wide">
-                  Timeline
-                </span>
-                <ChevronDown 
-                  className={cn(
-                    "h-6 w-6 text-zinc-300 transition-all",
-                    timelineCollapsed && "rotate-180"
-                  )}
-                />
-              </div>
-            </div>
             <div className={cn(
-              "flex-1 overflow-x-auto border-zinc-700 transition-all",
-              timelineCollapsed && "h-0"
+              "modern-timeline rounded-xl flex flex-col transition-all duration-300",
+              timelineCollapsed ? "h-[70px]" : "h-[650px]",
+              "mx-2 mb-1 flex-shrink-0 self-end w-[calc(100%-1rem)]"
             )}>
-              <div className="min-w-[830px] h-full p-4">
-                <VideoTimeline 
-                  videoGenerations={videoGenerations} 
-                  onGenerateVideo={handleGenerateVideo}
-                  workspaceCount={workspaceIds.length}
-                  activeWorkspaceIndex={activeWorkspaceIndex}
-                />
+              <div 
+                className="flex items-center justify-between pt-4 px-4 pb-1 border-gray-700 cursor-pointer hover:bg-zinc-750"
+                onClick={(e) => {
+                  if (e.target === e.currentTarget) {
+                    setTimelineCollapsed(!timelineCollapsed);
+                  }
+                }}
+              > 
+                <Button 
+                  className="bg-blue-500 text-white hover:bg-blue-600 flex items-center gap-2 rounded-xl"
+                  onClick={handleGenerateVideo}
+                  disabled={isGenerating}
+                >
+                  {isGenerating ? (
+                    <>
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      Generating...
+                    </>
+                  ) : (
+                    'Generate Video'
+                  )}
+                </Button>
+                <div className="flex items-center justify-between">
+                  <span className="text-zinc-300 text-m font-medium tracking-wide">
+                    Timeline
+                  </span>
+                  <ChevronDown 
+                    className={cn(
+                      "h-6 w-6 text-zinc-300 transition-all",
+                      timelineCollapsed && "rotate-180"
+                    )}
+                  />
+                </div>
+              </div>
+              <div className={cn(
+                "flex-1 overflow-x-auto border-zinc-700 transition-all",
+                timelineCollapsed && "h-0"
+              )}>
+                <div className="min-w-[830px] h-full p-4">
+                  <VideoTimeline 
+                    videoGenerations={videoGenerations} 
+                    onGenerateVideo={handleGenerateVideo}
+                    workspaceCount={workspaceIds.length}
+                    activeWorkspaceIndex={activeWorkspaceIndex}
+                  />
+                </div>
               </div>
             </div>
-          </div>
-          
-          <Footer editor={activeEditor} />
-        </main>
+            
+            <Footer editor={activeEditor} />
+          </main>
+        </div>
       </div>
-    </div>
+    </ThemeProvider>
   );
 }

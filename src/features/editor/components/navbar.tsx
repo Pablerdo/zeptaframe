@@ -14,7 +14,7 @@ import {
 } from "lucide-react";
 
 import { UserButton } from "@/features/auth/components/user-button";
-import { DarkModeToggle } from "@/components/dark-mode-toggle";
+import { DarkModeToggle } from "@/features/editor/components/dark-mode-toggle";
 
 import { ActiveTool, Editor } from "@/features/editor/types";
 import { Logo } from "@/features/editor/components/logo";

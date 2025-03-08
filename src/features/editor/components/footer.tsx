@@ -19,6 +19,7 @@ export const Footer = ({ editor }: FooterProps) => {
           size="icon"
           variant="tool"
           className={cn("bg-editor-sidebar h-full")}
+          disabled
         >
         
           <Minimize className="size-4" />
@@ -30,6 +31,7 @@ export const Footer = ({ editor }: FooterProps) => {
           size="icon"
           variant="tool"
           className={cn("bg-editor-sidebar h-full")}
+          disabled
         >
           <ZoomIn className="size-4" />
         </Button>
@@ -40,8 +42,10 @@ export const Footer = ({ editor }: FooterProps) => {
           size="icon"
           variant="tool"
           className={cn("bg-editor-sidebar h-full")}
+          disabled
         >
           <ZoomOut className="size-4" />
+
         </Button>
       </Hint>
     </footer>
