@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 
 import { UserButton } from "@/features/auth/components/user-button";
+import { DarkModeToggle } from "@/components/dark-mode-toggle";
 
 import { ActiveTool, Editor } from "@/features/editor/types";
 import { Logo } from "@/features/editor/components/logo";
@@ -70,7 +71,7 @@ export const Navbar = ({
   });
 
   return (
-    <nav className="w-full flex items-center p-4 h-[68px] gap-x-8 border-b border-black-900 lg:pl-[34px] bg-white ">
+    <nav className="w-full flex items-center p-4 h-[68px] gap-x-8 border-b border-black-900 lg:pl-[34px] bg-background text-foreground dark:shadow-dark-raised">
       <Logo />
       <div className="w-full flex items-center gap-x-1 h-full">
         <DropdownMenu modal={false}>
@@ -101,7 +102,7 @@ export const Navbar = ({
             variant="ghost"
             size="icon"
             onClick={() => onChangeActiveTool("select")}
-            className={cn(activeTool === "select" && "bg-gray-100")}
+            className={cn(activeTool === "select" && "bg-accent/10")}
           >
             <MousePointerClick className="size-4" />
           </Button>
@@ -210,6 +211,7 @@ export const Navbar = ({
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
+          <DarkModeToggle />
           <UserButton />
         </div>
       </div>

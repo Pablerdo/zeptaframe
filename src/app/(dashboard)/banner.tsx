@@ -19,8 +19,8 @@ export const Banner = () => {
       {
         name: "Untitled project",
         json: "",
-        width: 900,
-        height: 1200,
+        width: 720,
+        height: 480,
       },
       {
         onSuccess: ({ data }) => {
@@ -38,7 +38,7 @@ export const Banner = () => {
         </div>
       </div>
       <div className="flex flex-col gap-y-2">
-        <h1 className="text-xl md:text-3xl font-semibold">Visualize your ideas with The Canvas</h1>
+        <h1 className="text-xl md:text-3xl font-semibold">Create precise movies with Zeptaframe</h1>
         <p className="text-xs md:text-sm mb-2">
           Turn inspiration into design in no time. Simply upload an image and let AI do the rest.
         </p>
@@ -48,7 +48,7 @@ export const Banner = () => {
           variant="secondary"
           className="w-[160px]"
         >
-          Start creating
+          New Project
           {loading ? (
             <Loader2 className="size-4 ml-2 animate-spin" />
           ) : (

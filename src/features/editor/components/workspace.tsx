@@ -5,6 +5,7 @@ import { useEffect, useRef } from "react";
 import { Trash2 } from "lucide-react";
 import { useEditor } from "@/features/editor/hooks/use-editor";
 import { ActiveTool, Editor as EditorType } from "@/features/editor/types";
+import { cn } from "@/lib/utils";
 
 interface WorkspaceProps {
   defaultState?: string;
@@ -109,7 +110,7 @@ export const Workspace = ({
   return (
     <div 
       ref={containerRef}
-      className="relative min-w-full max-w-full flex-shrink-0 h-full bg-white rounded-xl shadow-soft overflow-hidden mx-4"
+      className={cn("modern-canvas relative min-w-full max-w-full flex-shrink-0 h-full rounded-xl shadow-soft overflow-hidden mx-4")}
       style={{
         scrollSnapAlign: "start",
         opacity: isActive ? 1 : 0.98,
@@ -118,7 +119,10 @@ export const Workspace = ({
     >
       <canvas 
         ref={canvasRef} 
-        className={activeTool === "segment" ? "cursor-crosshair" : "cursor-default"}
+        className={cn(
+          "border border-gray-200 dark:border-gray-700",
+          activeTool === "segment" ? "cursor-crosshair" : "cursor-default"
+        )}
       />
       {/* Workspace number indicator */}
       <div className="absolute top-2 right-2 bg-blue-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs font-bold">

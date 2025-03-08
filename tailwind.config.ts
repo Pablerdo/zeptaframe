@@ -54,12 +54,16 @@ const config = {
           foreground: "hsl(var(--card-foreground))",
         },
         editor: {
-          bg: "#dfe0e2",
-          sidebar: "#FFFFFF",
-          timeline: "#1E293B",
+          bg: {
+            DEFAULT: "#dfe0e2",
+            dark: "#545e6d"
+          },
+          canvas: "hsl(var(--component-bg))",
+          sidebar: "hsl(var(--component-bg))",
+          timeline: "hsl(var(--component-bg))", //"#1E293B",
           highlight: "#3B82F6",
         },
-      },
+      }, 
       borderRadius: {
         lg: "var(--radius)",
         md: "calc(var(--radius) - 2px)",
@@ -71,6 +75,7 @@ const config = {
         'soft': '0 4px 20px 0 rgba(0, 0, 0, 0.05)',
         'card': '0 8px 30px rgba(0, 0, 0, 0.08)',
         'highlight': '0 0 0 2px rgba(59, 130, 246, 0.3)',
+        'dark-raised': '0 6px 16px -5px rgba(0, 0, 0, 0.3), 0 0 3px 0 rgba(0, 0, 0, 0.2), 0 0 0 1px rgba(255, 255, 255, 0.05)',
       },
       keyframes: {
         "accordion-down": {

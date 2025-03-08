@@ -43,7 +43,7 @@ export const DrawSidebar = ({
   return (
     <aside
       className={cn(
-        "bg-white relative border-r z-[40] rounded-xl w-[360px] flex flex-col my-2",
+        "bg-editor-sidebar relative border-r z-[40] rounded-xl w-[360px] flex flex-col my-2",
         activeTool === "draw" ? "visible" : "hidden",
       )}
     >

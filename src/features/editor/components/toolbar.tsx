@@ -156,12 +156,12 @@ export const Toolbar = ({
 
   if (editor?.selectedObjects.length === 0) {
     return (
-      <div className="shrink-0 h-[56px] modern-toolbar border-b bg-white flex items-center overflow-x-auto z-[49] px-4 gap-x-2 rounded-xl"/>
+      <div className={cn("shrink-0 h-[56px] modern-toolbar border-b flex items-center overflow-x-auto z-[49] px-4 gap-x-2 rounded-xl")}/>
     );
   }
 
   return (
-    <div className="shrink-0 h-[56px] modern-toolbar border-b bg-white flex items-center overflow-x-auto z-[49] px-4 gap-x-2 rounded-xl">
+    <div className={cn("shrink-0 h-[56px] modern-toolbar border-b flex items-center overflow-x-auto z-[49] px-4 gap-x-2 rounded-xl")}>
       {!isImage && (
         <div className="flex items-center h-full justify-center">
           <Hint label="Color" side="bottom" sideOffset={5}>
@@ -170,7 +170,7 @@ export const Toolbar = ({
               size="icon"
               variant="tool"
               className={cn(
-                activeTool === "fill" && "bg-blue-50 border-blue-200 text-blue-600"
+                activeTool === "fill" && "bg-blue-50 dark:bg-slate-700 border-blue-200 dark:border-slate-600 text-blue-600 dark:text-blue-400"
               )}
             >
               <div

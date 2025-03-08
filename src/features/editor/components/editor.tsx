@@ -320,7 +320,7 @@ export const Editor = ({ initialData }: EditorProps) => {
   }, [workspaceIds.length, activeWorkspaceIndex]);
 
   return (
-    <div className="w-full h-full flex flex-col overflow-hidden bg-editor-bg">
+    <div className="w-full h-full flex flex-col overflow-hidden bg-editor-bg dark:bg-editor-bg-dark">
       <Navbar
         id={initialData.id}
         editor={activeEditor}
@@ -402,7 +402,7 @@ export const Editor = ({ initialData }: EditorProps) => {
           activeTool={activeTool}
           onChangeActiveTool={onChangeActiveTool}
         />
-        <main className="bg-editor-bg flex-1 overflow-hidden relative flex flex-col rounded-xl mx-2">
+        <main className="bg-editor-bg dark:bg-editor-bg-dark flex-1 overflow-hidden relative flex flex-col rounded-xl mx-2">
           <Toolbar
             editor={activeEditor}
             activeTool={activeTool}
@@ -442,15 +442,15 @@ export const Editor = ({ initialData }: EditorProps) => {
             <div className="w-16 flex items-center justify-center">
               <button
                 onClick={handleAddWorkspace}
-                className="w-12 h-16 rounded-md flex items-center justify-center bg-editor-timeline hover:bg-blue-600 transition-colors duration-200 group relative"
+                className={cn("bg-editor-sidebar rounded-xl p-2")}
               >
-                <Plus className="h-6 w-6 text-white" strokeWidth={3} />
+                <Plus className="h-6 w-6" strokeWidth={3} />
               </button>
             </div>
           </div>
           
           <div className={cn(
-            "bg-editor-timeline rounded-xl flex flex-col transition-all duration-300",
+            "modern-timeline rounded-xl flex flex-col transition-all duration-300",
             timelineCollapsed ? "h-[70px]" : "h-[650px]",
             "mx-2 mb-1 flex-shrink-0 self-end w-[calc(100%-1rem)]"
           )}>

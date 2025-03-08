@@ -4,6 +4,7 @@ import { Editor } from "@/features/editor/types";
 
 import { Hint } from "@/components/hint";
 import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 
 interface FooterProps {
   editor: Editor | undefined;
@@ -17,8 +18,9 @@ export const Footer = ({ editor }: FooterProps) => {
           onClick={() => editor?.autoZoom()}
           size="icon"
           variant="tool"
-          className="h-full"
+          className={cn("bg-editor-sidebar h-full")}
         >
+        
           <Minimize className="size-4" />
         </Button>
       </Hint>
@@ -27,7 +29,7 @@ export const Footer = ({ editor }: FooterProps) => {
           onClick={() => editor?.zoomIn()}
           size="icon"
           variant="tool"
-          className="h-full"
+          className={cn("bg-editor-sidebar h-full")}
         >
           <ZoomIn className="size-4" />
         </Button>
@@ -37,7 +39,7 @@ export const Footer = ({ editor }: FooterProps) => {
           onClick={() => editor?.zoomOut()}
           size="icon"
           variant="tool"
-          className="h-full"
+          className={cn("bg-editor-sidebar h-full")}
         >
           <ZoomOut className="size-4" />
         </Button>

@@ -12,6 +12,8 @@ body {
     --background: 210 40% 98%;
     --foreground: 222 47% 11%;
 
+    --component-bg: 0 0% 100%;
+
     --card: 0 0% 100%;
     --card-foreground: 222 47% 11%;
 
@@ -38,11 +40,15 @@ body {
     --ring: 221 83% 53%;
 
     --radius: 0.75rem;
+
   }
 
   .dark {
+
     --background: 222 47% 11%;
     --foreground: 210 40% 98%;
+
+    --component-bg: 222 47% 11%;
 
     --card: 222.2 84% 4.9%;
     --card-foreground: 210 40% 98%;
@@ -95,15 +101,15 @@ body {
 
 @layer components {
   .modern-sidebar {
-    @apply bg-white shadow-soft rounded-xl border-0 overflow-hidden;
+    @apply bg-editor-sidebar shadow-soft dark:shadow-dark-raised rounded-xl border-0 overflow-hidden;
   }
   
   .modern-sidebar-item {
-    @apply rounded-xl hover:bg-blue-50 transition-all duration-200;
+    @apply rounded-xl hover:bg-blue-50 dark:hover:bg-slate-700 transition-all duration-200;
   }
   
   .modern-toolbar {
-    @apply bg-white shadow-soft rounded-xl mx-2 my-2 border border-gray-100;
+    @apply bg-editor-sidebar shadow-soft dark:shadow-dark-raised rounded-xl mx-2 my-2 border border-gray-100 dark:border-slate-700;
   }
   
   .modern-button {
@@ -111,10 +117,26 @@ body {
   }
   
   .modern-card {
-    @apply bg-white rounded-xl shadow-card border-0;
+    @apply bg-editor-sidebar dark:bg-editor-sidebar-dark rounded-xl shadow-card border-0;
   }
   
   .modern-input {
-    @apply rounded-lg border-gray-200 focus:border-blue-500 focus:ring-blue-500;
+    @apply rounded-lg border-gray-200 dark:border-slate-700 focus:border-blue-500 focus:ring-blue-500;
+  }
+
+  .modern-canvas {
+    @apply bg-editor-canvas rounded-xl shadow-card border-0;
+  }
+
+  .modern-timeline {
+    @apply bg-editor-canvas shadow-sm dark:shadow-dark-raised  rounded-xl border-0;
+  }
+  
+  .canvas-grid {
+    @apply border border-gray-200 dark:border-gray-700;
+    background-size: 30px 30px;
+    background-image: 
+      linear-gradient(to right, #f0f0f0 1px, transparent 1px),
+      linear-gradient(to bottom, #f0f0f0 1px, transparent 1px);
   }
 }
