@@ -37,6 +37,7 @@ import VideoTimeline from "@/features/editor/components/video-timeline";
 import { Button } from "@/components/ui/button";
 import { dataUrlToFile, uploadToUploadThingResidual } from "@/lib/uploadthing";
 import { Workspace } from "@/features/editor/components/workspace";
+import { CameraControlSidebar } from "./camera-control-sidebar";
 
 interface EditorProps {
   initialData: ResponseType["data"];
@@ -390,6 +391,11 @@ export const Editor = ({ initialData }: EditorProps) => {
             onChangeActiveTool={onChangeActiveTool}
           />
           <DrawSidebar
+            editor={activeEditor}
+            activeTool={activeTool}
+            onChangeActiveTool={onChangeActiveTool}
+          />
+          <CameraControlSidebar
             editor={activeEditor}
             activeTool={activeTool}
             onChangeActiveTool={onChangeActiveTool}

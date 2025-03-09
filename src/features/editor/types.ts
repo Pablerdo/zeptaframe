@@ -110,6 +110,7 @@ export type ActiveTool =
   | "templates"
   | "control-motion"
   | "segment"
+  | "camera-control"
   | "prompt";
 
 export const FILL_COLOR = "rgba(0,0,0,1)";

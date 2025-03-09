@@ -11,6 +11,7 @@ import {
   ArrowUpRight,
   Crosshair,
   MessageSquare,
+  Video,
 } from "lucide-react";
 
 
@@ -59,24 +60,18 @@ export const Sidebar = ({
           isActive={activeTool === "draw"}
           onClick={() => onChangeActiveTool("draw")}
         />
-        {/* <SidebarItem
-          icon={Sparkles}
-          label="AI"
-          isActive={activeTool === "ai"}
-          onClick={() => onChangeActiveTool("ai")}
-        /> */}
         <SidebarItem
           icon={Crosshair}
           label="Segment"
           isActive={activeTool === "segment"}
           onClick={() => onChangeActiveTool("segment")}
         />
-        {/* <SidebarItem
-          icon={ArrowUpRight}
-          label="Control Motion"
-          isActive={activeTool === "control-motion"}
-          onClick={() => onChangeActiveTool("control-motion")}
-        /> */}
+        <SidebarItem
+          icon={Video}
+          label="Camera"
+          isActive={activeTool === "camera-control"}
+          onClick={() => onChangeActiveTool("camera-control")}
+        />
         <SidebarItem
           icon={MessageSquare}
           label="Prompt"
