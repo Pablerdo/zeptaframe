@@ -28,17 +28,19 @@ const VideoTimeline = ({
   
   useEffect(() => {
     if (videoGenerations.length > 0) {
-      const newVideoBoxes = [...videoBoxes];
-      
-      videoGenerations.forEach((gen, idx) => {
-        if (gen.status === 'success' && gen.videoUrl && idx < workspaceCount) {
-          newVideoBoxes[idx] = gen.videoUrl;
-        }
+      setVideoBoxes(prevBoxes => {
+        const newVideoBoxes = [...prevBoxes];
+        
+        videoGenerations.forEach((gen, idx) => {
+          if (gen.status === 'success' && gen.videoUrl && idx < workspaceCount) {
+            newVideoBoxes[idx] = gen.videoUrl;
+          }
+        });
+        
+        return newVideoBoxes;
       });
-      
-      setVideoBoxes(newVideoBoxes);
     }
-  }, [videoGenerations, workspaceCount, videoBoxes]);
+  }, [videoGenerations, workspaceCount]);
 
   return (
     <div className="w-full overflow-x-auto px-6">
