@@ -165,13 +165,17 @@ export const Editor = ({ initialData }: EditorProps) => {
   // Check the status of the video generations
   useEffect(() => {
     const intervals: NodeJS.Timeout[] = [];
+    const visibilityListeners: (() => void)[] = [];
+    const rafIds: number[] = [];
+    
     console.log("setting up video status check intervals");
 
-    // Only create intervals for pending generations that don't have one yet
+    // Only create intervals for pending generations
     videoGenerations.forEach((gen, index) => {
       if (gen.status === 'pending') {
         console.log(`Setting up interval for video generation ${gen.runId}`);
         
+        // Status check interval
         const intervalId = setInterval(async () => {
           console.log(`Checking status for video generation ${gen.runId}`);
           try {
@@ -188,6 +192,8 @@ export const Editor = ({ initialData }: EditorProps) => {
                   progress: 100
                 } : g
               ));
+              
+              // Clean up all timers and listeners for this generation
               clearInterval(intervalId);
             }
           } catch (error) {
@@ -199,10 +205,14 @@ export const Editor = ({ initialData }: EditorProps) => {
       }
     });
 
-    // Cleanup function to clear all intervals when component unmounts or dependencies change
+    // Cleanup function to clear all intervals and listeners
     return () => {
       console.log(`Cleaning up ${intervals.length} status check intervals`);
       intervals.forEach(id => clearInterval(id));
+      rafIds.forEach(id => cancelAnimationFrame(id));
+      visibilityListeners.forEach(listener => 
+        document.removeEventListener('visibilitychange', listener)
+      );
     };
   }, [videoGenerations.map(gen => gen.runId).join(',')]); // Only depend on the runIds
 
@@ -261,34 +271,56 @@ export const Editor = ({ initialData }: EditorProps) => {
       console.log(data);
       
       if (data.runId) {
-        // Add new video generation to array
+        // Add new video generation to array with current workspace index
+        const startTime = Date.now();
+        const estimatedDuration = 5 * 60 * 1000; // 5 minutes in milliseconds
+        
         setVideoGenerations(prev => [...prev, {
           runId: data.runId,
           status: 'pending',
-          progress: 0
+          progress: 0,
+          workspaceIndex: activeWorkspaceIndex,
+          startTime: startTime, // Store when we started
+          estimatedDuration: estimatedDuration // Store how long we expect it to take
         }]);
         
-        // Start the progress animation for this generation
-        const duration = 7 * 60 * 1000;
-        const interval = 100;
-        const steps = duration / interval;
-        let currentStep = 0;
-        
-        const progressInterval = setInterval(() => {
-          currentStep++;
-          const progress = (currentStep / steps) * 100;
+        // Create a function to update progress based on elapsed time
+        const updateProgress = () => {
+          const elapsedTime = Date.now() - startTime;
+          const calculatedProgress = Math.min((elapsedTime / estimatedDuration) * 100, 99);
           
           setVideoGenerations(prev => prev.map(gen => 
             gen.runId === data.runId ? {
               ...gen,
-              progress: Math.min(progress, 100)
+              progress: calculatedProgress
             } : gen
           ));
-          
-          if (currentStep >= steps) {
-            clearInterval(progressInterval);
+        };
+        
+        // Use requestAnimationFrame when visible and setInterval as fallback
+        let progressInterval: number | NodeJS.Timeout;
+        let rafId: number;
+        
+        const handleVisibilityChange = () => {
+          if (document.hidden) {
+            // Tab is hidden, use setInterval (will be throttled but still runs occasionally)
+            cancelAnimationFrame(rafId);
+            progressInterval = setInterval(updateProgress, 2000);
+          } else {
+            // Tab is visible, use requestAnimationFrame for smooth updates
+            clearInterval(progressInterval as NodeJS.Timeout);
+            
+            const updateWithRAF = () => {
+              updateProgress();
+              rafId = requestAnimationFrame(updateWithRAF);
+            };
+            rafId = requestAnimationFrame(updateWithRAF);
           }
-        }, interval);
+        };
+        
+        // Set up initial state based on current visibility
+        document.addEventListener('visibilitychange', handleVisibilityChange);
+        handleVisibilityChange();
         
         console.log("Video generation started. Please wait...");
       } else {

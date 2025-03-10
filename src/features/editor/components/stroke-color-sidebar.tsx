@@ -30,7 +30,7 @@ export const StrokeColorSidebar = ({
   return (
     <aside
       className={cn(
-        "bg-white relative border-r z-[40] w-[360px] h-full flex flex-col",
+        "bg-editor-sidebar relative border-r rounded-xl z-[40] w-[360px] h-full flex flex-col my-2",
         activeTool === "stroke-color" ? "visible" : "hidden",
       )}
     >

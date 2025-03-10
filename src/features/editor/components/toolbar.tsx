@@ -19,6 +19,7 @@ import {
   Trash,
   SquareSplitHorizontal,
   Copy,
+  PaintBucket,
 } from "lucide-react";
 
 import { isTextType } from "@/features/editor/utils";
@@ -192,7 +193,7 @@ export const Toolbar = ({
                 activeTool === "stroke-color" && "bg-blue-50 dark:bg-slate-700 border-blue-200 dark:border-slate-600 text-blue-600 dark:text-blue-400"
               )}
             >
-              <BsBorderWidth className="size-4" />
+              <PaintBucket className="size-4" />
             </Button>
           </Hint>
         </div>

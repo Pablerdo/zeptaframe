@@ -223,8 +223,11 @@ export type BuildEditorProps = {
 export interface VideoGeneration {
   runId: string;
   status: 'pending' | 'success' | 'error';
-  videoUrl?: string;
   progress: number;
+  videoUrl?: string;
+  workspaceIndex?: number;
+  startTime?: number;       // When the generation started
+  estimatedDuration?: number; // How long we expect it to take
 }
 
 export interface Coordinate {
