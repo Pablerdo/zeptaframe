@@ -83,7 +83,7 @@ export const SignInCard = () => {
             )}
           </Button>
         </form>
-        <Separator />
+        {/* <Separator />
         <div className="flex flex-col gap-y-2.5">
           <Button
             onClick={() => onProviderSignIn("google")}
@@ -113,7 +113,7 @@ export const SignInCard = () => {
             )}
             Continue with Github
           </Button>
-        </div>
+        </div> */}
         <p className="text-xs text-muted-foreground">
           Don&apos;t have an account?{" "}
           <Link href="/sign-up" onClick={() => setLoading(true)}>
