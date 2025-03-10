@@ -13,9 +13,9 @@ export const Logo = () => {
   return (
     <Link href="/">
       <div className="flex items-center gap-x-2 hover:opacity-75 transition h-[68px] px-4">
-        {/* <div className="size-8 relative">
-          <Image src="/logo.svg" alt="The Canvas" fill />
-        </div> */}
+        <div className="size-8 relative">
+          <Image src="/zeptaframe-logo.svg" alt="Zeptaframe" fill />
+        </div> 
         <h1 className={cn(font.className, "text-xl font-bold")}>Zeptaframe</h1>
       </div>
     </Link>
