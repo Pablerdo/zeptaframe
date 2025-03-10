@@ -187,9 +187,9 @@ export const Toolbar = ({
             <Button
               onClick={() => onChangeActiveTool("stroke-color")}
               size="icon"
-              variant="tool"
+              variant="ghost"
               className={cn(
-                activeTool === "stroke-color" && "bg-blue-50 border-blue-200 text-blue-600"
+                activeTool === "stroke-color" && "bg-blue-50 dark:bg-slate-700 border-blue-200 dark:border-slate-600 text-blue-600 dark:text-blue-400"
               )}
             >
               <BsBorderWidth className="size-4" />
@@ -205,7 +205,7 @@ export const Toolbar = ({
               size="icon"
               variant="ghost"
               className={cn(
-                activeTool === "stroke-width" && "bg-gray-100"
+                activeTool === "stroke-width" && "bg-gray-100 dark:bg-slate-800"
               )}
             >
               <BsBorderWidth className="size-4" />
@@ -222,7 +222,7 @@ export const Toolbar = ({
               variant="ghost"
               className={cn(
                 "w-auto px-2 text-sm",
-                activeTool === "font" && "bg-gray-100"
+                activeTool === "font" && "bg-gray-100 dark:bg-slate-800"
               )}
             >
               <div className="max-w-[100px] truncate">
@@ -241,7 +241,7 @@ export const Toolbar = ({
               size="icon"
               variant="ghost"
               className={cn(
-                properties.fontWeight > 500 && "bg-gray-100"
+                properties.fontWeight > 500 && "bg-gray-100 dark:bg-slate-800"
               )}
             >
               <FaBold className="size-4" />
@@ -257,7 +257,7 @@ export const Toolbar = ({
               size="icon"
               variant="ghost"
               className={cn(
-                properties.fontStyle === "italic" && "bg-gray-100"
+                properties.fontStyle === "italic" && "bg-gray-100 dark:bg-slate-800"
               )}
             >
               <FaItalic className="size-4" />
@@ -273,7 +273,7 @@ export const Toolbar = ({
               size="icon"
               variant="ghost"
               className={cn(
-                properties.fontUnderline && "bg-gray-100"
+                properties.fontUnderline && "bg-gray-100 dark:bg-slate-800"
               )}
             >
               <FaUnderline className="size-4" />
@@ -289,7 +289,7 @@ export const Toolbar = ({
               size="icon"
               variant="ghost"
               className={cn(
-                properties.fontLinethrough && "bg-gray-100"
+                properties.fontLinethrough && "bg-gray-100 dark:bg-slate-800"
               )}
             >
               <FaStrikethrough className="size-4" />
@@ -305,7 +305,7 @@ export const Toolbar = ({
               size="icon"
               variant="ghost"
               className={cn(
-                properties.textAlign === "left" && "bg-gray-100"
+                properties.textAlign === "left" && "bg-gray-100 dark:bg-slate-800"
               )}
             >
               <AlignLeft className="size-4" />
@@ -321,7 +321,7 @@ export const Toolbar = ({
               size="icon"
               variant="ghost"
               className={cn(
-                properties.textAlign === "center" && "bg-gray-100"
+                properties.textAlign === "center" && "bg-gray-100 dark:bg-slate-800"
               )}
             >
               <AlignCenter className="size-4" />
@@ -337,7 +337,7 @@ export const Toolbar = ({
               size="icon"
               variant="ghost"
               className={cn(
-                properties.textAlign === "right" && "bg-gray-100"
+                properties.textAlign === "right" && "bg-gray-100 dark:bg-slate-800"
               )}
             >
               <AlignRight className="size-4" />
@@ -361,7 +361,7 @@ export const Toolbar = ({
               size="icon"
               variant="ghost"
               className={cn(
-                activeTool === "filter" && "bg-gray-100"
+                activeTool === "filter" && "bg-gray-100 dark:bg-slate-800"
               )}
             >
               <TbColorFilter className="size-4" />
@@ -369,7 +369,7 @@ export const Toolbar = ({
           </Hint>
         </div>
       )}
-      {isImage && (
+      {/* {isImage && (
         <div className="flex items-center h-full justify-center">
           <Hint label="Remove background" side="bottom" sideOffset={5}>
             <Button
@@ -377,20 +377,21 @@ export const Toolbar = ({
               size="icon"
               variant="ghost"
               className={cn(
-                activeTool === "remove-bg" && "bg-gray-100"
+                activeTool === "remove-bg" && "bg-gray-100 dark:bg-slate-800"
               )}
             >
               <SquareSplitHorizontal className="size-4" />
             </Button>
           </Hint>
         </div>
-      )}
+      )} */}
       <div className="flex items-center h-full justify-center ml-auto">
         <Hint label="Bring forward" side="bottom" sideOffset={5}>
           <Button
             onClick={() => editor?.bringForward()}
             size="icon"
-            variant="tool"
+            variant="ghost"
+            className="dark:bg-editor-timeline"
           >
             <ArrowUp className="size-4" />
           </Button>
@@ -402,6 +403,7 @@ export const Toolbar = ({
             onClick={() => editor?.sendBackwards()}
             size="icon"
             variant="ghost"
+            className="dark:bg-editor-timeline"
           >
             <ArrowDown className="size-4" />
           </Button>
@@ -413,7 +415,7 @@ export const Toolbar = ({
             onClick={() => onChangeActiveTool("opacity")}
             size="icon"
             variant="ghost"
-            className={cn(activeTool === "opacity" && "bg-gray-100")}
+            className={cn("dark:bg-editor-timeline", activeTool === "opacity" && "bg-gray-100")}
           >
             <RxTransparencyGrid className="size-4" />
           </Button>
@@ -428,6 +430,7 @@ export const Toolbar = ({
             }}
             size="icon"
             variant="ghost"
+            className="dark:bg-editor-timeline"
           >
             <Copy className="size-4" />
           </Button>
@@ -439,7 +442,7 @@ export const Toolbar = ({
             onClick={() => editor?.delete()}
             size="icon"
             variant="tool"
-            className="text-red-600 hover:bg-red-50 hover:border-red-200"
+            className="text-red-600 hover:bg-red-50 hover:border-red-200 dark:bg-editor-bg-dark dark:border-red-800 dark:hover:bg-red-900/20 dark:hover:border-red-800"
           >
             <Trash className="size-4" />
           </Button>

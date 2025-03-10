@@ -484,7 +484,10 @@ export const Editor = ({ initialData }: EditorProps) => {
                     'Generate Video'
                   )}
                 </Button>
-                <div className="flex items-center justify-between">
+                <div 
+                  className="flex items-center justify-between"
+                  onClick={() => setTimelineCollapsed(!timelineCollapsed)}
+                >
                   <span className="text-zinc-300 text-m font-medium tracking-wide">
                     Timeline
                   </span>

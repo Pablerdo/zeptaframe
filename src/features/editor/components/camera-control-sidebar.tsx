@@ -54,7 +54,7 @@ export const CameraControlSidebar = ({
     >
       <ToolSidebarHeader
         title="Camera Control"
-        description="Place coordinates to segment the image"
+        description="Coming soon..."
       />
    
       
