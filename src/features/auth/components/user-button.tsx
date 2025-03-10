@@ -1,7 +1,7 @@
 "use client";
 
 import { useSession, signOut } from "next-auth/react";
-import { CreditCard, Crown, Loader, LogOut } from "lucide-react";
+import { CreditCard, Crown, Loader, LogOut, User } from "lucide-react";
 
 import { 
   Avatar, 
@@ -61,6 +61,14 @@ export const UserButton = () => {
         </Avatar>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-60">
+        <DropdownMenuItem className="h-10 cursor-default">
+          <User className="size-4 mr-2" />
+          <div className="flex flex-col">
+            <p className="font-medium">{name}</p>
+            <p className="text-xs text-muted-foreground">{session.data.user?.email}</p>
+          </div>
+        </DropdownMenuItem>
+        <DropdownMenuSeparator />
         <DropdownMenuItem
           disabled={mutation.isPending}
           onClick={onClick}
