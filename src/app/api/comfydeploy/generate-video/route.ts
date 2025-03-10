@@ -19,7 +19,7 @@ export async function POST(req: NextRequest) {
 
   try {
     const result = await cd.run.deployment.queue({
-      deploymentId: "0424d726-09b8-4ca7-bb9a-a337efc659a0",
+      deploymentId: "8b87168f-3dba-4af0-8aaa-c1e1c8658719", // hooked up to ZEPTA 3 (AutoPrompt)
       webhook: webhookUrl,
       inputs: {
         input_image: data.input_image,
