@@ -38,6 +38,7 @@ import { Button } from "@/components/ui/button";
 import { dataUrlToFile, uploadToUploadThingResidual } from "@/lib/uploadthing";
 import { Workspace } from "@/features/editor/components/workspace";
 import { CameraControlSidebar } from "./camera-control-sidebar";
+import CollapsibleVideoViewer from "@/features/editor/components/CollapsibleVideoViewer";
 
 interface EditorProps {
   initialData: ResponseType["data"];
@@ -457,62 +458,13 @@ export const Editor = ({ initialData }: EditorProps) => {
               </div>
             </div>
             
-            <div className={cn(
-              "modern-timeline rounded-xl flex flex-col transition-all duration-300",
-              timelineCollapsed ? "h-[70px]" : "h-[650px]",
-              "mx-2 mb-1 flex-shrink-0 self-end w-[calc(100%-1rem)]"
-            )}>
-              <div 
-                className="flex items-center justify-between pt-4 px-4 pb-1 border-gray-700 cursor-pointer hover:bg-zinc-750"
-                onClick={(e) => {
-                  if (e.target === e.currentTarget) {
-                    setTimelineCollapsed(!timelineCollapsed);
-                  }
-                }}
-              > 
-                <Button 
-                  className="bg-blue-500 text-white hover:bg-blue-600 flex items-center gap-2 rounded-xl"
-                  onClick={handleGenerateVideo}
-                  disabled={isGenerating}
-                >
-                  {isGenerating ? (
-                    <>
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                      Generating...
-                    </>
-                  ) : (
-                    'Generate Video'
-                  )}
-                </Button>
-                <div 
-                  className="flex items-center justify-between"
-                  onClick={() => setTimelineCollapsed(!timelineCollapsed)}
-                >
-                  <span className="text-zinc-300 text-m font-medium tracking-wide">
-                    Timeline
-                  </span>
-                  <ChevronDown 
-                    className={cn(
-                      "h-6 w-6 text-zinc-300 transition-all",
-                      timelineCollapsed && "rotate-180"
-                    )}
-                  />
-                </div>
-              </div>
-              <div className={cn(
-                "flex-1 overflow-x-auto border-zinc-700 transition-all",
-                timelineCollapsed && "h-0"
-              )}>
-                <div className="min-w-[830px] h-full p-4">
-                  <VideoTimeline 
-                    videoGenerations={videoGenerations} 
-                    onGenerateVideo={handleGenerateVideo}
-                    workspaceCount={workspaceIds.length}
-                    activeWorkspaceIndex={activeWorkspaceIndex}
-                  />
-                </div>
-              </div>
-            </div>
+            <CollapsibleVideoViewer
+              videoGenerations={videoGenerations}
+              onGenerateVideo={handleGenerateVideo}
+              isGenerating={isGenerating}
+              workspaceCount={workspaceIds.length}
+              activeWorkspaceIndex={activeWorkspaceIndex}
+            />
             
             <Footer editor={activeEditor} />
           </main>
