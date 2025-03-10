@@ -16,6 +16,9 @@ const inter = Inter({ subsets: ["latin"] });
 export const metadata: Metadata = {
   title: "Zeptaframe",
   description: "AI-native controllable video editor",
+  icons: {
+    icon: '/zeptaframe-logo-bin.svg',
+  },  
 };
 
 export default async function RootLayout({
