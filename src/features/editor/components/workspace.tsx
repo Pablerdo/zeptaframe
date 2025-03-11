@@ -1,7 +1,7 @@
 "use client";
 
 import { fabric } from "fabric";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Trash2 } from "lucide-react";
 import { useEditor } from "@/features/editor/hooks/use-editor";
 import { ActiveTool, Editor as EditorType } from "@/features/editor/types";
@@ -16,6 +16,7 @@ interface WorkspaceProps {
     json: string;
     height: number;
     width: number;
+    workspaceIndex: number;
   }) => void;
   isActive: boolean;
   index: number;
@@ -42,17 +43,23 @@ export const Workspace = ({
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const isInitializedRef = useRef(false);
+  const hasNotifiedActiveRef = useRef(false);
   
-  // Initialize the editor with useEditor hook (at component top level)
+  // Initialize the editor with useEditor hook
   const { init, editor } = useEditor({
     defaultState,
     defaultWidth,
     defaultHeight,
     clearSelectionCallback,
-    saveCallback,
+    saveCallback: values => {
+      if (saveCallback) {
+        saveCallback({
+          ...values,
+          workspaceIndex: index
+        });
+      }
+    },
   });
-
-  // Function to create and add grid to canvas
 
   // Initialize canvas when component mounts
   useEffect(() => {
@@ -71,10 +78,15 @@ export const Workspace = ({
     }
   }, [init]);
 
-  // Notify parent component when editor is ready or when active status changes
+  // Notify parent component when this workspace becomes active
+  // But only do it once per active state change to prevent loops
   useEffect(() => {
-    if (editor && isActive) {
+    if (editor && isActive && !hasNotifiedActiveRef.current) {
+      hasNotifiedActiveRef.current = true;
       onActive(editor, index);
+    } else if (!isActive) {
+      // Reset the notification flag when workspace becomes inactive
+      hasNotifiedActiveRef.current = false;
     }
   }, [editor, isActive, index, onActive]);
 
@@ -116,11 +128,8 @@ export const Workspace = ({
       style={{
         scrollSnapAlign: "start",
         opacity: isActive ? 1 : 0.98,
-        backgroundImage: `
-          linear-gradient(to right, rgba(200, 200, 200, 0.05) 1px, transparent 1px),
-          linear-gradient(to bottom, rgba(200, 200, 200, 0.05) 1px, transparent 1px)
-        `,
-        backgroundSize: '25px 25px',
+        // background: `radial-gradient(circle at center, rgba(128, 128, 128, 0.15) 0%, rgba(128, 128, 128, 0.03) 0%)`,
+        // background: `radial-gradient(ellipse closest-side at 50% 50%, #ffffff 0%, #e0e0e0 100%  )`,
       }}
       onClick={handleContainerClick}
     >
@@ -130,9 +139,6 @@ export const Workspace = ({
           "border border-gray-200 dark:border-gray-700 rounded-xl",
           activeTool === "segment" ? "cursor-crosshair" : "cursor-default"
         )}
-        style={{
-          boxShadow: '0 20px 40px rgba(0, 0, 0, 0.5), 0 8px 16px rgba(0, 0, 0, 0.4)',
-        }}
       />
       {/* Workspace number indicator */}
       <div className="absolute top-2 right-2 bg-blue-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs font-bold">

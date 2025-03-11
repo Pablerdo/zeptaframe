@@ -49,7 +49,14 @@ export const Editor = ({ initialData }: EditorProps) => {
   const [videoGenerations, setVideoGenerations] = useState<VideoGeneration[]>([]);
   const [isGenerating, setIsGenerating] = useState(false);
   const [activeTool, setActiveTool] = useState<ActiveTool>("select");
-  const [timelineCollapsed, setTimelineCollapsed] = useState(false);
+  
+  // Add a ref to store the latest initialData.json
+  const initialDataJsonRef = useRef(initialData.json);
+  
+  // Update the ref when initialData.json changes
+  useEffect(() => {
+    initialDataJsonRef.current = initialData.json;
+  }, [initialData.json]);
   
   // Use workspace IDs array instead of just a count
   const [workspaceIds, setWorkspaceIds] = useState<string[]>([]);
@@ -63,19 +70,54 @@ export const Editor = ({ initialData }: EditorProps) => {
   // Ref for the scrollable container
   const editorsContainerRef = useRef<HTMLDivElement>(null);
   
-  // Save callback with debounce
+  // Create ref outside the effect
+  const isWorkspacesInitialized = useRef(false);
+  
+  // Save callback with debounce - FIXED to prevent infinite update loop
   const debouncedSave = useCallback(
     debounce(
       (values: { 
         json: string,
         height: number,
         width: number,
+        workspaceIndex: number,
       }) => {
-        mutate(values);
+        // Use the ref instead of directly accessing initialData.json
+        const currentJson = initialDataJsonRef.current;
+        
+        // Create a structured object to store multiple workspaces
+        const currentWorkspaces = JSON.parse(currentJson || '{"workspaces":[]}');
+        let workspaces = currentWorkspaces.workspaces || [];
+        
+        // Update the workspace at the given index, or add a new one
+        const workspaceData = {
+          json: values.json,
+          height: values.height,
+          width: values.width,
+        };
+        
+        if (workspaces[values.workspaceIndex]) {
+          workspaces[values.workspaceIndex] = workspaceData;
+        } else {
+          // Fill any gaps with empty workspaces if needed
+          while (workspaces.length < values.workspaceIndex) {
+            workspaces.push(null);
+          }
+          workspaces.push(workspaceData);
+        }
+        
+        const updatedJson = JSON.stringify({ workspaces });
+        
+        // Save the entire workspaces array to the project
+        mutate({
+          json: updatedJson,
+          height: values.height,
+          width: values.width,
+        });
       },
       500
     ), 
-    [mutate]
+    [mutate] // Remove initialData.json from the dependency array
   );
   
   const onClearSelection = useCallback(() => {
@@ -95,20 +137,65 @@ export const Editor = ({ initialData }: EditorProps) => {
   const handleAddWorkspace = useCallback(() => {
     // Generate a unique ID for the new workspace
     const newId = `workspace-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
-    setWorkspaceIds(prev => [...prev, newId]);
-    
-    // Set the new workspace as active after it's created
     const newIndex = workspaceIds.length;
+    
+    setWorkspaceIds(prev => [...prev, newId]);
     setActiveWorkspaceIndex(newIndex);
-  }, [workspaceIds.length]);
+    
+    // Update the stored data to include the new workspace
+    try {
+      const data = JSON.parse(initialData.json || '{"workspaces":[]}');
+      if (!data.workspaces) data.workspaces = [];
+      
+      // Add a placeholder for the new workspace
+      data.workspaces.push({
+        json: null,
+        width: 720,  // Default width
+        height: 480, // Default height
+      });
+      
+      // Save the updated workspaces array
+      mutate({
+        json: JSON.stringify(data),
+        height: initialData.height,
+        width: initialData.width,
+      });
+    } catch (error) {
+      console.error("Error adding new workspace to stored data:", error);
+    }
+  }, [workspaceIds.length, initialData, mutate]);
 
-  // Create initial workspace on mount
+  // Create initial workspaces on mount - with more restrictive dependencies
   useEffect(() => {
-    if (workspaceIds.length === 0) {
+    if (workspaceIds.length === 0 && !isWorkspacesInitialized.current) {
+      isWorkspacesInitialized.current = true;
+      
+      try {
+        // Parse the initialData to get stored workspaces
+        const data = JSON.parse(initialData.json || '{"workspaces":[]}');
+        if (data.workspaces && Array.isArray(data.workspaces)) {
+          // Filter out any null entries
+          const validWorkspaces = data.workspaces.filter((ws: any) => ws !== null);
+          
+          if (validWorkspaces.length > 0) {
+            // Generate IDs for each workspace found in data
+            const timestamp = Date.now();
+            const ids = validWorkspaces.map((_: any, i: number) => 
+              `workspace-${timestamp}-${i}-${Math.random().toString(36).substring(2, 9)}`
+            );
+            setWorkspaceIds(ids);
+            return;
+          }
+        }
+      } catch (error) {
+        console.error("Error parsing initial workspace data:", error);
+      }
+      
+      // Fallback: create a single workspace if none exist
       const initialId = `workspace-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
       setWorkspaceIds([initialId]);
     }
-  }, []);
+  }, [initialData.json]); // Only depend on initialData.json, not workspaceIds.length
 
   // Handle scrolling between workspaces
   useEffect(() => {
@@ -149,9 +236,12 @@ export const Editor = ({ initialData }: EditorProps) => {
     const container = editorsContainerRef.current;
     if (!container) return;
     
-    container.scrollTo({
-      left: activeWorkspaceIndex * container.clientWidth,
-      behavior: 'smooth'
+    // Use requestAnimationFrame to ensure DOM is updated
+    requestAnimationFrame(() => {
+      container.scrollTo({
+        left: activeWorkspaceIndex * container.clientWidth,
+        behavior: 'smooth'
+      });
     });
   }, [activeWorkspaceIndex]);
 
@@ -216,123 +306,130 @@ export const Editor = ({ initialData }: EditorProps) => {
     };
   }, [videoGenerations.map(gen => gen.runId).join(',')]); // Only depend on the runIds
 
-  const handleGenerateVideo = async () => {
+  const handleGenerateVideo = async (model?: string) => {
     if (!activeEditor) return;
     
-    try {
-      setIsGenerating(true);
-      
-      const validMasks = activeEditor.segmentedMasks.filter(mask => mask.id && mask.id.trim() !== '');
-      
-      const trajectories = validMasks.map(mask => mask.trajectory?.points || []);
-      const rotations = validMasks.map(mask => mask.rotation || 0);
-      
-      // Upload the workspace image to UploadThing
-      let workspaceImageUrl = "";
-      if (activeEditor.workspaceURL) {
-        const workspaceFile = await dataUrlToFile(activeEditor.workspaceURL, "workspace.png");
-        workspaceImageUrl = await uploadToUploadThingResidual(workspaceFile);
-        console.log("Workspace image uploaded:", workspaceImageUrl);
-      } else {
-        throw new Error("No workspace image available");
-      }
-      
-      // Upload all mask images to UploadThing
-      const maskUploadPromises = validMasks.map(async (mask, index) => {
-        if (!mask.binaryUrl) return "";
+    if (model === "CogVideoX") {
+      try {
+        setIsGenerating(true);
         
-        const maskFile = await dataUrlToFile(mask.binaryUrl, `mask-${index}.png`);
-        return uploadToUploadThingResidual(maskFile);
-      });
-      
-      const uploadedMaskUrls = await Promise.all(maskUploadPromises);
-      console.log("Masks uploaded:", uploadedMaskUrls);
-      
-      // Now construct the videoGenData with the uploaded URLs
-      const videoGenData = {
-        "input_image": JSON.stringify([workspaceImageUrl]),
-        "input_masks": JSON.stringify(uploadedMaskUrls),
-        "input_prompt": activeEditor.prompt,
-        "input_trajectories": JSON.stringify(trajectories),
-        "input_rotations": JSON.stringify(rotations)
-      };
-      
-      console.log("videoGenData", videoGenData);
-
-      const response = await fetch("/api/comfydeploy/generate-video", {
-        method: "POST",
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(videoGenData),
-      });
-      
-      const data = await response.json();
-      console.log(data);
-      
-      if (data.runId) {
-        // Add new video generation to array with current workspace index
-        const startTime = Date.now();
-        const estimatedDuration = 5 * 60 * 1000; // 5 minutes in milliseconds
-        
-        setVideoGenerations(prev => [...prev, {
-          runId: data.runId,
-          status: 'pending',
-          progress: 0,
-          workspaceIndex: activeWorkspaceIndex,
-          startTime: startTime, // Store when we started
-          estimatedDuration: estimatedDuration // Store how long we expect it to take
-        }]);
-        
-        // Create a function to update progress based on elapsed time
-        const updateProgress = () => {
-          const elapsedTime = Date.now() - startTime;
-          const calculatedProgress = Math.min((elapsedTime / estimatedDuration) * 100, 99);
+        const validMasks = activeEditor.segmentedMasks.filter(mask => mask.id && mask.id.trim() !== '');
           
-          setVideoGenerations(prev => prev.map(gen => 
-            gen.runId === data.runId ? {
-              ...gen,
-              progress: calculatedProgress
-            } : gen
-          ));
+        const trajectories = validMasks.map(mask => mask.trajectory?.points || []);
+        const rotations = validMasks.map(mask => mask.rotation || 0);
+        
+        // Upload the workspace image to UploadThing
+        let workspaceImageUrl = "";
+        if (activeEditor.workspaceURL) {
+          const workspaceFile = await dataUrlToFile(activeEditor.workspaceURL, "workspace.png");
+          workspaceImageUrl = await uploadToUploadThingResidual(workspaceFile);
+          console.log("Workspace image uploaded:", workspaceImageUrl);
+        } else {
+          throw new Error("No workspace image available");
+        }
+        
+        // Upload all mask images to UploadThing
+        const maskUploadPromises = validMasks.map(async (mask, index) => {
+          if (!mask.binaryUrl) return "";
+          
+          const maskFile = await dataUrlToFile(mask.binaryUrl, `mask-${index}.png`);
+          return uploadToUploadThingResidual(maskFile);
+        });
+        
+        const uploadedMaskUrls = await Promise.all(maskUploadPromises);
+        console.log("Masks uploaded:", uploadedMaskUrls);
+        
+        // Now construct the videoGenData with the uploaded URLs
+        const videoGenData = {
+          "input_image": JSON.stringify([workspaceImageUrl]),
+          "input_masks": JSON.stringify(uploadedMaskUrls),
+          "input_prompt": activeEditor.prompt,
+          "input_trajectories": JSON.stringify(trajectories),
+          "input_rotations": JSON.stringify(rotations)
         };
         
-        // Use requestAnimationFrame when visible and setInterval as fallback
-        let progressInterval: number | NodeJS.Timeout;
-        let rafId: number;
+        console.log("videoGenData", videoGenData);
+
+        const response = await fetch("/api/comfydeploy/generate-video", {
+          method: "POST",
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(videoGenData),
+        });
         
-        const handleVisibilityChange = () => {
-          if (document.hidden) {
-            // Tab is hidden, use setInterval (will be throttled but still runs occasionally)
-            cancelAnimationFrame(rafId);
-            progressInterval = setInterval(updateProgress, 2000);
-          } else {
-            // Tab is visible, use requestAnimationFrame for smooth updates
-            clearInterval(progressInterval as NodeJS.Timeout);
+        const data = await response.json();
+        console.log(data);
+        
+        if (data.runId) {
+          // Add new video generation to array with current workspace index
+          const startTime = Date.now();
+          const estimatedDuration = 5 * 60 * 1000; // 5 minutes in milliseconds
+          
+          setVideoGenerations(prev => [...prev, {
+            runId: data.runId,
+            status: 'pending',
+            progress: 0,
+            workspaceIndex: activeWorkspaceIndex,
+            startTime: startTime, // Store when we started
+            estimatedDuration: estimatedDuration // Store how long we expect it to take
+          }]);
+          
+          // Create a function to update progress based on elapsed time
+          const updateProgress = () => {
+            const elapsedTime = Date.now() - startTime;
+            const calculatedProgress = Math.min((elapsedTime / estimatedDuration) * 100, 99);
             
-            const updateWithRAF = () => {
-              updateProgress();
+            setVideoGenerations(prev => prev.map(gen => 
+              gen.runId === data.runId ? {
+                ...gen,
+                progress: calculatedProgress
+              } : gen
+            ));
+          };
+          
+          // Use requestAnimationFrame when visible and setInterval as fallback
+          let progressInterval: number | NodeJS.Timeout;
+          let rafId: number;
+          
+          const handleVisibilityChange = () => {
+            if (document.hidden) {
+              // Tab is hidden, use setInterval (will be throttled but still runs occasionally)
+              cancelAnimationFrame(rafId);
+              progressInterval = setInterval(updateProgress, 2000);
+            } else {
+              // Tab is visible, use requestAnimationFrame for smooth updates
+              clearInterval(progressInterval as NodeJS.Timeout);
+              
+              const updateWithRAF = () => {
+                updateProgress();
+                rafId = requestAnimationFrame(updateWithRAF);
+              };
               rafId = requestAnimationFrame(updateWithRAF);
-            };
-            rafId = requestAnimationFrame(updateWithRAF);
-          }
-        };
-        
-        // Set up initial state based on current visibility
-        document.addEventListener('visibilitychange', handleVisibilityChange);
-        handleVisibilityChange();
-        
-        console.log("Video generation started. Please wait...");
-      } else {
-        throw new Error("No video runId received");
+            }
+          };
+          
+          // Set up initial state based on current visibility
+          document.addEventListener('visibilitychange', handleVisibilityChange);
+          handleVisibilityChange();
+          
+          console.log("Video generation started. Please wait...");
+        } else {
+          throw new Error("No video runId received");
+        }
+      } catch (error) {
+        console.error("Error:", error);
+        console.log("Error generating video");
+      } finally {
+        setIsGenerating(false);
       }
-    } catch (error) {
-      console.error("Error:", error);
-      console.log("Error generating video");
-    } finally {
-      setIsGenerating(false);
-    }
-  };
+    } else if (model === "HunyuanVideo") {
+      console.log("HunyuanVideo model selected");
+    } else {
+      console.log("Model not yet implemented");
+    } 
+  }
+  
 
   // Handle deleting a workspace
   const handleDeleteWorkspace = useCallback((indexToDelete: number) => {
@@ -342,17 +439,32 @@ export const Editor = ({ initialData }: EditorProps) => {
     // Create a new array without the deleted workspace
     setWorkspaceIds(prev => prev.filter((_, i) => i !== indexToDelete));
     
-    // If deleting the active workspace, set the previous one as active
-    // If deleting the first workspace, set the new first one as active
+    // Also remove the workspace from the stored data
+    try {
+      const data = JSON.parse(initialData.json || '{"workspaces":[]}');
+      if (data.workspaces && Array.isArray(data.workspaces)) {
+        data.workspaces = data.workspaces.filter((_: any, i: number) => i !== indexToDelete);
+        
+        // Save the updated workspaces array
+        mutate({
+          json: JSON.stringify(data),
+          height: initialData.height,
+          width: initialData.width,
+        });
+      }
+    } catch (error) {
+      console.error("Error removing workspace from stored data:", error);
+    }
+    
+    // Update active workspace index
     if (indexToDelete === activeWorkspaceIndex) {
       const newActiveIndex = indexToDelete === 0 ? 0 : indexToDelete - 1;
       setActiveWorkspaceIndex(newActiveIndex);
     } 
-    // If deleting a workspace before the active one, shift the active index
     else if (indexToDelete < activeWorkspaceIndex) {
       setActiveWorkspaceIndex(prev => prev - 1);
     }
-  }, [workspaceIds.length, activeWorkspaceIndex]);
+  }, [workspaceIds.length, activeWorkspaceIndex, initialData, mutate]);
 
   return (
     <ThemeProvider attribute="class" defaultTheme="light" enableSystem>
@@ -461,22 +573,50 @@ export const Editor = ({ initialData }: EditorProps) => {
                 }}
               >
                 {/* Render workspaces based on workspace IDs array */}
-                {workspaceIds.map((id, index) => (
-                  <Workspace
-                    key={id}
-                    index={index}
-                    isActive={index === activeWorkspaceIndex}
-                    onActive={handleSetActiveEditor}
-                    onDelete={handleDeleteWorkspace}
-                    canDelete={workspaceIds.length > 1}
-                    defaultState={index === 0 ? initialData.json : undefined}
-                    defaultWidth={index === 0 ? initialData.width : undefined}
-                    defaultHeight={index === 0 ? initialData.height : undefined}
-                    clearSelectionCallback={onClearSelection}
-                    saveCallback={debouncedSave}
-                    activeTool={activeTool}
-                  />
-                ))}
+                {workspaceIds.map((id, index) => {
+                  // Parse workspace data for this index
+                  let workspaceState, workspaceWidth, workspaceHeight;
+                  
+                  try {
+                    const data = JSON.parse(initialData.json || '{"workspaces":[]}');
+                    if (data.workspaces && data.workspaces[index]) {
+                      const workspace = data.workspaces[index];
+                      workspaceState = workspace.json;
+                      workspaceWidth = workspace.width;
+                      workspaceHeight = workspace.height;
+                    } else if (index === 0) {
+                      // Fallback for first workspace if in old format
+                      workspaceState = initialData.json;
+                      workspaceWidth = initialData.width;
+                      workspaceHeight = initialData.height;
+                    }
+                  } catch (error) {
+                    console.error(`Error parsing workspace data for index ${index}:`, error);
+                    if (index === 0) {
+                      // Fallback for first workspace
+                      workspaceState = initialData.json;
+                      workspaceWidth = initialData.width;
+                      workspaceHeight = initialData.height;
+                    }
+                  }
+                  
+                  return (
+                    <Workspace
+                      key={id}
+                      index={index}
+                      isActive={index === activeWorkspaceIndex}
+                      onActive={handleSetActiveEditor}
+                      onDelete={handleDeleteWorkspace}
+                      canDelete={workspaceIds.length > 1}
+                      defaultState={workspaceState}
+                      defaultWidth={workspaceWidth}
+                      defaultHeight={workspaceHeight}
+                      clearSelectionCallback={onClearSelection}
+                      saveCallback={debouncedSave}
+                      activeTool={activeTool}
+                    />
+                  );
+                })}
               </div>
               
               {/* Add workspace button */}

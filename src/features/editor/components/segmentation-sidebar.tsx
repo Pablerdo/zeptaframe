@@ -190,6 +190,11 @@ export const SegmentationSidebar = ({
     }
   }, [activeTool, editor?.canvas, device]);
 
+  useEffect(() => {
+    console.log("segmentedMasks updated:", editor?.segmentedMasks);
+    // Do something with the updated masks
+  }, [editor?.segmentedMasks]);
+
   // Start encoding image
   const encodeImageClick = async () => {
     if (!samWorker.current || !editor?.canvas) return;
@@ -321,16 +326,30 @@ export const SegmentationSidebar = ({
     
     setIsSegmentationActive(true);
     if (editor) {
+      // Create a deep copy of the current masks to avoid reference issues
+      const currentMasks = [...editor.segmentedMasks];
+      
       // Create new array with inProgress mask at the top
       const updatedMasks = [
         { id: "", url: '', binaryUrl: '', name: 'New Object', inProgress: true },
-        ...editor.segmentedMasks.map(mask => ({ ...mask, isApplied: false }))
+        ...currentMasks.map(mask => ({ ...mask, isApplied: false }))
       ];
+
+      console.log("updatedMasks", updatedMasks);
       editor.setSegmentedMasks(updatedMasks);
+      
+      console.log("segmentedMasks after init in handleNewMask", editor.segmentedMasks);
+      // Force a re-render if needed by updating a local state
+      setMask(null); // Reset any current mask
     }
   };
 
   const handleSaveInProgressMask = () => {
+    console.log("handleSaveInProgressMask");
+    console.log("mask", mask);
+    console.log("maskBinary", maskBinary);
+    console.log("editor", editor);
+    console.log("editor.segmentedMasks", editor?.segmentedMasks);
     if (mask && maskBinary && editor) {
       const maskDataUrl = mask.toDataURL('image/png');
       const maskBinaryDataUrl = maskBinary.toDataURL('image/png');
@@ -338,6 +357,8 @@ export const SegmentationSidebar = ({
       
       // Get count of actual saved masks (excluding the stub)
       const savedMasksCount = editor.segmentedMasks.filter(mask => mask.url).length;
+
+      console.log("segmentedMasks before setup", editor.segmentedMasks);
 
       // First update the state with a new array
       const updatedMasks = [
@@ -360,6 +381,7 @@ export const SegmentationSidebar = ({
       ];
       editor.setSegmentedMasks(updatedMasks);
 
+      console.log("segmentedMasks after setup", editor.segmentedMasks);
       // Then set up the mask in Fabric.js
       if (editor.canvas) {
         // Remove any existing masks

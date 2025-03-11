@@ -7,9 +7,16 @@ interface VideoBoxProps {
   onGenerateVideo: () => void;
   isLoading?: boolean;
   progress?: number;
+  model?: string;
 }
 
-export const VideoBox = ({ video, onGenerateVideo, isLoading = false, progress = 0 }: VideoBoxProps) => {
+export const VideoBox = ({ 
+  video, 
+  onGenerateVideo, 
+  isLoading = false, 
+  progress = 0,
+  model = "CogVideoX"
+}: VideoBoxProps) => {
   const videoRef = useRef<HTMLVideoElement>(null);
   
   // Auto-play video when it loads
@@ -38,7 +45,7 @@ export const VideoBox = ({ video, onGenerateVideo, isLoading = false, progress =
         <div className="w-full h-full bg-gray-800/80 flex flex-col items-center justify-center">
           <Loader2 className="h-10 w-10 animate-spin text-blue-500 mb-4" />
           <span className="text-gray-300 text-sm font-medium tracking-wide mb-2">
-            Generating video...
+            Generating video with {model}...
           </span>
           <div className="w-[60%] h-2 bg-gray-700 rounded-full overflow-hidden">
             <div 

@@ -787,13 +787,51 @@ export const useEditor = ({
         cornerStrokeColor: "#3b82f6",
       });
 
+      const createGridPattern = () => {
+        const gridSize = 20;
+        const gridColor = 'rgba(0,0,0,0.1)';
+        
+        // Create a canvas for the grid pattern
+        const patternCanvas = document.createElement('canvas');
+        const patternContext = patternCanvas.getContext('2d');
+        
+        patternCanvas.width = gridSize;
+        patternCanvas.height = gridSize;
+        
+        if (patternContext) {
+          // Draw the grid lines
+          patternContext.strokeStyle = gridColor;
+          patternContext.lineWidth = 1;
+          
+          // Horizontal line
+          patternContext.beginPath();
+          patternContext.moveTo(0, 0);
+          patternContext.lineTo(gridSize, 0);
+          patternContext.stroke();
+          
+          // Vertical line
+          patternContext.beginPath();
+          patternContext.moveTo(0, 0);
+          patternContext.lineTo(0, gridSize);
+          patternContext.stroke();
+        }
+        
+        return new fabric.Pattern({
+          source: patternCanvas as unknown as HTMLImageElement,
+          repeat: 'repeat'
+        });
+      };
+
       const initialWorkspace = new fabric.Rect({
         width: 720, //initialWidth.current, locked at 720 for now
         height: 480, //initialHeight.current, locked at 480 for now
         name: "clip",
-        fill: "white",
+        fill: createGridPattern(),
+        backgroundColor: 'white',
         selectable: false,
         hasControls: false,
+        lockMovementX: true,
+        lockMovementY: true,
         shadow: new fabric.Shadow({
           color: "rgba(0,0,0,0.8)",
           blur: 5,
