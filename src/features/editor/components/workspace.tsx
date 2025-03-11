@@ -116,15 +116,23 @@ export const Workspace = ({
       style={{
         scrollSnapAlign: "start",
         opacity: isActive ? 1 : 0.98,
+        backgroundImage: `
+          linear-gradient(to right, rgba(200, 200, 200, 0.05) 1px, transparent 1px),
+          linear-gradient(to bottom, rgba(200, 200, 200, 0.05) 1px, transparent 1px)
+        `,
+        backgroundSize: '25px 25px',
       }}
       onClick={handleContainerClick}
     >
       <canvas 
         ref={canvasRef} 
         className={cn(
-          "border border-gray-200 dark:border-gray-700",
+          "border border-gray-200 dark:border-gray-700 rounded-xl",
           activeTool === "segment" ? "cursor-crosshair" : "cursor-default"
         )}
+        style={{
+          boxShadow: '0 20px 40px rgba(0, 0, 0, 0.5), 0 8px 16px rgba(0, 0, 0, 0.4)',
+        }}
       />
       {/* Workspace number indicator */}
       <div className="absolute top-2 right-2 bg-blue-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs font-bold">

@@ -38,7 +38,7 @@ import { Button } from "@/components/ui/button";
 import { dataUrlToFile, uploadToUploadThingResidual } from "@/lib/uploadthing";
 import { Workspace } from "@/features/editor/components/workspace";
 import { CameraControlSidebar } from "./camera-control-sidebar";
-import CollapsibleVideoViewer from "@/features/editor/components/CollapsibleVideoViewer";
+import CollapsibleVideoViewer from "@/features/editor/components/collapsible-video-viewer";
 
 interface EditorProps {
   initialData: ResponseType["data"];
