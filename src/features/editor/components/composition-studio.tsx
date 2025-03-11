@@ -33,18 +33,16 @@ import { SettingsSidebar } from "@/features/editor/components/settings-sidebar";
 import { SegmentationSidebar } from "@/features/editor/components/segmentation-sidebar";
 import { PromptSidebar } from "@/features/editor/components/prompt-sidebar";
 import { cn } from "@/lib/utils";
-import VideoTimeline from "@/features/editor/components/video-timeline";
-import { Button } from "@/components/ui/button";
 import { dataUrlToFile, uploadToUploadThingResidual } from "@/lib/uploadthing";
 import { Workspace } from "@/features/editor/components/workspace";
 import { CameraControlSidebar } from "./camera-control-sidebar";
 import CollapsibleVideoViewer from "@/features/editor/components/collapsible-video-viewer";
 
-interface EditorProps {
+interface CompositionStudioProps {
   initialData: ResponseType["data"];
 }
 
-export const Editor = ({ initialData }: EditorProps) => {
+export const CompositionStudio = ({ initialData }: CompositionStudioProps) => {
   const { mutate } = useUpdateProject(initialData.id);
   const [videoGenerations, setVideoGenerations] = useState<VideoGeneration[]>([]);
   const [isGenerating, setIsGenerating] = useState(false);

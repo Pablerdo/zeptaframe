@@ -5,7 +5,7 @@ import { Loader, TriangleAlert } from "lucide-react";
 
 import { useGetProject } from "@/features/projects/api/use-get-project";
 
-import { Editor } from "@/features/editor/components/editor";
+import { CompositionStudio } from "@/features/editor/components/composition-studio";
 import { Button } from "@/components/ui/button";
 
 interface EditorProjectIdPageProps {
@@ -47,7 +47,7 @@ const EditorProjectIdPage = ({
     );
   }
 
-  return <Editor initialData={data} />
+  return <CompositionStudio initialData={data} />
 };
  
 export default EditorProjectIdPage;
