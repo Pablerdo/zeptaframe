@@ -47,14 +47,6 @@ export const CompositionStudio = ({ initialData }: CompositionStudioProps) => {
   const [isGenerating, setIsGenerating] = useState(false);
   const [activeTool, setActiveTool] = useState<ActiveTool>("select");
   
-  // Add a ref to store the latest initialData.json
-  const initialDataJsonRef = useRef(initialData.json);
-  
-  // Update the ref when initialData.json changes
-  useEffect(() => {
-    initialDataJsonRef.current = initialData.json;
-  }, [initialData.json]);
-  
   // Use workbench IDs array instead of just a count
   const [workbenchIds, setWorkbenchIds] = useState<string[]>([]);
   
@@ -67,9 +59,6 @@ export const CompositionStudio = ({ initialData }: CompositionStudioProps) => {
   // Ref for the scrollable container
   const editorsContainerRef = useRef<HTMLDivElement>(null);
   
-  // Create ref outside the effect
-  const isWorkbenchesInitialized = useRef(false);
-  
   // Save callback with debounce - FIXED to prevent infinite update loop
   const debouncedSave = useCallback(
     debounce(
@@ -77,40 +66,8 @@ export const CompositionStudio = ({ initialData }: CompositionStudioProps) => {
         json: string,
         height: number,
         width: number,
-        workbenchIndex: number,
       }) => {
-        // Use the ref instead of directly accessing initialData.json
-        const currentJson = initialDataJsonRef.current;
-        
-        // Create a structured object to store multiple workbenches
-        const currentWorkbenches = JSON.parse(currentJson || '{"workbenches":[]}');
-        let workbenches = currentWorkbenches.workbenches || [];
-        
-        // Update the workbench at the given index, or add a new one
-        const workbenchData = {
-          json: values.json,
-          height: values.height,
-          width: values.width,
-        };
-        
-        if (workbenches[values.workbenchIndex]) {
-          workbenches[values.workbenchIndex] = workbenchData;
-        } else {
-          // Fill any gaps with empty workbenches if needed
-          while (workbenches.length < values.workbenchIndex) {
-            workbenches.push(null);
-          }
-          workbenches.push(workbenchData);
-        }
-        
-        const updatedJson = JSON.stringify({ workbenches });
-        
-        // Save the entire workbenches array to the project
-        mutate({
-          json: updatedJson,
-          height: values.height,
-          width: values.width,
-        });
+        mutate(values);
       },
       500
     ), 
@@ -134,65 +91,20 @@ export const CompositionStudio = ({ initialData }: CompositionStudioProps) => {
   const handleAddWorkbench = useCallback(() => {
     // Generate a unique ID for the new workbench
     const newId = `workbench-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
-    const newIndex = workbenchIds.length;
-    
     setWorkbenchIds(prev => [...prev, newId]);
+
+    // Set the new workspace as active after it's created
+    const newIndex = workbenchIds.length;
     setActiveWorkbenchIndex(newIndex);
-    
-    // Update the stored data to include the new workbench
-    try {
-      const data = JSON.parse(initialData.json || '{"workbenches":[]}');
-      if (!data.workbenches) data.workbenches = [];
-      
-      // Add a placeholder for the new workbench
-      data.workbenches.push({
-        json: null,
-        width: 720,  // Default width
-        height: 480, // Default height
-      });
-      
-      // Save the updated workbenches array
-      mutate({
-        json: JSON.stringify(data),
-        height: initialData.height,
-        width: initialData.width,
-      });
-    } catch (error) {
-      console.error("Error adding new workbench to stored data:", error);
-    }
-  }, [workbenchIds.length, initialData, mutate]);
+  }, [workbenchIds.length]);
 
   // Create initial workbenches on mount - with more restrictive dependencies
   useEffect(() => {
-    if (workbenchIds.length === 0 && !isWorkbenchesInitialized.current) {
-      isWorkbenchesInitialized.current = true;
-      
-      try {
-        // Parse the initialData to get stored workbenches
-        const data = JSON.parse(initialData.json || '{"workbenches":[]}');
-        if (data.workbenches && Array.isArray(data.workbenches)) {
-          // Filter out any null entries
-          const validWorkbenches = data.workbenches.filter((ws: any) => ws !== null);
-          
-          if (validWorkbenches.length > 0) {
-            // Generate IDs for each workbench found in data
-            const timestamp = Date.now();
-            const ids = validWorkbenches.map((_: any, i: number) => 
-              `workbench-${timestamp}-${i}-${Math.random().toString(36).substring(2, 9)}`
-            );
-            setWorkbenchIds(ids);
-            return;
-          }
-        }
-      } catch (error) {
-        console.error("Error parsing initial workbench data:", error);
-      }
-      
-      // Fallback: create a single workbench if none exist
+    if (workbenchIds.length === 0) {
       const initialId = `workbench-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
       setWorkbenchIds([initialId]);
     }
-  }, [initialData.json]); // Only depend on initialData.json, not workbenchIds.length
+  }, []); // Only depend on initialData.json, not workbenchIds.length
 
   // Handle scrolling between workbenches
   useEffect(() => {
@@ -427,7 +339,6 @@ export const CompositionStudio = ({ initialData }: CompositionStudioProps) => {
     } 
   }
   
-
   // Handle deleting a workbench
   const handleDeleteWorkbench = useCallback((indexToDelete: number) => {
     // Don't allow deleting if it's the last workbench
@@ -435,23 +346,6 @@ export const CompositionStudio = ({ initialData }: CompositionStudioProps) => {
     
     // Create a new array without the deleted workbench
     setWorkbenchIds(prev => prev.filter((_, i) => i !== indexToDelete));
-    
-    // Also remove the workbench from the stored data
-    try {
-      const data = JSON.parse(initialData.json || '{"workbenches":[]}');
-      if (data.workbenches && Array.isArray(data.workbenches)) {
-        data.workbenches = data.workbenches.filter((_: any, i: number) => i !== indexToDelete);
-        
-        // Save the updated workbenches array
-        mutate({
-          json: JSON.stringify(data),
-          height: initialData.height,
-          width: initialData.width,
-        });
-      }
-    } catch (error) {
-      console.error("Error removing workbench from stored data:", error);
-    }
     
     // Update active workbench index
     if (indexToDelete === activeWorkbenchIndex) {
@@ -461,7 +355,7 @@ export const CompositionStudio = ({ initialData }: CompositionStudioProps) => {
     else if (indexToDelete < activeWorkbenchIndex) {
       setActiveWorkbenchIndex(prev => prev - 1);
     }
-  }, [workbenchIds.length, activeWorkbenchIndex, initialData, mutate]);
+  }, [workbenchIds.length, activeWorkbenchIndex]);
 
   return (
     <ThemeProvider attribute="class" defaultTheme="light" enableSystem>

@@ -45,32 +45,6 @@ export const ScrollableWorkbenchViewer = ({
       >
       {/* Render workbenches based on workbench IDs array */}
       {workbenchIds.map((id, index) => {
-        // Parse workbench data for this index
-        let workbenchState, workbenchWidth, workbenchHeight;
-        
-        try {
-          const data = JSON.parse(initialData.json || '{"workbenches":[]}');
-          if (data.workbenches && data.workbenches[index]) {
-            const workbench = data.workbenches[index];
-            workbenchState = workbench.json;
-            workbenchWidth = workbench.width;
-            workbenchHeight = workbench.height;
-          } else if (index === 0) {
-            // Fallback for first workbench if in old format
-            workbenchState = initialData.json;
-            workbenchWidth = initialData.width;
-            workbenchHeight = initialData.height;
-          }
-        } catch (error) {
-          console.error(`Error parsing workbench data for index ${index}:`, error);
-          if (index === 0) {
-            // Fallback for first workbench
-            workbenchState = initialData.json;
-            workbenchWidth = initialData.width;
-            workbenchHeight = initialData.height;
-          }
-        }
-        
         return (
           <Workbench
             key={id}
@@ -79,9 +53,9 @@ export const ScrollableWorkbenchViewer = ({
             onActive={handleSetActiveEditor}
             onDelete={handleDeleteWorkbench}
             canDelete={workbenchIds.length > 1}
-            defaultState={workbenchState}
-            defaultWidth={workbenchWidth}
-            defaultHeight={workbenchHeight}
+            defaultState={initialData.json}
+            defaultWidth={720}
+            defaultHeight={480}
             clearSelectionCallback={onClearSelection}
             debouncedSave={debouncedSave}
             activeTool={activeTool}

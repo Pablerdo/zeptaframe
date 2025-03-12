@@ -322,24 +322,26 @@ export const SegmentationSidebar = ({
       existingMasks.forEach(mask => editor.canvas.remove(mask));
       editor.canvas.renderAll();
     }
-    console.log("handleNewMask");
+    
     setIsSegmentationActive(true);
     if (editor) {
-      // Create a deep copy of the current masks to avoid reference issues
-      const currentMasks = [...editor.segmentedMasks];
-      
-      // Create new array with inProgress mask at the top
+      // Create a completely new array with a unique ID for the in-progress mask
       const updatedMasks = [
-        { id: "", url: '', binaryUrl: '', name: 'New Object', inProgress: true },
-        ...currentMasks.map(mask => ({ ...mask, isApplied: false }))
+        { id: crypto.randomUUID(), url: '', binaryUrl: '', name: 'New Object', inProgress: true },
+        ...editor.segmentedMasks.map(mask => ({ ...mask, isApplied: false }))
       ];
 
-      console.log("updatedMasks", updatedMasks);
-      editor.setSegmentedMasks(updatedMasks);
+      // Force update by creating a new array
+      editor.setSegmentedMasks([...updatedMasks]);
       
-      console.log("segmentedMasks after init in handleNewMask", editor.segmentedMasks);
-      // Force a re-render if needed by updating a local state
-      setMask(null); // Reset any current mask
+      // Add a setTimeout to check if state updated
+      setTimeout(() => {
+        console.log("segmentedMasks after update:", editor.segmentedMasks);
+      }, 0);
+      
+      // Reset any current mask
+      setMask(null);
+      setLoading(false);
     }
   };
 
@@ -378,7 +380,7 @@ export const SegmentationSidebar = ({
           }
         ).filter(mask => !mask.inProgress)
       ];
-      editor.setSegmentedMasks(updatedMasks);
+      editor.setSegmentedMasks([...updatedMasks]);
 
       console.log("segmentedMasks after setup", editor.segmentedMasks);
       // Then set up the mask in Fabric.js

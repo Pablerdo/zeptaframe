@@ -16,7 +16,6 @@ interface WorkbenchProps {
     json: string;
     height: number;
     width: number;
-    workbenchIndex: number;
   }) => void;
   isActive: boolean;
   index: number;
@@ -51,14 +50,7 @@ export const Workbench = ({
     defaultWidth,
     defaultHeight,
     clearSelectionCallback,
-    saveCallback: values => {
-      if (debouncedSave) {
-        debouncedSave({
-          ...values,
-          workbenchIndex: index
-        });
-      }
-    },
+    saveCallback: debouncedSave,
   });
 
   // Initialize canvas when component mounts
@@ -81,12 +73,8 @@ export const Workbench = ({
   // Notify parent component when this workbench becomes active
   // But only do it once per active state change to prevent loops
   useEffect(() => {
-    if (editor && isActive && !hasNotifiedActiveRef.current) {
-      hasNotifiedActiveRef.current = true;
+    if (editor && isActive) {
       onActive(editor, index);
-    } else if (!isActive) {
-      // Reset the notification flag when workbench becomes inactive
-      hasNotifiedActiveRef.current = false;
     }
   }, [editor, isActive, index, onActive]);
 
