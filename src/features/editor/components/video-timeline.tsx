@@ -10,21 +10,21 @@ import { cn } from '@/lib/utils';
 interface VideoTimelineProps {
   onGenerateVideo: (index: number) => void;
   videoGenerations: VideoGeneration[];
-  workspaceCount: number;
-  activeWorkspaceIndex: number;
+  workbenchCount: number;
+  activeWorkbenchIndex: number;
 }
 
 const VideoTimeline = ({ 
   onGenerateVideo, 
   videoGenerations, 
-  workspaceCount,
-  activeWorkspaceIndex 
+  workbenchCount,
+  activeWorkbenchIndex 
 }: VideoTimelineProps) => {
   const [videoBoxes, setVideoBoxes] = useState<(string | null)[]>([]);
   
   useEffect(() => {
-    setVideoBoxes(Array(workspaceCount).fill(null));
-  }, [workspaceCount]);
+    setVideoBoxes(Array(workbenchCount).fill(null));
+  }, [workbenchCount]);
   
   useEffect(() => {
     if (videoGenerations.length > 0) {
@@ -32,20 +32,20 @@ const VideoTimeline = ({
         const newVideoBoxes = [...prevBoxes];
         
         videoGenerations.forEach((gen) => {
-          if (gen.status === 'success' && gen.videoUrl && gen.workspaceIndex !== undefined) {
-            newVideoBoxes[gen.workspaceIndex] = gen.videoUrl;
+          if (gen.status === 'success' && gen.videoUrl && gen.workbenchIndex !== undefined) {
+            newVideoBoxes[gen.workbenchIndex] = gen.videoUrl;
           }
         });
         
         return newVideoBoxes;
       });
     }
-  }, [videoGenerations, workspaceCount]);
+  }, [videoGenerations, workbenchCount]);
 
-  // Helper function to check if a workspace has a loading video
+  // Helper function to check if a workbench has a loading video
   const getVideoGeneration = (index: number) => {
     return videoGenerations.find(
-      gen => gen.workspaceIndex === index && gen.status === 'pending'
+      gen => gen.workbenchIndex === index && gen.status === 'pending'
     );
   };
 
@@ -70,7 +70,7 @@ const VideoTimeline = ({
                   <div 
                     className={cn(
                       "h-2 mt-2 w-full absolute -bottom-3 rounded-md transition-colors duration-300",
-                      index === activeWorkspaceIndex ? "bg-blue-500" : "bg-transparent"
+                      index === activeWorkbenchIndex ? "bg-blue-500" : "bg-transparent"
                     )}
                   />
                 </div>
@@ -83,7 +83,7 @@ const VideoTimeline = ({
               </div>
               
               <div className="mt-5 text-xs font-medium text-gray-500">
-                Workspace {index + 1}
+                Workbench {index + 1}
               </div>
             </div>
           );

@@ -1,7 +1,7 @@
 "use client";
 import { useCallback, useEffect, useRef, useState } from "react";
 import debounce from "lodash.debounce";
-import { ChevronDown, Loader2, Plus } from "lucide-react";
+import { Plus } from "lucide-react";
 import { ThemeProvider } from "next-themes";
 
 import { ResponseType } from "@/features/projects/api/use-get-project";
@@ -10,7 +10,6 @@ import { useUpdateProject } from "@/features/projects/api/use-update-project";
 import { 
   ActiveTool, 
   selectionDependentTools,
-  SegmentedMask,
   VideoGeneration,
   Editor as EditorType
 } from "@/features/editor/types";
@@ -34,9 +33,9 @@ import { SegmentationSidebar } from "@/features/editor/components/segmentation-s
 import { PromptSidebar } from "@/features/editor/components/prompt-sidebar";
 import { cn } from "@/lib/utils";
 import { dataUrlToFile, uploadToUploadThingResidual } from "@/lib/uploadthing";
-import { Workspace } from "@/features/editor/components/workspace";
 import { CameraControlSidebar } from "./camera-control-sidebar";
 import CollapsibleVideoViewer from "@/features/editor/components/collapsible-video-viewer";
+import { ScrollableWorkbenchViewer } from "./scrollable-workbench-viewer";
 
 interface CompositionStudioProps {
   initialData: ResponseType["data"];
@@ -56,11 +55,11 @@ export const CompositionStudio = ({ initialData }: CompositionStudioProps) => {
     initialDataJsonRef.current = initialData.json;
   }, [initialData.json]);
   
-  // Use workspace IDs array instead of just a count
-  const [workspaceIds, setWorkspaceIds] = useState<string[]>([]);
+  // Use workbench IDs array instead of just a count
+  const [workbenchIds, setWorkbenchIds] = useState<string[]>([]);
   
-  // Track active workspace index
-  const [activeWorkspaceIndex, setActiveWorkspaceIndex] = useState(0);
+  // Track active workbench index
+  const [activeWorkbenchIndex, setActiveWorkbenchIndex] = useState(0);
   
   // Store the current active editor instance
   const [activeEditor, setActiveEditor] = useState<EditorType | undefined>(undefined);
@@ -69,7 +68,7 @@ export const CompositionStudio = ({ initialData }: CompositionStudioProps) => {
   const editorsContainerRef = useRef<HTMLDivElement>(null);
   
   // Create ref outside the effect
-  const isWorkspacesInitialized = useRef(false);
+  const isWorkbenchesInitialized = useRef(false);
   
   // Save callback with debounce - FIXED to prevent infinite update loop
   const debouncedSave = useCallback(
@@ -78,35 +77,35 @@ export const CompositionStudio = ({ initialData }: CompositionStudioProps) => {
         json: string,
         height: number,
         width: number,
-        workspaceIndex: number,
+        workbenchIndex: number,
       }) => {
         // Use the ref instead of directly accessing initialData.json
         const currentJson = initialDataJsonRef.current;
         
-        // Create a structured object to store multiple workspaces
-        const currentWorkspaces = JSON.parse(currentJson || '{"workspaces":[]}');
-        let workspaces = currentWorkspaces.workspaces || [];
+        // Create a structured object to store multiple workbenches
+        const currentWorkbenches = JSON.parse(currentJson || '{"workbenches":[]}');
+        let workbenches = currentWorkbenches.workbenches || [];
         
-        // Update the workspace at the given index, or add a new one
-        const workspaceData = {
+        // Update the workbench at the given index, or add a new one
+        const workbenchData = {
           json: values.json,
           height: values.height,
           width: values.width,
         };
         
-        if (workspaces[values.workspaceIndex]) {
-          workspaces[values.workspaceIndex] = workspaceData;
+        if (workbenches[values.workbenchIndex]) {
+          workbenches[values.workbenchIndex] = workbenchData;
         } else {
-          // Fill any gaps with empty workspaces if needed
-          while (workspaces.length < values.workspaceIndex) {
-            workspaces.push(null);
+          // Fill any gaps with empty workbenches if needed
+          while (workbenches.length < values.workbenchIndex) {
+            workbenches.push(null);
           }
-          workspaces.push(workspaceData);
+          workbenches.push(workbenchData);
         }
         
-        const updatedJson = JSON.stringify({ workspaces });
+        const updatedJson = JSON.stringify({ workbenches });
         
-        // Save the entire workspaces array to the project
+        // Save the entire workbenches array to the project
         mutate({
           json: updatedJson,
           height: values.height,
@@ -124,78 +123,78 @@ export const CompositionStudio = ({ initialData }: CompositionStudioProps) => {
     }
   }, [activeTool]);
 
-  // Handle setting active editor when a workspace becomes active
+  // Handle setting active editor when a workbench becomes active
   const handleSetActiveEditor = useCallback((editor: EditorType, index: number) => {
     setActiveEditor(editor);
-    setActiveWorkspaceIndex(index);
-    console.log(`Editor from workspace ${index + 1} is now active`);
+    setActiveWorkbenchIndex(index);
+    console.log(`Editor from workbench ${index + 1} is now active`);
   }, []);
 
-  // Add a new workspace
-  const handleAddWorkspace = useCallback(() => {
-    // Generate a unique ID for the new workspace
-    const newId = `workspace-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
-    const newIndex = workspaceIds.length;
+  // Add a new workbench
+  const handleAddWorkbench = useCallback(() => {
+    // Generate a unique ID for the new workbench
+    const newId = `workbench-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
+    const newIndex = workbenchIds.length;
     
-    setWorkspaceIds(prev => [...prev, newId]);
-    setActiveWorkspaceIndex(newIndex);
+    setWorkbenchIds(prev => [...prev, newId]);
+    setActiveWorkbenchIndex(newIndex);
     
-    // Update the stored data to include the new workspace
+    // Update the stored data to include the new workbench
     try {
-      const data = JSON.parse(initialData.json || '{"workspaces":[]}');
-      if (!data.workspaces) data.workspaces = [];
+      const data = JSON.parse(initialData.json || '{"workbenches":[]}');
+      if (!data.workbenches) data.workbenches = [];
       
-      // Add a placeholder for the new workspace
-      data.workspaces.push({
+      // Add a placeholder for the new workbench
+      data.workbenches.push({
         json: null,
         width: 720,  // Default width
         height: 480, // Default height
       });
       
-      // Save the updated workspaces array
+      // Save the updated workbenches array
       mutate({
         json: JSON.stringify(data),
         height: initialData.height,
         width: initialData.width,
       });
     } catch (error) {
-      console.error("Error adding new workspace to stored data:", error);
+      console.error("Error adding new workbench to stored data:", error);
     }
-  }, [workspaceIds.length, initialData, mutate]);
+  }, [workbenchIds.length, initialData, mutate]);
 
-  // Create initial workspaces on mount - with more restrictive dependencies
+  // Create initial workbenches on mount - with more restrictive dependencies
   useEffect(() => {
-    if (workspaceIds.length === 0 && !isWorkspacesInitialized.current) {
-      isWorkspacesInitialized.current = true;
+    if (workbenchIds.length === 0 && !isWorkbenchesInitialized.current) {
+      isWorkbenchesInitialized.current = true;
       
       try {
-        // Parse the initialData to get stored workspaces
-        const data = JSON.parse(initialData.json || '{"workspaces":[]}');
-        if (data.workspaces && Array.isArray(data.workspaces)) {
+        // Parse the initialData to get stored workbenches
+        const data = JSON.parse(initialData.json || '{"workbenches":[]}');
+        if (data.workbenches && Array.isArray(data.workbenches)) {
           // Filter out any null entries
-          const validWorkspaces = data.workspaces.filter((ws: any) => ws !== null);
+          const validWorkbenches = data.workbenches.filter((ws: any) => ws !== null);
           
-          if (validWorkspaces.length > 0) {
-            // Generate IDs for each workspace found in data
+          if (validWorkbenches.length > 0) {
+            // Generate IDs for each workbench found in data
             const timestamp = Date.now();
-            const ids = validWorkspaces.map((_: any, i: number) => 
-              `workspace-${timestamp}-${i}-${Math.random().toString(36).substring(2, 9)}`
+            const ids = validWorkbenches.map((_: any, i: number) => 
+              `workbench-${timestamp}-${i}-${Math.random().toString(36).substring(2, 9)}`
             );
-            setWorkspaceIds(ids);
+            setWorkbenchIds(ids);
             return;
           }
         }
       } catch (error) {
-        console.error("Error parsing initial workspace data:", error);
+        console.error("Error parsing initial workbench data:", error);
       }
       
-      // Fallback: create a single workspace if none exist
-      const initialId = `workspace-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
-      setWorkspaceIds([initialId]);
+      // Fallback: create a single workbench if none exist
+      const initialId = `workbench-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
+      setWorkbenchIds([initialId]);
     }
-  }, [initialData.json]); // Only depend on initialData.json, not workspaceIds.length
+  }, [initialData.json]); // Only depend on initialData.json, not workbenchIds.length
 
-  // Handle scrolling between workspaces
+  // Handle scrolling between workbenches
   useEffect(() => {
     const container = editorsContainerRef.current;
     if (!container) return;
@@ -210,14 +209,14 @@ export const CompositionStudio = ({ initialData }: CompositionStudioProps) => {
       scrollTimeout = setTimeout(() => {
         if (!container) return;
         
-        // Calculate which workspace is most visible based on scroll position
+        // Calculate which workbench is most visible based on scroll position
         const scrollLeft = container.scrollLeft;
-        const workspaceWidth = container.clientWidth;
+        const workbenchWidth = container.clientWidth;
         
-        const visibleIndex = Math.round(scrollLeft / workspaceWidth);
-        if (visibleIndex !== activeWorkspaceIndex && visibleIndex < workspaceIds.length) {
-          setActiveWorkspaceIndex(visibleIndex);
-          console.log(`Workspace ${visibleIndex + 1} is now active after scroll`);
+        const visibleIndex = Math.round(scrollLeft / workbenchWidth);
+        if (visibleIndex !== activeWorkbenchIndex && visibleIndex < workbenchIds.length) {
+          setActiveWorkbenchIndex(visibleIndex);
+          console.log(`Workbench ${visibleIndex + 1} is now active after scroll`);
         }
       }, 150); // Short delay to ensure scrolling has stopped
     };
@@ -227,9 +226,9 @@ export const CompositionStudio = ({ initialData }: CompositionStudioProps) => {
       container.removeEventListener('scroll', handleScroll);
       clearTimeout(scrollTimeout);
     };
-  }, [activeWorkspaceIndex, workspaceIds.length]);
+  }, [activeWorkbenchIndex, workbenchIds.length]);
 
-  // Scroll to active workspace when activeWorkspaceIndex changes
+  // Scroll to active workbench when activeWorkbenchIndex changes
   useEffect(() => {
     const container = editorsContainerRef.current;
     if (!container) return;
@@ -237,11 +236,11 @@ export const CompositionStudio = ({ initialData }: CompositionStudioProps) => {
     // Use requestAnimationFrame to ensure DOM is updated
     requestAnimationFrame(() => {
       container.scrollTo({
-        left: activeWorkspaceIndex * container.clientWidth,
+        left: activeWorkbenchIndex * container.clientWidth,
         behavior: 'smooth'
       });
     });
-  }, [activeWorkspaceIndex]);
+  }, [activeWorkbenchIndex]);
 
   const onChangeActiveTool = useCallback((tool: ActiveTool) => {
     if (tool === activeTool) {
@@ -316,14 +315,14 @@ export const CompositionStudio = ({ initialData }: CompositionStudioProps) => {
         const trajectories = validMasks.map(mask => mask.trajectory?.points || []);
         const rotations = validMasks.map(mask => mask.rotation || 0);
         
-        // Upload the workspace image to UploadThing
-        let workspaceImageUrl = "";
+        // Upload the workbench image to UploadThing
+        let workbenchImageUrl = "";
         if (activeEditor.workspaceURL) {
-          const workspaceFile = await dataUrlToFile(activeEditor.workspaceURL, "workspace.png");
-          workspaceImageUrl = await uploadToUploadThingResidual(workspaceFile);
-          console.log("Workspace image uploaded:", workspaceImageUrl);
+          const workbenchFile = await dataUrlToFile(activeEditor.workspaceURL, "workspace.png");
+          workbenchImageUrl = await uploadToUploadThingResidual(workbenchFile);
+          console.log("Workbench image uploaded:", workbenchImageUrl);
         } else {
-          throw new Error("No workspace image available");
+          throw new Error("No workbench image available");
         }
         
         // Upload all mask images to UploadThing
@@ -339,7 +338,7 @@ export const CompositionStudio = ({ initialData }: CompositionStudioProps) => {
         
         // Now construct the videoGenData with the uploaded URLs
         const videoGenData = {
-          "input_image": JSON.stringify([workspaceImageUrl]),
+          "input_image": JSON.stringify([workbenchImageUrl]),
           "input_masks": JSON.stringify(uploadedMaskUrls),
           "input_prompt": activeEditor.prompt,
           "input_trajectories": JSON.stringify(trajectories),
@@ -360,7 +359,7 @@ export const CompositionStudio = ({ initialData }: CompositionStudioProps) => {
         console.log(data);
         
         if (data.runId) {
-          // Add new video generation to array with current workspace index
+          // Add new video generation to array with current workbench index
           const startTime = Date.now();
           const estimatedDuration = 5 * 60 * 1000; // 5 minutes in milliseconds
           
@@ -368,7 +367,7 @@ export const CompositionStudio = ({ initialData }: CompositionStudioProps) => {
             runId: data.runId,
             status: 'pending',
             progress: 0,
-            workspaceIndex: activeWorkspaceIndex,
+            workbenchIndex: activeWorkbenchIndex,
             startTime: startTime, // Store when we started
             estimatedDuration: estimatedDuration // Store how long we expect it to take
           }]);
@@ -429,21 +428,21 @@ export const CompositionStudio = ({ initialData }: CompositionStudioProps) => {
   }
   
 
-  // Handle deleting a workspace
-  const handleDeleteWorkspace = useCallback((indexToDelete: number) => {
-    // Don't allow deleting if it's the last workspace
-    if (workspaceIds.length <= 1) return;
+  // Handle deleting a workbench
+  const handleDeleteWorkbench = useCallback((indexToDelete: number) => {
+    // Don't allow deleting if it's the last workbench
+    if (workbenchIds.length <= 1) return;
     
-    // Create a new array without the deleted workspace
-    setWorkspaceIds(prev => prev.filter((_, i) => i !== indexToDelete));
+    // Create a new array without the deleted workbench
+    setWorkbenchIds(prev => prev.filter((_, i) => i !== indexToDelete));
     
-    // Also remove the workspace from the stored data
+    // Also remove the workbench from the stored data
     try {
-      const data = JSON.parse(initialData.json || '{"workspaces":[]}');
-      if (data.workspaces && Array.isArray(data.workspaces)) {
-        data.workspaces = data.workspaces.filter((_: any, i: number) => i !== indexToDelete);
+      const data = JSON.parse(initialData.json || '{"workbenches":[]}');
+      if (data.workbenches && Array.isArray(data.workbenches)) {
+        data.workbenches = data.workbenches.filter((_: any, i: number) => i !== indexToDelete);
         
-        // Save the updated workspaces array
+        // Save the updated workbenches array
         mutate({
           json: JSON.stringify(data),
           height: initialData.height,
@@ -451,18 +450,18 @@ export const CompositionStudio = ({ initialData }: CompositionStudioProps) => {
         });
       }
     } catch (error) {
-      console.error("Error removing workspace from stored data:", error);
+      console.error("Error removing workbench from stored data:", error);
     }
     
-    // Update active workspace index
-    if (indexToDelete === activeWorkspaceIndex) {
+    // Update active workbench index
+    if (indexToDelete === activeWorkbenchIndex) {
       const newActiveIndex = indexToDelete === 0 ? 0 : indexToDelete - 1;
-      setActiveWorkspaceIndex(newActiveIndex);
+      setActiveWorkbenchIndex(newActiveIndex);
     } 
-    else if (indexToDelete < activeWorkspaceIndex) {
-      setActiveWorkspaceIndex(prev => prev - 1);
+    else if (indexToDelete < activeWorkbenchIndex) {
+      setActiveWorkbenchIndex(prev => prev - 1);
     }
-  }, [workspaceIds.length, activeWorkspaceIndex, initialData, mutate]);
+  }, [workbenchIds.length, activeWorkbenchIndex, initialData, mutate]);
 
   return (
     <ThemeProvider attribute="class" defaultTheme="light" enableSystem>
@@ -559,81 +558,39 @@ export const CompositionStudio = ({ initialData }: CompositionStudioProps) => {
               activeTool={activeTool}
               onChangeActiveTool={onChangeActiveTool}
             />
+
+            
             <div className="flex flex-row h-full w-full mb-4 relative overflow-hidden">
-              {/* Scrollable container for workspaces */}
-              <div 
-                ref={editorsContainerRef}
-                className="flex-1 overflow-x-auto mt-2 mx-2 scroll-smooth" 
-                style={{
-                  scrollSnapType: "x mandatory",
-                  display: "flex",
-                  WebkitOverflowScrolling: "touch",
-                }}
-              >
-                {/* Render workspaces based on workspace IDs array */}
-                {workspaceIds.map((id, index) => {
-                  // Parse workspace data for this index
-                  let workspaceState, workspaceWidth, workspaceHeight;
-                  
-                  try {
-                    const data = JSON.parse(initialData.json || '{"workspaces":[]}');
-                    if (data.workspaces && data.workspaces[index]) {
-                      const workspace = data.workspaces[index];
-                      workspaceState = workspace.json;
-                      workspaceWidth = workspace.width;
-                      workspaceHeight = workspace.height;
-                    } else if (index === 0) {
-                      // Fallback for first workspace if in old format
-                      workspaceState = initialData.json;
-                      workspaceWidth = initialData.width;
-                      workspaceHeight = initialData.height;
-                    }
-                  } catch (error) {
-                    console.error(`Error parsing workspace data for index ${index}:`, error);
-                    if (index === 0) {
-                      // Fallback for first workspace
-                      workspaceState = initialData.json;
-                      workspaceWidth = initialData.width;
-                      workspaceHeight = initialData.height;
-                    }
-                  }
-                  
-                  return (
-                    <Workspace
-                      key={id}
-                      index={index}
-                      isActive={index === activeWorkspaceIndex}
-                      onActive={handleSetActiveEditor}
-                      onDelete={handleDeleteWorkspace}
-                      canDelete={workspaceIds.length > 1}
-                      defaultState={workspaceState}
-                      defaultWidth={workspaceWidth}
-                      defaultHeight={workspaceHeight}
-                      clearSelectionCallback={onClearSelection}
-                      saveCallback={debouncedSave}
-                      activeTool={activeTool}
-                    />
-                  );
-                })}
-              </div>
+              <ScrollableWorkbenchViewer
+                editorsContainerRef={editorsContainerRef}
+                workbenchIds={workbenchIds}
+                activeWorkbenchIndex={activeWorkbenchIndex}
+                handleSetActiveEditor={handleSetActiveEditor}
+                handleDeleteWorkbench={handleDeleteWorkbench}
+                initialData={initialData}
+                debouncedSave={debouncedSave}
+                onClearSelection={onClearSelection}
+                activeTool={activeTool}
+              />
               
-              {/* Add workspace button */}
+              {/* Add workbench button */}
               <div className="w-16 flex items-center justify-center">
                 <button
-                  onClick={handleAddWorkspace}
+                  onClick={handleAddWorkbench}
                   className={cn("bg-editor-sidebar rounded-xl p-2")}
                 >
                   <Plus className="h-6 w-6" strokeWidth={3} />
                 </button>
               </div>
+
             </div>
             
             <CollapsibleVideoViewer
               videoGenerations={videoGenerations}
               onGenerateVideo={handleGenerateVideo}
               isGenerating={isGenerating}
-              workspaceCount={workspaceIds.length}
-              activeWorkspaceIndex={activeWorkspaceIndex}
+              workbenchCount={workbenchIds.length}
+              activeWorkbenchIndex={activeWorkbenchIndex}
             />
             
             <Footer editor={activeEditor} />

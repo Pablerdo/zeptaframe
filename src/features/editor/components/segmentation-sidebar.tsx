@@ -56,7 +56,6 @@ export const SegmentationSidebar = ({
   const [isSegmentationActive, setIsSegmentationActive] = useState(false);
   const [recordingMotion, setRecordingMotion] = useState<string | null>(null);
   const [activeAnimations, setActiveAnimations] = useState<{[key: string]: {
-
     stop: () => void;
     isPlaying: boolean;
   }}>({});
@@ -323,7 +322,7 @@ export const SegmentationSidebar = ({
       existingMasks.forEach(mask => editor.canvas.remove(mask));
       editor.canvas.renderAll();
     }
-    
+    console.log("handleNewMask");
     setIsSegmentationActive(true);
     if (editor) {
       // Create a deep copy of the current masks to avoid reference issues

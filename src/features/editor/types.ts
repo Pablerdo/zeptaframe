@@ -184,7 +184,7 @@ export interface EditorHookProps {
   }) => void;
 };
 
-export interface Workspace {
+export interface Workbench {
   id: string;
   canvasRef: React.RefObject<HTMLCanvasElement> | { current: null };
   containerRef: React.RefObject<HTMLDivElement> | { current: null };
@@ -225,7 +225,7 @@ export interface VideoGeneration {
   status: 'pending' | 'success' | 'error';
   progress: number;
   videoUrl?: string;
-  workspaceIndex?: number;
+  workbenchIndex?: number;
   startTime?: number;       // When the generation started
   estimatedDuration?: number; // How long we expect it to take
 }

@@ -9,16 +9,16 @@ interface CollapsibleVideoViewerProps {
   videoGenerations: VideoGeneration[];
   onGenerateVideo: (model?: string) => void;
   isGenerating: boolean;
-  workspaceCount: number;
-  activeWorkspaceIndex: number;
+  workbenchCount: number;
+  activeWorkbenchIndex: number;
 }
 
 const CollapsibleVideoViewer = ({
   videoGenerations,
   onGenerateVideo,
   isGenerating,
-  workspaceCount,
-  activeWorkspaceIndex
+  workbenchCount,
+  activeWorkbenchIndex
 }: CollapsibleVideoViewerProps) => {
   const [timelineCollapsed, setTimelineCollapsed] = useState(false);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
@@ -129,8 +129,8 @@ const CollapsibleVideoViewer = ({
           <VideoTimeline 
             videoGenerations={videoGenerations} 
             onGenerateVideo={handleGenerateVideoForTimeline}
-            workspaceCount={workspaceCount}
-            activeWorkspaceIndex={activeWorkspaceIndex}
+            workbenchCount={workbenchCount}
+            activeWorkbenchIndex={activeWorkbenchIndex}
           />
         </div>
       </div>

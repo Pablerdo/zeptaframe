@@ -7,16 +7,16 @@ import { useEditor } from "@/features/editor/hooks/use-editor";
 import { ActiveTool, Editor as EditorType } from "@/features/editor/types";
 import { cn } from "@/lib/utils";
 
-interface WorkspaceProps {
+interface WorkbenchProps {
   defaultState?: string;
   defaultWidth?: number;
   defaultHeight?: number;
   clearSelectionCallback?: () => void;
-  saveCallback?: (values: {
+  debouncedSave?: (values: {
     json: string;
     height: number;
     width: number;
-    workspaceIndex: number;
+    workbenchIndex: number;
   }) => void;
   isActive: boolean;
   index: number;
@@ -26,19 +26,19 @@ interface WorkspaceProps {
   canDelete: boolean;
 }
 
-export const Workspace = ({
+export const Workbench = ({
   defaultState,
   defaultWidth,
   defaultHeight,
   clearSelectionCallback,
-  saveCallback,
+  debouncedSave,
   isActive,
   index,
   onActive,
   activeTool,
   onDelete,
   canDelete
-}: WorkspaceProps) => {
+}: WorkbenchProps) => {
   // Create refs for canvas and container
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -52,10 +52,10 @@ export const Workspace = ({
     defaultHeight,
     clearSelectionCallback,
     saveCallback: values => {
-      if (saveCallback) {
-        saveCallback({
+      if (debouncedSave) {
+        debouncedSave({
           ...values,
-          workspaceIndex: index
+          workbenchIndex: index
         });
       }
     },
@@ -78,19 +78,19 @@ export const Workspace = ({
     }
   }, [init]);
 
-  // Notify parent component when this workspace becomes active
+  // Notify parent component when this workbench becomes active
   // But only do it once per active state change to prevent loops
   useEffect(() => {
     if (editor && isActive && !hasNotifiedActiveRef.current) {
       hasNotifiedActiveRef.current = true;
       onActive(editor, index);
     } else if (!isActive) {
-      // Reset the notification flag when workspace becomes inactive
+      // Reset the notification flag when workbench becomes inactive
       hasNotifiedActiveRef.current = false;
     }
   }, [editor, isActive, index, onActive]);
 
-  // Handle tool changes when this workspace is active
+  // Handle tool changes when this workbench is active
   useEffect(() => {
     if (isActive && editor) {
       if (activeTool === "draw") {
@@ -140,7 +140,7 @@ export const Workspace = ({
           activeTool === "segment" ? "cursor-crosshair" : "cursor-default"
         )}
       />
-      {/* Workspace number indicator */}
+      {/* workbench number indicator */}
       <div className="absolute top-2 right-2 bg-blue-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs font-bold">
         {index + 1}
       </div>
@@ -148,7 +148,7 @@ export const Workspace = ({
       <button
         onClick={handleDelete}
         className="absolute bottom-2 right-2 bg-red-500 hover:bg-red-600 text-white p-2 rounded-full transition-colors duration-200"
-        title="Delete workspace"
+        title="Delete workbench"
         disabled={!canDelete}
         style={{
           opacity: canDelete ? 1 : 0.5,
