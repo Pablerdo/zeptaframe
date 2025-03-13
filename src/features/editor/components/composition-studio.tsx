@@ -49,7 +49,8 @@ export const CompositionStudio = ({ initialData }: CompositionStudioProps) => {
   const [videoGenerations, setVideoGenerations] = useState<VideoGeneration[]>([]);
   const [isGenerating, setIsGenerating] = useState(false);
   const [activeTool, setActiveTool] = useState<ActiveTool>("select");
-  
+  const [allowEncodeWorkbenchImage, setAllowEncodeWorkbenchImage] = useState(true);
+
   // Add a new function to parse the project JSON
   const parseProjectData = (jsonString: string): ProjectJSON => {
     try {
@@ -530,7 +531,7 @@ export const CompositionStudio = ({ initialData }: CompositionStudioProps) => {
   };
 
   useEffect(() => {
-    if (activeEditor?.canvas && activeTool !== "segment") {
+    if (activeEditor?.canvas && activeTool !== "segment" && allowEncodeWorkbenchImage) {
       // Create a debounced version of the canvas change handler
       // This will wait 800ms after the last change before executing
       const debouncedHandleCanvasChange = debounce(() => {
@@ -696,11 +697,6 @@ export const CompositionStudio = ({ initialData }: CompositionStudioProps) => {
             activeTool={activeTool}
             onChangeActiveTool={onChangeActiveTool}
           />
-          {/* <PromptSidebar
-            editor={activeEditor}
-            activeTool={activeTool}
-            onChangeActiveTool={onChangeActiveTool}
-          /> */}
           <SettingsSidebar
             editor={activeEditor}
             activeTool={activeTool}
@@ -737,6 +733,7 @@ export const CompositionStudio = ({ initialData }: CompositionStudioProps) => {
                 projectData={projectData}
                 isDeletingIndex={isDeletingIndex}
                 transitionDirection={transitionDirection}
+                setAllowEncodeWorkbenchImage={setAllowEncodeWorkbenchImage}
               />
               
               {/* Add workbench button */}

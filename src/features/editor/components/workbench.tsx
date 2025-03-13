@@ -41,6 +41,7 @@ interface WorkbenchProps {
   setMask: (mask: HTMLCanvasElement | null) => void;
   maskBinary: HTMLCanvasElement | null;
   setMaskBinary: (maskBinary: HTMLCanvasElement | null) => void;
+  setAllowEncodeWorkbenchImage: (allowEncodeWorkbenchImage: boolean) => void;
 }
 
 export const Workbench = ({
@@ -64,6 +65,7 @@ export const Workbench = ({
   setMask,
   maskBinary,
   setMaskBinary,
+  setAllowEncodeWorkbenchImage,
 }: WorkbenchProps) => {
   // Create refs for canvas and container
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -99,6 +101,16 @@ export const Workbench = ({
       isInitializedRef.current = true;
     }
   }, [init]);
+
+  useEffect(() => {
+    if (editor) {
+      if (activeWorkbenchTool === "animate") {
+        setAllowEncodeWorkbenchImage(false);
+      } else {
+        setAllowEncodeWorkbenchImage(true);
+      }
+    }
+  }, [activeWorkbenchTool, editor]);
 
   // Notify parent component ONLY when this workbench BECOMES active,
   // not on every editor change
@@ -314,7 +326,7 @@ export const Workbench = ({
       <div 
         className="flex flex-col h-full" 
         style={{ 
-          width: activeWorkbenchTool !== "select" ? "70%" : "92%",
+          width: activeWorkbenchTool !== "select" ? "74%" : "94%",
           transition: "width 0.3s ease-in-out"
         }}
       >
@@ -361,9 +373,9 @@ export const Workbench = ({
       <div 
         className="flex flex-col h-full"
         style={{ 
-          width: activeWorkbenchTool !== "select" ? "22%" : "0%",
+          width: activeWorkbenchTool !== "select" ? "350px" : "0px",
           overflow: "hidden",
-          transition: "width 0.3s ease-in-out"
+          transition: "width 0.2s ease-in-out"
         }}
       >
         <AnimateRightSidebar 
@@ -399,7 +411,7 @@ export const Workbench = ({
       </div>
 
       {/* Right buttons column - fixed width */}
-      <div className="flex flex-col w-[8%] h-full">
+      <div className="flex flex-col w-[100px] h-full">
         <aside className="modern-right-sidebar flex flex-col py-3 px-2 border-l h-full justify-between">
           <ul className="flex flex-col space-y-2">
             <RightSidebarItem

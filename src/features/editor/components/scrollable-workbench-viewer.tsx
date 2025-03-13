@@ -32,6 +32,7 @@ interface ScrollableWorkbenchViewerProps {
   projectData: ProjectJSON;
   isDeletingIndex: number | null;
   transitionDirection: 'left' | 'right' | null;
+  setAllowEncodeWorkbenchImage: (allowEncodeWorkbenchImage: boolean) => void;
 }
 
 
@@ -57,6 +58,7 @@ export const ScrollableWorkbenchViewer = ({
   projectData,
   isDeletingIndex,
   transitionDirection,
+  setAllowEncodeWorkbenchImage,
 }: ScrollableWorkbenchViewerProps) => {
 
   return (
@@ -117,6 +119,7 @@ export const ScrollableWorkbenchViewer = ({
               setMask={setMask}
               maskBinary={maskBinary}
               setMaskBinary={setMaskBinary}
+              setAllowEncodeWorkbenchImage={setAllowEncodeWorkbenchImage}
             />
           </div>
         );
