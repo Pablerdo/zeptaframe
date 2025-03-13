@@ -121,21 +121,7 @@ export const Workbench = ({
     }
   }, [activeWorkbenchTool, editor]);
 
-  // Notify parent component ONLY when this workbench BECOMES active,
-  // not on every editor change
-  useEffect(() => {
-    // Only call onActive when the workbench becomes active and has an editor
-    if (editor && isActive) {
-      // Use a ref to track if we've already notified for this active state
-      if (!isActiveNotifiedRef.current) {
-        onActive(editor, index);
-        isActiveNotifiedRef.current = true;
-      }
-    } else {
-      // Reset the flag when the workbench becomes inactive
-      isActiveNotifiedRef.current = false;
-    }
-  }, [isActive, editor, index, onActive]);
+
 
   // Handle tool changes when this workbench is active
   useEffect(() => {
@@ -492,6 +478,29 @@ export const Workbench = ({
     img.src = workspaceImage;
   }, [editor, samWorker]);
 
+    // Notify parent component ONLY when this workbench BECOMES active,
+  // not on every editor change
+  useEffect(() => {
+    // Only call onActive when the workbench becomes active and has an editor
+    if (editor && isActive) {
+      // Use a ref to track if we've already notified for this active state
+      if (!isActiveNotifiedRef.current) {
+        onActive(editor, index);
+        isActiveNotifiedRef.current = true;
+        
+        // Encode the current workbench image when it becomes active
+        // This ensures the SAM worker has the correct image for the currently visible workbench
+        if (samWorker.current && editor.canvas) {
+          console.log("Workbench became active, encoding current workbench image");
+          encodeWorkbenchImage();
+        }
+      }
+    } else {
+      // Reset the flag when the workbench becomes inactive
+      isActiveNotifiedRef.current = false;
+    }
+  }, [isActive, editor, index, onActive, encodeWorkbenchImage, samWorker]);
+  
   // Add this effect to handle canvas changes
   useEffect(() => {
     if (editor?.canvas && activeTool !== "segment" && isActive) {

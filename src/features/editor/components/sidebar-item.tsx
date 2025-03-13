@@ -24,7 +24,7 @@ export const SidebarItem = ({
         "w-full h-full aspect-video p-3 py-4 flex flex-col rounded-xl transition-all duration-200 border",
         isActive 
           ? "bg-blue-50 dark:bg-slate-700 text-blue-600 dark:text-blue-400 border-blue-100 dark:border-slate-600" 
-          : "hover:bg-gray-50 dark:hover:bg-slate-800 border-gray-200 dark:border-slate-700"
+          : "hover:bg-gray-50 dark:hover:bg-slate-800 border-gray-300 dark:border-slate-600"
       )}
     >
       <Icon className={cn(
