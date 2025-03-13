@@ -17,6 +17,15 @@ interface ScrollableWorkbenchViewerProps {
   }) => void;
   onClearSelection: () => void;
   activeTool: ActiveTool;
+  onChangeActiveTool: (tool: ActiveTool) => void;
+  samWorker: React.RefObject<Worker | null>;
+  samWorkerLoading: boolean;
+  prevMaskArray: Float32Array | null;
+  setPrevMaskArray: (prevMaskArray: Float32Array | null) => void;
+  mask: HTMLCanvasElement | null;
+  setMask: (mask: HTMLCanvasElement | null) => void;
+  maskBinary: HTMLCanvasElement | null;
+  setMaskBinary: (maskBinary: HTMLCanvasElement | null) => void;
 }
 
 
@@ -30,6 +39,15 @@ export const ScrollableWorkbenchViewer = ({
   debouncedSave,
   onClearSelection,
   activeTool,
+  onChangeActiveTool,
+  samWorker,
+  samWorkerLoading,
+  prevMaskArray,
+  setPrevMaskArray,
+  mask,
+  setMask,
+  maskBinary,
+  setMaskBinary,
 }: ScrollableWorkbenchViewerProps) => {
 
   return (
@@ -40,25 +58,45 @@ export const ScrollableWorkbenchViewer = ({
         scrollSnapType: "x mandatory",
         display: "flex",
         WebkitOverflowScrolling: "touch",
+        gap: "20px",
       }}
       >
       {/* Render workbenches based on workbench IDs array */}
       {workbenchIds.map((id, index) => {
         return (
-          <Workbench
-            key={id}
-            index={index}
-            isActive={index === activeWorkbenchIndex}
-            onActive={handleSetActiveEditor}
-            onDelete={handleDeleteWorkbench}
-            canDelete={workbenchIds.length > 1}
-            defaultState={initialData.json}
-            defaultWidth={720}
-            defaultHeight={480}
-            clearSelectionCallback={onClearSelection}
-            debouncedSave={debouncedSave}
-            activeTool={activeTool}
-          />
+          <div 
+            key={id} 
+            style={{
+              flex: "0 0 100%", 
+              width: "100%", 
+              minWidth: "100%",
+              scrollSnapAlign: "start",
+              boxSizing: "border-box",
+            }}
+          >
+            <Workbench
+              index={index}
+              isActive={index === activeWorkbenchIndex}
+              onActive={handleSetActiveEditor}
+              onDelete={handleDeleteWorkbench}
+              canDelete={workbenchIds.length > 1}
+              defaultState={initialData.json}
+              defaultWidth={720}
+              defaultHeight={480}
+              clearSelectionCallback={onClearSelection}
+              debouncedSave={debouncedSave}
+              activeTool={activeTool}
+              onChangeActiveTool={onChangeActiveTool}
+              samWorker={samWorker}
+              samWorkerLoading={samWorkerLoading}
+              prevMaskArray={prevMaskArray}
+              setPrevMaskArray={setPrevMaskArray}
+              mask={mask}
+              setMask={setMask}
+              maskBinary={maskBinary}
+              setMaskBinary={setMaskBinary}
+            />
+          </div>
         );
       })}
       </div>

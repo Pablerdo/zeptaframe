@@ -8,14 +8,12 @@ import { VideoGeneration } from '@/features/editor/types';
 import { cn } from '@/lib/utils';
 
 interface VideoTimelineProps {
-  onGenerateVideo: (index: number) => void;
   videoGenerations: VideoGeneration[];
   workbenchCount: number;
   activeWorkbenchIndex: number;
 }
 
 const VideoTimeline = ({ 
-  onGenerateVideo, 
   videoGenerations, 
   workbenchCount,
   activeWorkbenchIndex 
@@ -63,7 +61,6 @@ const VideoTimeline = ({
                 <div className="relative">
                   <VideoBox
                     video={videoUrl}
-                    onGenerateVideo={() => onGenerateVideo(index)}
                     isLoading={isLoading}
                     progress={progress}
                   />

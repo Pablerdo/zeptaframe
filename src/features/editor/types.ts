@@ -110,8 +110,16 @@ export type ActiveTool =
   | "templates"
   | "control-motion"
   | "segment"
+  | "animate"
   | "camera-control"
   | "prompt";
+
+export type ActiveWorkbenchTool = 
+  | "select"
+  | "animate"
+  | "camera-control"
+  | "prompt"
+  | "model";
 
 export const FILL_COLOR = "rgba(0,0,0,1)";
 export const STROKE_COLOR = "rgba(0,0,0,1)";

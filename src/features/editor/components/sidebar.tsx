@@ -66,18 +66,18 @@ export const Sidebar = ({
           isActive={activeTool === "segment"}
           onClick={() => onChangeActiveTool("segment")}
         />
-        <SidebarItem
+        {/* <SidebarItem
           icon={Video}
           label="Camera"
           isActive={activeTool === "camera-control"}
           onClick={() => onChangeActiveTool("camera-control")}
-        />
-        <SidebarItem
+        /> */}
+        {/* <SidebarItem
           icon={MessageSquare}
           label="Prompt"
           isActive={activeTool === "prompt"}
           onClick={() => onChangeActiveTool("prompt")}
-        />
+        /> */}
         <SidebarItem
           icon={Settings}
           label="Settings"

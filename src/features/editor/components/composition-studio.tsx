@@ -33,9 +33,8 @@ import { SegmentationSidebar } from "@/features/editor/components/segmentation-s
 import { PromptSidebar } from "@/features/editor/components/prompt-sidebar";
 import { cn } from "@/lib/utils";
 import { dataUrlToFile, uploadToUploadThingResidual } from "@/lib/uploadthing";
-import { CameraControlSidebar } from "./camera-control-sidebar";
 import CollapsibleVideoViewer from "@/features/editor/components/collapsible-video-viewer";
-import { ScrollableWorkbenchViewer } from "./scrollable-workbench-viewer";
+import { ScrollableWorkbenchViewer } from "@/features/editor/components/scrollable-workbench-viewer";
 import { float32ArrayToBinaryMask, float32ArrayToCanvas, resizeCanvas, sliceTensor } from "@/app/sam/lib/imageutils";
 import { canvasToFloat32Array } from "@/app/sam/lib/imageutils";
 import { resizeAndPadBox } from "@/app/sam/lib/imageutils";
@@ -163,184 +162,6 @@ export const CompositionStudio = ({ initialData }: CompositionStudioProps) => {
     }
     setActiveTool(tool);
   }, [activeTool]);
-
-  // Check the status of the video generations
-  useEffect(() => {
-    const intervals: NodeJS.Timeout[] = [];
-    const visibilityListeners: (() => void)[] = [];
-    const rafIds: number[] = [];
-    
-    console.log("setting up video status check intervals");
-
-    // Only create intervals for pending generations
-    videoGenerations.forEach((gen, index) => {
-      if (gen.status === 'pending') {
-        console.log(`Setting up interval for video generation ${gen.runId}`);
-        
-        // Status check interval
-        const intervalId = setInterval(async () => {
-          console.log(`Checking status for video generation ${gen.runId}`);
-          try {
-            const response = await fetch(`/api/comfydeploy/webhook-video?runId=${gen.runId}`);
-            const data = await response.json();
-            
-            if (data.status === "success") {
-              console.log(`Video generation ${gen.runId} completed successfully`);
-              setVideoGenerations(prev => prev.map((g, i) => 
-                i === index ? {
-                  ...g,
-                  status: 'success',
-                  videoUrl: data.videoUrl,
-                  progress: 100
-                } : g
-              ));
-              
-              // Clean up all timers and listeners for this generation
-              clearInterval(intervalId);
-            }
-          } catch (error) {
-            console.error(`Error checking status for video ${gen.runId}:`, error);
-          }
-        }, 5000);
-        
-        intervals.push(intervalId);
-      }
-    });
-
-    // Cleanup function to clear all intervals and listeners
-    return () => {
-      console.log(`Cleaning up ${intervals.length} status check intervals`);
-      intervals.forEach(id => clearInterval(id));
-      rafIds.forEach(id => cancelAnimationFrame(id));
-      visibilityListeners.forEach(listener => 
-        document.removeEventListener('visibilitychange', listener)
-      );
-    };
-  }, [videoGenerations.map(gen => gen.runId).join(',')]); // Only depend on the runIds
-
-  const handleGenerateVideo = async (model?: string) => {
-    if (!activeEditor) return;
-    
-    if (model === "CogVideoX") {
-      try {
-        setIsGenerating(true);
-        
-        const validMasks = activeEditor.segmentedMasks.filter(mask => mask.id && mask.id.trim() !== '');
-          
-        const trajectories = validMasks.map(mask => mask.trajectory?.points || []);
-        const rotations = validMasks.map(mask => mask.rotation || 0);
-        
-        // Upload the workbench image to UploadThing
-        let workbenchImageUrl = "";
-        if (activeEditor.workspaceURL) {
-          const workbenchFile = await dataUrlToFile(activeEditor.workspaceURL, "workspace.png");
-          workbenchImageUrl = await uploadToUploadThingResidual(workbenchFile);
-          console.log("Workbench image uploaded:", workbenchImageUrl);
-        } else {
-          throw new Error("No workbench image available");
-        }
-        
-        // Upload all mask images to UploadThing
-        const maskUploadPromises = validMasks.map(async (mask, index) => {
-          if (!mask.binaryUrl) return "";
-          
-          const maskFile = await dataUrlToFile(mask.binaryUrl, `mask-${index}.png`);
-          return uploadToUploadThingResidual(maskFile);
-        });
-        
-        const uploadedMaskUrls = await Promise.all(maskUploadPromises);
-        console.log("Masks uploaded:", uploadedMaskUrls);
-        
-        // Now construct the videoGenData with the uploaded URLs
-        const videoGenData = {
-          "input_image": JSON.stringify([workbenchImageUrl]),
-          "input_masks": JSON.stringify(uploadedMaskUrls),
-          "input_prompt": activeEditor.prompt,
-          "input_trajectories": JSON.stringify(trajectories),
-          "input_rotations": JSON.stringify(rotations)
-        };
-        
-        console.log("videoGenData", videoGenData);
-
-        const response = await fetch("/api/comfydeploy/generate-video", {
-          method: "POST",
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify(videoGenData),
-        });
-        
-        const data = await response.json();
-        console.log(data);
-        
-        if (data.runId) {
-          // Add new video generation to array with current workbench index
-          const startTime = Date.now();
-          const estimatedDuration = 5 * 60 * 1000; // 5 minutes in milliseconds
-          
-          setVideoGenerations(prev => [...prev, {
-            runId: data.runId,
-            status: 'pending',
-            progress: 0,
-            workbenchIndex: activeWorkbenchIndex,
-            startTime: startTime, // Store when we started
-            estimatedDuration: estimatedDuration // Store how long we expect it to take
-          }]);
-          
-          // Create a function to update progress based on elapsed time
-          const updateProgress = () => {
-            const elapsedTime = Date.now() - startTime;
-            const calculatedProgress = Math.min((elapsedTime / estimatedDuration) * 100, 99);
-            
-            setVideoGenerations(prev => prev.map(gen => 
-              gen.runId === data.runId ? {
-                ...gen,
-                progress: calculatedProgress
-              } : gen
-            ));
-          };
-          
-          // Use requestAnimationFrame when visible and setInterval as fallback
-          let progressInterval: number | NodeJS.Timeout;
-          let rafId: number;
-          
-          const handleVisibilityChange = () => {
-            if (document.hidden) {
-              // Tab is hidden, use setInterval (will be throttled but still runs occasionally)
-              cancelAnimationFrame(rafId);
-              progressInterval = setInterval(updateProgress, 2000);
-            } else {
-              // Tab is visible, use requestAnimationFrame for smooth updates
-              clearInterval(progressInterval as NodeJS.Timeout);
-              
-              const updateWithRAF = () => {
-                updateProgress();
-                rafId = requestAnimationFrame(updateWithRAF);
-              };
-              rafId = requestAnimationFrame(updateWithRAF);
-            }
-          };
-          
-          // Set up initial state based on current visibility
-          document.addEventListener('visibilitychange', handleVisibilityChange);
-          handleVisibilityChange();
-          
-          console.log("Video generation started. Please wait...");
-        } else {
-          throw new Error("No video runId received");
-        }
-      } catch (error) {
-        console.error("Error:", error);
-        console.log("Error generating video");
-      } finally {
-        setIsGenerating(false);
-      }
-    } else if (model === "HunyuanVideo") {
-      console.log("HunyuanVideo model selected");
-    } else {
-      console.log("Model not yet implemented");
-    } 
-  }
   
   // Add a new workbench
   const handleAddWorkbench = useCallback(() => {
@@ -701,16 +522,11 @@ export const CompositionStudio = ({ initialData }: CompositionStudioProps) => {
             activeTool={activeTool}
             onChangeActiveTool={onChangeActiveTool}
           />
-          <CameraControlSidebar
+          {/* <PromptSidebar
             editor={activeEditor}
             activeTool={activeTool}
             onChangeActiveTool={onChangeActiveTool}
-          />
-          <PromptSidebar
-            editor={activeEditor}
-            activeTool={activeTool}
-            onChangeActiveTool={onChangeActiveTool}
-          />
+          /> */}
           <SettingsSidebar
             editor={activeEditor}
             activeTool={activeTool}
@@ -735,10 +551,19 @@ export const CompositionStudio = ({ initialData }: CompositionStudioProps) => {
                 debouncedSave={debouncedSave}
                 onClearSelection={onClearSelection}
                 activeTool={activeTool}
+                onChangeActiveTool={onChangeActiveTool}
+                samWorker={samWorker}
+                samWorkerLoading={samWorkerLoading}
+                prevMaskArray={prevMaskArray}
+                setPrevMaskArray={setPrevMaskArray}
+                mask={mask}
+                setMask={setMask}
+                maskBinary={maskBinary}
+                setMaskBinary={setMaskBinary}
               />
               
               {/* Add workbench button */}
-              <div className="w-16 flex items-center justify-center">
+              <div className="w-10 flex items-center justify-center">
                 <button
                   onClick={handleAddWorkbench}
                   className={cn("bg-editor-sidebar rounded-xl p-2")}
@@ -751,13 +576,12 @@ export const CompositionStudio = ({ initialData }: CompositionStudioProps) => {
             
             <CollapsibleVideoViewer
               videoGenerations={videoGenerations}
-              onGenerateVideo={handleGenerateVideo}
               isGenerating={isGenerating}
               workbenchCount={workbenchIds.length}
               activeWorkbenchIndex={activeWorkbenchIndex}
             />
             
-            <Footer editor={activeEditor} />
+            {/* <Footer editor={activeEditor} /> */}
           </main>
         </div>
       </div>

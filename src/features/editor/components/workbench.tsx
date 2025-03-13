@@ -2,10 +2,18 @@
 
 import { fabric } from "fabric";
 import { useEffect, useRef, useState } from "react";
-import { Trash2 } from "lucide-react";
+import { Crosshair, MessageSquare, Trash2, Video, Film, ArrowRightSquare, PlayCircle, ArrowRightCircle, Loader2 } from "lucide-react";
 import { useEditor } from "@/features/editor/hooks/use-editor";
-import { ActiveTool, Editor as EditorType } from "@/features/editor/types";
+import { ActiveTool, ActiveWorkbenchTool, Editor as EditorType, VideoGeneration } from "@/features/editor/types";
 import { cn } from "@/lib/utils";
+import { SidebarItem } from "@/features/editor/components/sidebar-item";
+import { RightSidebarItem } from "./right-sidebar-item";
+import { AnimateRightSidebar } from "./right-sidebar/animate-right-sidebar";
+import { CameraControlRightSidebar } from "./right-sidebar/camera-control-right-sidebar";
+import { PromptRightSidebar } from "./right-sidebar/prompt-right-sidebar";
+import { ModelRightSidebar } from "./right-sidebar/model-right-sidebar";
+import { uploadToUploadThingResidual } from "@/lib/uploadthing";
+import { dataUrlToFile } from "@/lib/uploadthing";
 
 interface WorkbenchProps {
   defaultState?: string;
@@ -23,6 +31,15 @@ interface WorkbenchProps {
   activeTool: ActiveTool;
   onDelete: (index: number) => void;
   canDelete: boolean;
+  onChangeActiveTool: (tool: ActiveTool) => void;
+  samWorker: React.RefObject<Worker | null>;
+  samWorkerLoading: boolean;
+  prevMaskArray: Float32Array | null;
+  setPrevMaskArray: (prevMaskArray: Float32Array | null) => void;
+  mask: HTMLCanvasElement | null;
+  setMask: (mask: HTMLCanvasElement | null) => void;
+  maskBinary: HTMLCanvasElement | null;
+  setMaskBinary: (maskBinary: HTMLCanvasElement | null) => void;
 }
 
 export const Workbench = ({
@@ -36,14 +53,25 @@ export const Workbench = ({
   onActive,
   activeTool,
   onDelete,
-  canDelete
+  canDelete,
+  samWorker,
+  samWorkerLoading,
+  prevMaskArray,
+  setPrevMaskArray,
+  mask,
+  setMask,
+  maskBinary,
+  setMaskBinary,
 }: WorkbenchProps) => {
   // Create refs for canvas and container
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const isInitializedRef = useRef(false);
   const isActiveNotifiedRef = useRef(false);
-  
+  const [activeWorkbenchTool, setActiveWorkbenchTool] = useState<ActiveWorkbenchTool>("select");
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [selectedModel, setSelectedModel] = useState("cogvideox");
+  const [videoGeneration, setVideoGeneration] = useState<VideoGeneration | null>(null);
   // Initialize the editor with useEditor hook
   const { init, editor } = useEditor({
     defaultState,
@@ -117,43 +145,310 @@ export const Workbench = ({
     }
   };
 
-  return (
-    <div 
-      ref={containerRef}
-      className={cn("modern-canvas relative min-w-full max-w-full flex-shrink-0 h-full rounded-xl shadow-soft overflow-hidden mx-4")}
-      style={{
-        scrollSnapAlign: "start",
-        opacity: isActive ? 1 : 0.98,
-        // background: `radial-gradient(circle at center, rgba(128, 128, 128, 0.15) 0%, rgba(128, 128, 128, 0.03) 0%)`,
-        // background: `radial-gradient(ellipse closest-side at 50% 50%, #ffffff 0%, #e0e0e0 100%  )`,
-      }}
-      onClick={handleContainerClick}
-    >
-      <canvas 
-        ref={canvasRef} 
-        className={cn(
-          "border border-gray-200 dark:border-gray-700 rounded-xl",
-          activeTool === "segment" ? "cursor-crosshair" : "cursor-default"
-        )}
-      />
-      {/* workbench number indicator */}
-      <div className="absolute top-2 right-2 bg-blue-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs font-bold">
-        {index + 1}
-      </div>
+  // Check the status of the video generations
+  useEffect(() => {
+    console.log("setting up video status check intervals");
 
-      <button
-        onClick={handleDelete}
-        className="absolute bottom-2 right-2 bg-red-500 hover:bg-red-600 text-white p-2 rounded-full transition-colors duration-200"
-        title="Delete workbench"
-        disabled={!canDelete}
-        style={{
-          opacity: canDelete ? 1 : 0.5,
-          cursor: canDelete ? 'pointer' : 'not-allowed'
+    // Only create intervals for pending generations
+    if (videoGeneration?.status === 'pending') {
+      console.log(`Setting up interval for video generation ${videoGeneration.runId}`);
+      
+      // Status check interval
+      const intervalId = setInterval(async () => {
+        console.log(`Checking status for video generation ${videoGeneration.runId}`);
+        try {
+          const response = await fetch(`/api/comfydeploy/webhook-video?runId=${videoGeneration.runId}`);
+          const data = await response.json();
+          
+          if (data.status === "success") {
+            console.log(`Video generation ${videoGeneration.runId} completed successfully`);
+            setVideoGeneration(prev => prev ? {
+              ...prev,
+              status: 'success',
+              videoUrl: data.videoUrl,
+              progress: 100
+            } : null);
+            
+            // Clean up all timers and listeners for this generation
+            clearInterval(intervalId);
+          }
+        } catch (error) {
+          console.error(`Error checking status for video ${videoGeneration?.runId}:`, error);
+        }
+      }, 5000);
+      
+      // Return cleanup function
+      return () => {
+        clearInterval(intervalId);
+      };
+    }
+  }, [videoGeneration]);
+
+  const handleGenerateVideo = async (model?: string) => {
+    if (!editor) return;
+
+    if (model === "CogVideoX") {
+      try {
+        setIsGenerating(true);
+        
+        const validMasks = editor.segmentedMasks.filter(mask => mask.id && mask.id.trim() !== '');
+          
+        const trajectories = validMasks.map(mask => mask.trajectory?.points || []);
+        const rotations = validMasks.map(mask => mask.rotation || 0);
+        
+        // Upload the workbench image to UploadThing
+        let workbenchImageUrl = "";
+        if (editor.workspaceURL) {
+          const workbenchFile = await dataUrlToFile(editor.workspaceURL, "workspace.png");
+          workbenchImageUrl = await uploadToUploadThingResidual(workbenchFile);
+          console.log("Workbench image uploaded:", workbenchImageUrl);
+        } else {
+          throw new Error("No workbench image available");
+        }
+        
+        // Upload all mask images to UploadThing
+        const maskUploadPromises = validMasks.map(async (mask, index) => {
+          if (!mask.binaryUrl) return "";
+          
+          const maskFile = await dataUrlToFile(mask.binaryUrl, `mask-${index}.png`);
+          return uploadToUploadThingResidual(maskFile);
+        });
+        
+        const uploadedMaskUrls = await Promise.all(maskUploadPromises);
+        console.log("Masks uploaded:", uploadedMaskUrls);
+        
+        // Now construct the videoGenData with the uploaded URLs
+        const videoGenData = {
+          "input_image": JSON.stringify([workbenchImageUrl]),
+          "input_masks": JSON.stringify(uploadedMaskUrls),
+          "input_prompt": editor.prompt,
+          "input_trajectories": JSON.stringify(trajectories),
+          "input_rotations": JSON.stringify(rotations)
+        };
+        
+        console.log("videoGenData", videoGenData);
+
+        const response = await fetch("/api/comfydeploy/generate-video", {
+          method: "POST",
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(videoGenData),
+        });
+        
+        const data = await response.json();
+        console.log(data);
+        
+        if (data.runId) {
+          // Add new video generation to array with current workbench index
+          const startTime = Date.now();
+          const estimatedDuration = 5 * 60 * 1000; // 5 minutes in milliseconds
+          
+          setVideoGeneration({
+            runId: data.runId,
+            status: 'pending',
+            progress: 0,
+            workbenchIndex: index,
+            startTime: startTime, // Store when we started
+            estimatedDuration: estimatedDuration // Store how long we expect it to take
+          });
+          
+          // Create a function to update progress based on elapsed time
+          const updateProgress = () => {
+            const elapsedTime = Date.now() - startTime;
+            const calculatedProgress = Math.min((elapsedTime / estimatedDuration) * 100, 99);
+            
+            setVideoGeneration(prev => prev ? {
+              ...prev,
+              progress: calculatedProgress
+            } : null);
+          };
+          
+          // Use requestAnimationFrame when visible and setInterval as fallback
+          let progressInterval: number | NodeJS.Timeout;
+          let rafId: number;
+          
+          const handleVisibilityChange = () => {
+            if (document.hidden) {
+              // Tab is hidden, use setInterval (will be throttled but still runs occasionally)
+              cancelAnimationFrame(rafId);
+              progressInterval = setInterval(updateProgress, 2000);
+            } else {
+              // Tab is visible, use requestAnimationFrame for smooth updates
+              clearInterval(progressInterval as NodeJS.Timeout);
+              
+              const updateWithRAF = () => {
+                updateProgress();
+                rafId = requestAnimationFrame(updateWithRAF);
+              };
+              rafId = requestAnimationFrame(updateWithRAF);
+            }
+          };
+          
+          // Set up initial state based on current visibility
+          document.addEventListener('visibilitychange', handleVisibilityChange);
+          handleVisibilityChange();
+          
+          console.log("Video generation started. Please wait...");
+        } else {
+          throw new Error("No video runId received");
+        }
+      } catch (error) {
+        console.error("Error:", error);
+        console.log("Error generating video");
+      } finally {
+        setIsGenerating(false);
+      }
+    } else if (model === "HunyuanVideo") {
+      console.log("HunyuanVideo model selected");
+    } else {
+      console.log("Model not yet implemented");
+    } 
+  }
+
+  return (
+    <div className="flex flex-row w-full h-full">
+      {/* Left column - dynamic width */}
+      <div 
+        className="flex flex-col h-full" 
+        style={{ 
+          width: activeWorkbenchTool !== "select" ? "70%" : "92%",
+          transition: "width 0.3s ease-in-out"
         }}
       >
-        <Trash2 className="h-4 w-4" />
-      </button>
-      
+        <div 
+          ref={containerRef}
+          className={cn("modern-canvas relative flex-shrink-0 h-full shadow-soft overflow-hidden")}
+          style={{
+            scrollSnapAlign: "start",
+            opacity: isActive ? 1 : 0.98,
+            // background: `radial-gradient(circle at center, rgba(128, 128, 128, 0.15) 0%, rgba(128, 128, 128, 0.03) 0%)`,
+            // background: `radial-gradient(ellipse closest-side at 50% 50%, #ffffff 0%, #e0e0e0 100%  )`,
+          }}
+          onClick={handleContainerClick}
+        >
+          <canvas 
+            ref={canvasRef} 
+            className={cn(
+              activeTool === "segment" ? "cursor-crosshair" : "cursor-default"
+            )}
+          />
+          {/* workbench number indicator */}
+          <div className="absolute top-2 left-2 flex items-center space-x-2">
+            <div className="bg-blue-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs font-bold">
+              {index + 1}
+            </div>
+
+            <button
+              onClick={handleDelete}
+              className="bg-red-500 hover:bg-red-600 text-white w-6 h-6 px-1 rounded-full transition-colors duration-200"
+              title="Delete workbench"
+              disabled={!canDelete}
+              style={{
+                opacity: canDelete ? 1 : 0.5,
+                cursor: canDelete ? 'pointer' : 'not-allowed'
+              }}
+            >
+              <Trash2 className="h-4 w-4" />
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* Middle sidebar content - dynamic width */}
+      <div 
+        className="flex flex-col h-full"
+        style={{ 
+          width: activeWorkbenchTool !== "select" ? "22%" : "0%",
+          overflow: "hidden",
+          transition: "width 0.3s ease-in-out"
+        }}
+      >
+        <AnimateRightSidebar 
+          editor={editor}
+          activeWorkbenchTool={activeWorkbenchTool}
+          onChangeActiveWorkbenchTool={setActiveWorkbenchTool}
+          samWorker={samWorker}
+          samWorkerLoading={samWorkerLoading}
+          prevMaskArray={prevMaskArray}
+          setPrevMaskArray={setPrevMaskArray}
+          mask={mask}
+          setMask={setMask}
+          maskBinary={maskBinary}
+          setMaskBinary={setMaskBinary}
+        />
+        <CameraControlRightSidebar 
+          editor={editor}
+          activeWorkbenchTool={activeWorkbenchTool}
+          onChangeActiveWorkbenchTool={setActiveWorkbenchTool}
+        />
+        <PromptRightSidebar
+          editor={editor}
+          activeWorkbenchTool={activeWorkbenchTool}
+          onChangeActiveWorkbenchTool={setActiveWorkbenchTool}
+        />
+        <ModelRightSidebar
+          editor={editor}
+          activeWorkbenchTool={activeWorkbenchTool}
+          onChangeActiveWorkbenchTool={setActiveWorkbenchTool}
+          selectedModel={selectedModel}
+          onSelectModel={setSelectedModel}
+        />
+      </div>
+
+      {/* Right buttons column - fixed width */}
+      <div className="flex flex-col w-[8%] h-full">
+        <aside className="modern-right-sidebar flex flex-col py-3 px-2 border-l h-full justify-between">
+          <ul className="flex flex-col space-y-2">
+            <RightSidebarItem
+              icon={ArrowRightCircle}
+              label="Animate"
+              isActive={activeWorkbenchTool === "animate"}
+              onClick={() => setActiveWorkbenchTool("animate")}
+            />
+            <RightSidebarItem
+              icon={Video}
+              label="Camera"
+              isActive={activeWorkbenchTool === "camera-control"}
+              onClick={() => setActiveWorkbenchTool("camera-control")}
+            />
+            <RightSidebarItem
+              icon={MessageSquare}
+              label="Prompt"
+              isActive={activeWorkbenchTool === "prompt"}
+              onClick={() => setActiveWorkbenchTool("prompt")}
+            />
+            <RightSidebarItem
+              icon={Film}
+              label="Model"
+              isActive={activeWorkbenchTool === "model"}
+              onClick={() => setActiveWorkbenchTool("model")}
+            />
+          </ul>
+          
+          {/* Generate Video Submit Button */}
+          <div className="mt-auto">
+            <button 
+              className="w-full aspect-square bg-blue-500 hover:bg-blue-600 text-white rounded-lg transition-colors duration-200 flex flex-col items-center justify-center gap-1 px-2 py-1"
+              onClick={() => handleGenerateVideo()}
+              disabled={isGenerating}
+            >
+              {isGenerating ? (
+                <>
+                  <Loader2 className="h-6 w-6 animate-spin" />
+                  <span className="text-xs">Sending request...</span>
+                </>
+              ) : (
+                <div className="flex flex-col items-center">
+                  <ArrowRightSquare className="h-6 w-6" />
+                  <span className="text-xs font-medium mt-1">Submit</span>
+                  <span className="text-xs text-blue-200/80 mt-0.5">CogVideoX</span>
+                </div>
+              )}
+            </button>
+          </div>
+        </aside>
+      </div>
     </div>
   );
 }; 

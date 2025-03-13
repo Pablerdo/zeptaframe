@@ -104,6 +104,10 @@ body {
     @apply bg-editor-sidebar shadow-soft dark:shadow-dark-raised rounded-xl border-0 overflow-hidden;
   }
   
+  .modern-right-sidebar {
+    @apply bg-editor-sidebar shadow-soft dark:shadow-dark-raised rounded-r-xl overflow-hidden;
+  }
+
   .modern-sidebar-item {
     @apply rounded-xl hover:bg-blue-50 dark:hover:bg-slate-700 transition-all duration-200;
   }
@@ -125,7 +129,7 @@ body {
   }
 
   .modern-canvas {
-    @apply bg-editor-canvas rounded-xl shadow-card border-0;
+    @apply bg-editor-canvas rounded-l-xl shadow-card border-0;
   }
 
   .modern-timeline {

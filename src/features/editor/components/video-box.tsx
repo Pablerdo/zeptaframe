@@ -4,7 +4,6 @@ import { Button } from "@/components/ui/button";
 
 interface VideoBoxProps {
   video: string | null;
-  onGenerateVideo: () => void;
   isLoading?: boolean;
   progress?: number;
   model?: string;
@@ -12,7 +11,6 @@ interface VideoBoxProps {
 
 export const VideoBox = ({ 
   video, 
-  onGenerateVideo, 
   isLoading = false, 
   progress = 0,
   model = "CogVideoX"
