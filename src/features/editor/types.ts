@@ -238,6 +238,17 @@ export interface VideoGeneration {
   estimatedDuration?: number; // How long we expect it to take
 }
 
+
+export type SupportedVideoModelId = 
+  | "cogvideox"
+  | "hunyuanvideo";
+
+export type BaseVideoModel = {
+  id: SupportedVideoModelId;
+  name: string;
+  icon: React.ElementType;
+};
+  
 export interface Coordinate {
   x: number;
   y: number;

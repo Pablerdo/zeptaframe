@@ -30,7 +30,6 @@ import { DrawSidebar } from "@/features/editor/components/draw-sidebar";
 import { TemplateSidebar } from "@/features/editor/components/template-sidebar";
 import { SettingsSidebar } from "@/features/editor/components/settings-sidebar";
 import { SegmentationSidebar } from "@/features/editor/components/segmentation-sidebar";
-import { PromptSidebar } from "@/features/editor/components/prompt-sidebar";
 import { cn } from "@/lib/utils";
 import { dataUrlToFile, uploadToUploadThingResidual } from "@/lib/uploadthing";
 import CollapsibleVideoViewer from "@/features/editor/components/collapsible-video-viewer";

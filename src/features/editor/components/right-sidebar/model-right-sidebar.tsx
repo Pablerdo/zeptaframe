@@ -1,17 +1,20 @@
 import { 
   ActiveWorkbenchTool, 
   Editor,
+  BaseVideoModel,
+  SupportedVideoModelId,
 } from "@/features/editor/types";
 import { ToolSidebarHeader } from "@/features/editor/components/tool-sidebar-header";
 import { cn } from "@/lib/utils";
 import { Film, Video, X } from "lucide-react";
+import { videoModels } from "@/features/editor/utils/videoModels";
 
 interface ModelRightSidebarProps {
   editor: Editor | undefined;
   activeWorkbenchTool: ActiveWorkbenchTool;
   onChangeActiveWorkbenchTool: (tool: ActiveWorkbenchTool) => void;
-  selectedModel: string;
-  onSelectModel: (model: string) => void;
+  selectedModel: BaseVideoModel;
+  onSelectModel: (model: BaseVideoModel) => void;
 };
 
 export const ModelRightSidebar = ({
@@ -21,10 +24,7 @@ export const ModelRightSidebar = ({
   selectedModel,
   onSelectModel,
 }: ModelRightSidebarProps) => {
-  const models = [
-    { id: "cogvideox", name: "CogVideoX", icon: Film },
-    { id: "hunyuanvideo", name: "HunyuanVideo", icon: Video },
-  ];
+  
 
   const onClose = () => onChangeActiveWorkbenchTool("select");
 
@@ -50,14 +50,14 @@ export const ModelRightSidebar = ({
       </div>
 
       <div className="flex-1 overflow-y-auto p-4 space-y-2">
-        {models.map((model) => (
+        {Object.values(videoModels).map((model: BaseVideoModel) => (
           <button
             key={model.id}
-            onClick={() => onSelectModel(model.id)}
+            onClick={() => onSelectModel(model)}
             className={cn(
               "w-full p-3 rounded-lg flex items-center gap-3 transition-colors",
               "hover:bg-gray-100 dark:hover:bg-gray-800",
-              selectedModel === model.id 
+              selectedModel.id === model.id 
                 ? "bg-blue-100 dark:bg-blue-900 border border-blue-200 dark:border-blue-800"
                 : "bg-transparent border border-transparent"
             )}

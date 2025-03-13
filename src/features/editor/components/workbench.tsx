@@ -4,7 +4,7 @@ import { fabric } from "fabric";
 import { useEffect, useRef, useState, useCallback } from "react";
 import { Crosshair, MessageSquare, Trash2, Video, Film, ArrowRightSquare, PlayCircle, ArrowRightCircle, Loader2 } from "lucide-react";
 import { useEditor } from "@/features/editor/hooks/use-editor";
-import { ActiveTool, ActiveWorkbenchTool, Editor as EditorType, VideoGeneration } from "@/features/editor/types";
+import { ActiveTool, ActiveWorkbenchTool, BaseVideoModel, Editor as EditorType, SupportedVideoModelId, VideoGeneration } from "@/features/editor/types";
 import { cn } from "@/lib/utils";
 import { SidebarItem } from "@/features/editor/components/sidebar-item";
 import { RightSidebarItem } from "./right-sidebar-item";
@@ -83,8 +83,9 @@ export const Workbench = ({
   const isActiveNotifiedRef = useRef(false);
   const [activeWorkbenchTool, setActiveWorkbenchTool] = useState<ActiveWorkbenchTool>("select");
   const [isGenerating, setIsGenerating] = useState(false);
-  const [selectedModel, setSelectedModel] = useState("cogvideox");
+  const [selectedModel, setSelectedModel] = useState<BaseVideoModel>({ id: "cogvideox" as SupportedVideoModelId, name: "CogVideoX", icon: Film });
   const [videoGeneration, setVideoGeneration] = useState<VideoGeneration | null>(null);
+  
   // Initialize the editor with useEditor hook
   const { init, editor } = useEditor({
     defaultState,
@@ -120,8 +121,6 @@ export const Workbench = ({
       }
     }
   }, [activeWorkbenchTool, editor]);
-
-
 
   // Handle tool changes when this workbench is active
   useEffect(() => {
@@ -193,10 +192,11 @@ export const Workbench = ({
     }
   }, [videoGeneration]);
 
-  const handleGenerateVideo = async (model?: string) => {
+  const handleGenerateVideo = async (modelId?: SupportedVideoModelId) => {
     if (!editor) return;
 
-    if (model === "CogVideoX") {
+    console.log("handleGenerateVideo, modelId", modelId);
+    if (modelId === "cogvideox") {
       try {
         setIsGenerating(true);
         
@@ -308,8 +308,8 @@ export const Workbench = ({
       } finally {
         setIsGenerating(false);
       }
-    } else if (model === "HunyuanVideo") {
-      console.log("HunyuanVideo model selected");
+    } else if (modelId === "hunyuanvideo") {
+      console.log("HunyuanVideo model selected, but not implemented yet");
     } else {
       console.log("Model not yet implemented");
     } 
@@ -611,7 +611,7 @@ export const Workbench = ({
           activeWorkbenchTool={activeWorkbenchTool}
           onChangeActiveWorkbenchTool={setActiveWorkbenchTool}
           selectedModel={selectedModel}
-          onSelectModel={setSelectedModel}
+          onSelectModel={(model: BaseVideoModel) => setSelectedModel(model)}
         />
       </div>
 
@@ -649,7 +649,7 @@ export const Workbench = ({
           <div className="mt-auto">
             <button 
               className="w-full aspect-square bg-blue-500 hover:bg-blue-600 text-white rounded-lg transition-colors duration-200 flex flex-col items-center justify-center gap-1 px-2 py-1"
-              onClick={() => handleGenerateVideo()}
+              onClick={() => handleGenerateVideo(selectedModel.id)}
               disabled={isGenerating}
             >
               {isGenerating ? (
