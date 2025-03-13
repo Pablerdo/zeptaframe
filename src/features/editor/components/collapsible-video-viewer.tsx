@@ -49,11 +49,28 @@ const CollapsibleVideoViewer = ({
         }}
       > 
         <span className="font-bold">Timeline</span>
+        
+        {/* Dot indicators for workbenches */}
+        <div className="flex items-center gap-2 flex-grow justify-center px-4">
+          <div className="flex items-center gap-1">
+            {Array.from({ length: workbenchCount }).map((_, index) => (
+              <div
+                key={index}
+                className={cn(
+                  "w-2 h-2 rounded-full transition-colors duration-200",
+                  index === activeWorkbenchIndex 
+                    ? "bg-blue-500" 
+                    : "bg-zinc-500/50 hover:bg-zinc-400"
+                )}
+              />
+            ))}
+          </div>
+        </div>
+
         <div 
           className="flex items-center justify-between gap-2 px-3 py-1 rounded-full hover:bg-zinc-700/50 transition-colors duration-200"
           onClick={() => setTimelineCollapsed(!timelineCollapsed)}
         >
-
           <ChevronDown 
             className={cn(
               "h-5 w-5 text-zinc-300 transition-transform duration-200",

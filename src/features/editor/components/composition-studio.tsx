@@ -106,7 +106,7 @@ export const CompositionStudio = ({ initialData }: CompositionStudioProps) => {
       const initialId = `workbench-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
       setWorkbenchIds([initialId]);
     }
-  }, []); // Only depend on initialData.json, not workbenchIds.length
+  }, [workbenchIds.length]); // Only depend on initialData.json, not workbenchIds.length
 
   // Handle scrolling between workbenches
   useEffect(() => {
@@ -379,7 +379,7 @@ export const CompositionStudio = ({ initialData }: CompositionStudioProps) => {
         debouncedHandleCanvasChange.cancel(); // Important: cancel any pending executions
       };
     }
-  }, [activeEditor?.canvas, samWorker.current, samWorkerDevice, encodeWorkbenchImage]);
+  }, [activeEditor?.canvas, samWorker.current, samWorkerDevice, encodeWorkbenchImage, activeTool]);
 
   
   const onWorkerMessage = (event: MessageEvent) => {
@@ -413,7 +413,7 @@ export const CompositionStudio = ({ initialData }: CompositionStudioProps) => {
   };
 
 
-  const initializeSamWorker = () => {
+  const initializeSamWorker = useCallback(() => {
     if (!samWorker.current) {
       console.log("Initializing SAM worker");
       samWorker.current = new Worker(new URL("../../../app/sam/worker.js", import.meta.url), {
@@ -424,7 +424,7 @@ export const CompositionStudio = ({ initialData }: CompositionStudioProps) => {
       console.log("Worker started");
       setSamWorkerLoading(true);
     }
-  }
+  }, []);
 
   useEffect(() => {
     initializeSamWorker();
