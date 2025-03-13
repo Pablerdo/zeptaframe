@@ -1034,7 +1034,7 @@ export const AnimateRightSidebar = ({
                 <div>
                   <h4 className="text-base font-medium text-foreground">No animations yet</h4>
                   <p className="text-sm text-muted-foreground mt-1 max-w-xs mx-auto">
-                    Create your first object by clicking "New Mask" above to start segmenting content.
+                    Create your first object by clicking &quot;New Mask&quot; above to start segmenting content.
                   </p>
                 </div>
               </div>
