@@ -382,85 +382,85 @@ export const CompositionStudio = ({ initialData }: CompositionStudioProps) => {
   }, [activeEditor]);
 
   // Then modify your handleDecodingResults function to use the refs
-  function handleDecodingResults(decodingResults: { 
-    masks: { dims: number[]; }; 
-    iou_predictions: { cpuData: number[]; }; 
-  }) {
-    console.log("inside handleDecodingResults", decodingResults);
-    // SAM2 returns 3 mask along with scores -> select best one
-    const maskTensors = decodingResults.masks;
-    const [bs, noMasks, width, height] = maskTensors.dims;
-    const maskScores = decodingResults.iou_predictions.cpuData;
-    const bestMaskIdx = maskScores.indexOf(Math.max(...maskScores));
-    const bestMaskArray = sliceTensor(maskTensors, bestMaskIdx)
-    let bestMaskCanvas = float32ArrayToCanvas(bestMaskArray, width, height)
-    let bestMaskBinary = float32ArrayToBinaryMask(bestMaskArray, width, height)
+  // function handleDecodingResults(decodingResults: { 
+  //   masks: { dims: number[]; }; 
+  //   iou_predictions: { cpuData: number[]; }; 
+  // }) {
+  //   console.log("inside handleDecodingResults", decodingResults);
+  //   // SAM2 returns 3 mask along with scores -> select best one
+  //   const maskTensors = decodingResults.masks;
+  //   const [bs, noMasks, width, height] = maskTensors.dims;
+  //   const maskScores = decodingResults.iou_predictions.cpuData;
+  //   const bestMaskIdx = maskScores.indexOf(Math.max(...maskScores));
+  //   const bestMaskArray = sliceTensor(maskTensors, bestMaskIdx)
+  //   let bestMaskCanvas = float32ArrayToCanvas(bestMaskArray, width, height)
+  //   let bestMaskBinary = float32ArrayToBinaryMask(bestMaskArray, width, height)
 
-    bestMaskCanvas = resizeCanvas(bestMaskCanvas, { w: 720, h: 480 });
-    bestMaskBinary = resizeCanvas(bestMaskBinary, { w: 720, h: 480 });
-    setMask(bestMaskCanvas);
-    setMaskBinary(bestMaskBinary);
-    setPrevMaskArray(bestMaskArray);
+  //   bestMaskCanvas = resizeCanvas(bestMaskCanvas, { w: 720, h: 480 });
+  //   bestMaskBinary = resizeCanvas(bestMaskBinary, { w: 720, h: 480 });
+  //   setMask(bestMaskCanvas);
+  //   setMaskBinary(bestMaskBinary);
+  //   setPrevMaskArray(bestMaskArray);
 
-    // Use refs to get current values
-    const currentActiveTool = activeToolRef.current;
-    const currentEditor = activeEditorRef.current;
+  //   // Use refs to get current values
+  //   const currentActiveTool = activeToolRef.current;
+  //   const currentEditor = activeEditorRef.current;
 
-    console.log("currentActiveTool", currentActiveTool);
-    console.log("currentEditor?.canvas", currentEditor?.canvas);
+  //   console.log("currentActiveTool", currentActiveTool);
+  //   console.log("currentEditor?.canvas", currentEditor?.canvas);
     
-    // Add mask to canvas if in segment mode
-    if (currentActiveTool === "segment" && currentEditor?.canvas) {
-      console.log("inside handleDecodingResults, currentActiveTool === 'segment' && currentEditor?.canvas");
-      const workspace = currentEditor.getWorkspace();
-      if (!workspace) return;
+  //   // Add mask to canvas if in segment mode
+  //   if (currentActiveTool === "segment" && currentEditor?.canvas) {
+  //     console.log("inside handleDecodingResults, currentActiveTool === 'segment' && currentEditor?.canvas");
+  //     const workspace = currentEditor.getWorkspace();
+  //     if (!workspace) return;
 
-      // Get workspace dimensions with type assertion since we know these are fabric.Object properties
-      const workspaceWidth = (workspace as fabric.Object).width as number || 720;
-      const workspaceHeight = (workspace as fabric.Object).height as number || 480;
+  //     // Get workspace dimensions with type assertion since we know these are fabric.Object properties
+  //     const workspaceWidth = (workspace as fabric.Object).width as number || 720;
+  //     const workspaceHeight = (workspace as fabric.Object).height as number || 480;
 
-      // Create a temporary canvas to properly scale the mask
-      const tempCanvas = document.createElement('canvas');
-      tempCanvas.width = workspaceWidth;  // Original workspace width
-      tempCanvas.height = workspaceHeight; // Original workspace height
-      const tempCtx = tempCanvas.getContext('2d');
+  //     // Create a temporary canvas to properly scale the mask
+  //     const tempCanvas = document.createElement('canvas');
+  //     tempCanvas.width = workspaceWidth;  // Original workspace width
+  //     tempCanvas.height = workspaceHeight; // Original workspace height
+  //     const tempCtx = tempCanvas.getContext('2d');
 
-      if (!tempCtx) return;
+  //     if (!tempCtx) return;
 
-      // Draw the mask centered and scaled
-      tempCtx.drawImage(
-        bestMaskCanvas,
-        0,
-        0,
-        bestMaskCanvas.width,
-        bestMaskCanvas.height,
-      );
+  //     // Draw the mask centered and scaled
+  //     tempCtx.drawImage(
+  //       bestMaskCanvas,
+  //       0,
+  //       0,
+  //       bestMaskCanvas.width,
+  //       bestMaskCanvas.height,
+  //     );
 
-      // Convert the properly scaled mask canvas to a Fabric image
-      fabric.Image.fromURL(tempCanvas.toDataURL(), (maskImage) => {
-        // Position the mask at the workspace coordinates
-        maskImage.set({
-          left: workspace.left || 0,
-          top: workspace.top || 0,
-          width: workspaceWidth,  // Original workspace width
-          height: workspaceHeight, // Original workspace height
-          selectable: false,
-          evented: false,
-          opacity: 0.9,
-        });
+  //     // Convert the properly scaled mask canvas to a Fabric image
+  //     fabric.Image.fromURL(tempCanvas.toDataURL(), (maskImage) => {
+  //       // Position the mask at the workspace coordinates
+  //       maskImage.set({
+  //         left: workspace.left || 0,
+  //         top: workspace.top || 0,
+  //         width: workspaceWidth,  // Original workspace width
+  //         height: workspaceHeight, // Original workspace height
+  //         selectable: false,
+  //         evented: false,
+  //         opacity: 0.9,
+  //       });
 
-        // Remove any existing mask before adding the new one
-        const existingMasks = currentEditor.canvas.getObjects().filter(obj => obj.data?.isMask);
-        existingMasks.forEach(mask => currentEditor.canvas.remove(mask));
+  //       // Remove any existing mask before adding the new one
+  //       const existingMasks = currentEditor.canvas.getObjects().filter(obj => obj.data?.isMask);
+  //       existingMasks.forEach(mask => currentEditor.canvas.remove(mask));
 
-        // Add metadata to identify this as a mask
-        maskImage.data = { isMask: true };
+  //       // Add metadata to identify this as a mask
+  //       maskImage.data = { isMask: true };
         
-        currentEditor.canvas.add(maskImage);
-        currentEditor.canvas.renderAll();
-      });
-    }
-  }
+  //       currentEditor.canvas.add(maskImage);
+  //       currentEditor.canvas.renderAll();
+  //     });
+  //   }
+  // }
   
   // Start encoding image
   const encodeWorkbenchImage = async () => {
@@ -554,7 +554,7 @@ export const CompositionStudio = ({ initialData }: CompositionStudioProps) => {
         debouncedHandleCanvasChange.cancel(); // Important: cancel any pending executions
       };
     }
-  }, [activeEditor?.canvas, samWorker.current, samWorkerDevice, encodeWorkbenchImage, activeTool]);
+  }, [activeEditor?.canvas, samWorker.current, samWorkerDevice, encodeWorkbenchImage, activeTool, allowEncodeWorkbenchImage]);
 
   
   const onWorkerMessage = (event: MessageEvent) => {
@@ -580,8 +580,9 @@ export const CompositionStudio = ({ initialData }: CompositionStudioProps) => {
       setSamWorkerLoading(false);
       setSamWorkerStatus("Ready. Click on image to start new mask");
     } else if (type == "decodeMaskResult") {
-      handleDecodingResults(data);
-      // console.log("Decoding results");
+      // The handleDecodingResults has been moved to the Workbench component
+      // handleDecodingResults(data);
+      // We just need to update the UI state here
       setSamWorkerLoading(false);
       setSamWorkerStatus("Ready. Click on image");
     }

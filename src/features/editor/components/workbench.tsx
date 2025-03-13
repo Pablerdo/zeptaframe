@@ -1,7 +1,7 @@
 "use client";
 
 import { fabric } from "fabric";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useCallback } from "react";
 import { Crosshair, MessageSquare, Trash2, Video, Film, ArrowRightSquare, PlayCircle, ArrowRightCircle, Loader2 } from "lucide-react";
 import { useEditor } from "@/features/editor/hooks/use-editor";
 import { ActiveTool, ActiveWorkbenchTool, Editor as EditorType, VideoGeneration } from "@/features/editor/types";
@@ -14,6 +14,15 @@ import { PromptRightSidebar } from "./right-sidebar/prompt-right-sidebar";
 import { ModelRightSidebar } from "./right-sidebar/model-right-sidebar";
 import { uploadToUploadThingResidual } from "@/lib/uploadthing";
 import { dataUrlToFile } from "@/lib/uploadthing";
+import { 
+  sliceTensor, 
+  float32ArrayToCanvas, 
+  float32ArrayToBinaryMask, 
+  resizeCanvas,
+  canvasToFloat32Array,
+  resizeAndPadBox
+} from "@/app/sam/lib/imageutils";
+import debounce from "lodash/debounce";
 
 interface WorkbenchProps {
   defaultState?: string;
@@ -319,6 +328,193 @@ export const Workbench = ({
       console.log("Model not yet implemented");
     } 
   }
+
+  function handleDecodingResults(decodingResults: { 
+    masks: { dims: number[]; }; 
+    iou_predictions: { cpuData: number[]; }; 
+  }) {
+    console.log("inside workbench handleDecodingResults", decodingResults);
+    
+    // SAM2 returns 3 mask along with scores -> select best one
+    const maskTensors = decodingResults.masks;
+    const [bs, noMasks, width, height] = maskTensors.dims;
+    const maskScores = decodingResults.iou_predictions.cpuData;
+    const bestMaskIdx = maskScores.indexOf(Math.max(...maskScores));
+    const bestMaskArray = sliceTensor(maskTensors, bestMaskIdx)
+    let bestMaskCanvas = float32ArrayToCanvas(bestMaskArray, width, height)
+    let bestMaskBinary = float32ArrayToBinaryMask(bestMaskArray, width, height)
+
+    bestMaskCanvas = resizeCanvas(bestMaskCanvas, { w: 720, h: 480 });
+    bestMaskBinary = resizeCanvas(bestMaskBinary, { w: 720, h: 480 });
+    setMask(bestMaskCanvas);
+    setMaskBinary(bestMaskBinary);
+    setPrevMaskArray(bestMaskArray);
+
+    // We have direct access to activeWorkbenchTool and editor within the workbench component
+    console.log("activeWorkbenchTool", activeWorkbenchTool);
+    console.log("editor?.canvas", editor?.canvas);
+    
+    // Add mask to canvas if in animate mode
+    if (activeWorkbenchTool === "animate" && editor?.canvas) {
+      console.log("inside handleDecodingResults, activeWorkbenchTool === 'animate' && editor?.canvas");
+      const workspace = editor.getWorkspace();
+      if (!workspace) return;
+
+      // Get workspace dimensions with type assertion since we know these are fabric.Object properties
+      const workspaceWidth = (workspace as fabric.Object).width as number || 720;
+      const workspaceHeight = (workspace as fabric.Object).height as number || 480;
+
+      // Create a temporary canvas to properly scale the mask
+      const tempCanvas = document.createElement('canvas');
+      tempCanvas.width = workspaceWidth;  // Original workspace width
+      tempCanvas.height = workspaceHeight; // Original workspace height
+      const tempCtx = tempCanvas.getContext('2d');
+
+      if (!tempCtx) return;
+
+      // Draw the mask centered and scaled
+      tempCtx.drawImage(
+        bestMaskCanvas,
+        0,
+        0,
+        bestMaskCanvas.width,
+        bestMaskCanvas.height,
+      );
+
+      // Convert the properly scaled mask canvas to a Fabric image
+      fabric.Image.fromURL(tempCanvas.toDataURL(), (maskImage) => {
+        // Position the mask at the workspace coordinates
+        maskImage.set({
+          left: workspace.left || 0,
+          top: workspace.top || 0,
+          width: workspaceWidth,  // Original workspace width
+          height: workspaceHeight, // Original workspace height
+          selectable: false,
+          evented: false,
+          opacity: 0.9,
+        });
+
+        // Remove any existing mask before adding the new one
+        const existingMasks = editor.canvas.getObjects().filter(obj => obj.data?.isMask);
+        existingMasks.forEach(mask => editor.canvas.remove(mask));
+
+        // Add metadata to identify this as a mask
+        maskImage.data = { isMask: true };
+        
+        editor.canvas.add(maskImage);
+        editor.canvas.renderAll();
+      });
+    }
+  }
+
+  const handleWorkerMessage = useCallback((event: MessageEvent) => {
+    const { type, data } = event.data;
+
+    if (type === "decodeMaskResult" && isActive) {
+      // Only process mask results if this workbench is active
+      handleDecodingResults(data);
+    }
+  }, [isActive, activeWorkbenchTool, editor, setMask, setMaskBinary, setPrevMaskArray]);
+
+  useEffect(() => {
+    if (isActive && samWorker.current) {
+      // Only add listener when workbench is active
+      samWorker.current.addEventListener("message", handleWorkerMessage);
+      
+      return () => {
+        if (samWorker.current) {
+          samWorker.current.removeEventListener("message", handleWorkerMessage);
+        }
+      };
+    }
+  }, [isActive, samWorker, handleWorkerMessage]);
+
+  // Add this function to handle encoding the workbench image
+  const encodeWorkbenchImage = useCallback(async () => {
+    if (!samWorker.current || !editor?.canvas) return;
+    
+    const workspace = editor?.getWorkspace();
+    if (!workspace) return;
+
+    console.log("calling encodeWorkbenchImage inside workbench");
+
+    // Get the workspace dimensions and position
+    const workspaceWidth = workspace.width || 720;
+    const workspaceHeight = workspace.height || 480;
+    const workspaceLeft = workspace.left || 0;
+    const workspaceTop = workspace.top || 0;
+    
+    // Create a temporary canvas with the workspace content
+    const tempCanvas = document.createElement('canvas');
+    tempCanvas.width = workspaceWidth;
+    tempCanvas.height = workspaceHeight;
+    const tempCtx = tempCanvas.getContext('2d');
+    
+    // Save current viewport transform and ensure it's not undefined
+    const currentViewportTransform = editor.canvas.viewportTransform || [1, 0, 0, 1, 0, 0];
+    
+    // Reset viewport transform temporarily to get accurate image
+    editor.canvas.setViewportTransform([1, 0, 0, 1, 0, 0]);
+    
+    // Draw the workspace content onto the temp canvas
+    const workspaceImage = editor.canvas.toDataURL({
+      format: 'png',  
+      quality: 1,
+      left: workspaceLeft,
+      top: workspaceTop,
+      width: workspaceWidth,
+      height: workspaceHeight
+    });
+
+    editor.setWorkspaceURL(workspaceImage);
+
+    // Restore viewport transform
+    editor.canvas.setViewportTransform(currentViewportTransform);
+
+    const img = new Image();
+    img.onload = () => {
+      const imageSize = { w: 1024, h: 1024 }; // Add this constant or make it a state/prop
+      const largestDim = Math.max(workspaceWidth, workspaceHeight);
+
+      const box = resizeAndPadBox(
+        { h: workspaceHeight, w: workspaceWidth },
+        { h: largestDim, w: largestDim }
+      );
+      
+      tempCtx?.drawImage(img, 0, 0, 720, 480, box?.x || 0, 0, box?.w, box?.h);
+    
+      samWorker.current?.postMessage({
+        type: "encodeImage",
+        data: canvasToFloat32Array(resizeCanvas(tempCanvas, imageSize)),
+      });
+    };
+
+    img.src = workspaceImage;
+  }, [editor, samWorker]);
+
+  // Add this effect to handle canvas changes
+  useEffect(() => {
+    if (editor?.canvas && activeTool !== "segment" && isActive) {
+      // Create a debounced version of the canvas change handler
+      const debouncedHandleCanvasChange = debounce(() => {
+        console.log("Canvas object changed in workbench, re-encoding workbench image");
+        encodeWorkbenchImage();
+      }, 500);
+      
+      // Add event listeners for all object changes
+      editor.canvas.on('object:added', debouncedHandleCanvasChange);
+      editor.canvas.on('object:modified', debouncedHandleCanvasChange);
+      editor.canvas.on('object:removed', debouncedHandleCanvasChange);
+      
+      // Cleanup all listeners and cancel any pending debounced calls
+      return () => {
+        editor.canvas.off('object:added', debouncedHandleCanvasChange);
+        editor.canvas.off('object:modified', debouncedHandleCanvasChange);
+        editor.canvas.off('object:removed', debouncedHandleCanvasChange);
+        debouncedHandleCanvasChange.cancel(); // Important: cancel any pending executions
+      };
+    }
+  }, [editor?.canvas, activeTool, isActive, encodeWorkbenchImage]);
 
   return (
     <div className="flex flex-row w-full h-full">
