@@ -4,7 +4,7 @@ import debounce from "lodash.debounce";
 import { Plus } from "lucide-react";
 import { ThemeProvider } from "next-themes";
 
-import { ResponseType } from "@/features/projects/api/use-get-project";
+import { ProjectJSON, ResponseType } from "@/features/projects/api/use-get-project";
 import { useUpdateProject } from "@/features/projects/api/use-update-project";
 
 import { 
@@ -50,8 +50,68 @@ export const CompositionStudio = ({ initialData }: CompositionStudioProps) => {
   const [isGenerating, setIsGenerating] = useState(false);
   const [activeTool, setActiveTool] = useState<ActiveTool>("select");
   
-  // Use workbench IDs array instead of just a count
-  const [workbenchIds, setWorkbenchIds] = useState<string[]>([]);
+  // Add a new function to parse the project JSON
+  const parseProjectData = (jsonString: string): ProjectJSON => {
+    try {
+      // Try to parse as structured format
+      const parsed = JSON.parse(jsonString);
+      
+      // Check if it has the expected structure
+      if (parsed.workbenches && typeof parsed.workbenches === 'object') {
+        return parsed;
+      }
+      
+      // If not, it's an older format - create a structure with one workbench
+      const defaultId = `workbench-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
+      return {
+        metadata: { 
+          version: "1.0", 
+          lastModified: new Date().toISOString() 
+        },
+        defaultSettings: {
+          width: initialData.width || 720,
+          height: initialData.height || 480
+        },
+        workbenches: {
+          [defaultId]: {
+            json: jsonString, // Original project JSON becomes the first workbench
+            width: initialData.width || 720,
+            height: initialData.height || 480
+          }
+        }
+      };
+    } catch (e) {
+      // If parsing fails, return an empty structure
+      const defaultId = `workbench-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
+      return {
+        metadata: { 
+          version: "1.0", 
+          lastModified: new Date().toISOString() 
+        },
+        defaultSettings: {
+          width: initialData.width || 720,
+          height: initialData.height || 480
+        },
+        workbenches: {
+          [defaultId]: {
+            json: "", 
+            width: initialData.width || 720,
+            height: initialData.height || 480
+          }
+        }
+      };
+    }
+  };
+
+  // In CompositionStudio:
+  const [projectData, setProjectData] = useState<ProjectJSON>(() => 
+    parseProjectData(initialData.json)
+  );
+
+  // Initialize workbench IDs from parsed project data
+  const [workbenchIds, setWorkbenchIds] = useState<string[]>(() => 
+    Object.keys(projectData.workbenches)
+  );
   
   // Track active workbench index
   const [activeWorkbenchIndex, setActiveWorkbenchIndex] = useState(0);
@@ -62,6 +122,7 @@ export const CompositionStudio = ({ initialData }: CompositionStudioProps) => {
   // Ref for the scrollable container
   const editorsContainerRef = useRef<HTMLDivElement>(null);
   
+  // SAM worker and mask state
   const samWorker = useRef<Worker | null>(null);
   const [samWorkerLoading, setSamWorkerLoading] = useState(false);
   const [samWorkerStatus, setSamWorkerStatus] = useState("");
@@ -72,19 +133,52 @@ export const CompositionStudio = ({ initialData }: CompositionStudioProps) => {
   const [prevMaskArray, setPrevMaskArray] = useState<Float32Array | null>(null);
   const [mask, setMask] = useState<HTMLCanvasElement | null>(null);
   const [maskBinary, setMaskBinary] = useState<HTMLCanvasElement | null>(null);
-  // Save callback with debounce - FIXED to prevent infinite update loop
+
+  // Add these new state variables to composition-studio.tsx
+  const [isDeletingIndex, setIsDeletingIndex] = useState<number | null>(null);
+  const [transitionDirection, setTransitionDirection] = useState<'left' | 'right' | null>(null);
+
+  // Save callback with debounce - updated to include workbenchId
   const debouncedSave = useCallback(
     debounce(
       (values: { 
+        workbenchId: string,
         json: string,
         height: number,
         width: number,
       }) => {
-        mutate(values);
+        // Update the project data state
+        setProjectData(prev => {
+          const updated = {
+            ...prev,
+            metadata: {
+              ...prev.metadata,
+              lastModified: new Date().toISOString()
+            },
+            workbenches: {
+              ...prev.workbenches,
+              [values.workbenchId]: {
+                json: values.json,
+                height: values.height,
+                width: values.width
+              }
+            }
+          };
+          
+          // Serialize the entire structure to JSON
+          const serialized = JSON.stringify(updated);
+          
+          // Save to database - uses the existing json field
+          mutate({ 
+            json: serialized
+          });
+          
+          return updated;
+        });
       },
       500
     ), 
-    [mutate] // Remove initialData.json from the dependency array
+    [mutate]
   );
   
   const onClearSelection = useCallback(() => {
@@ -147,13 +241,16 @@ export const CompositionStudio = ({ initialData }: CompositionStudioProps) => {
     const container = editorsContainerRef.current;
     if (!container) return;
     
-    // Use requestAnimationFrame to ensure DOM is updated
-    requestAnimationFrame(() => {
+    // Give a small delay to ensure DOM is fully updated
+    const timeoutId = setTimeout(() => {
+      const scrollTarget = activeWorkbenchIndex * container.clientWidth;
       container.scrollTo({
-        left: activeWorkbenchIndex * container.clientWidth,
+        left: scrollTarget,
         behavior: 'smooth'
       });
-    });
+    }, 50);
+    
+    return () => clearTimeout(timeoutId);
   }, [activeWorkbenchIndex]);
 
   const onChangeActiveTool = useCallback((tool: ActiveTool) => {
@@ -163,34 +260,111 @@ export const CompositionStudio = ({ initialData }: CompositionStudioProps) => {
     setActiveTool(tool);
   }, [activeTool]);
   
-  // Add a new workbench
+  // Handle adding a new workbench
   const handleAddWorkbench = useCallback(() => {
     // Generate a unique ID for the new workbench
     const newId = `workbench-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
+    
+    // Update workbench IDs array
     setWorkbenchIds(prev => [...prev, newId]);
-
-    // Set the new workspace as active after it's created
-    const newIndex = workbenchIds.length;
-    setActiveWorkbenchIndex(newIndex);
-  }, [workbenchIds.length]);
+    
+    // Update project data with new workbench
+    setProjectData(prev => {
+      // Use active workbench as template
+      const activeId = workbenchIds[activeWorkbenchIndex];
+      const templateWorkbench = // prev.workbenches[activeId] || {
+      {  
+        json: "",
+        width: prev.defaultSettings?.width || 720,
+        height: prev.defaultSettings?.height || 480
+      };
+      
+      const updated = {
+        ...prev,
+        metadata: {
+          ...prev.metadata,
+          lastModified: new Date().toISOString()
+        },
+        workbenches: {
+          ...prev.workbenches,
+          [newId]: templateWorkbench
+        }
+      };
+      
+      // Save to database
+      mutate({ json: JSON.stringify(updated) });
+      
+      return updated;
+    });
+    
+    // Set as active
+    setActiveWorkbenchIndex(workbenchIds.length);
+  }, [workbenchIds, activeWorkbenchIndex, mutate]);
   
   // Handle deleting a workbench
   const handleDeleteWorkbench = useCallback((indexToDelete: number) => {
     // Don't allow deleting if it's the last workbench
     if (workbenchIds.length <= 1) return;
     
-    // Create a new array without the deleted workbench
-    setWorkbenchIds(prev => prev.filter((_, i) => i !== indexToDelete));
+    // Get the ID of the workbench to delete
+    const idToDelete = workbenchIds[indexToDelete];
     
-    // Update active workbench index
-    if (indexToDelete === activeWorkbenchIndex) {
-      const newActiveIndex = indexToDelete === 0 ? 0 : indexToDelete - 1;
+    // Set deleting state for animation
+    setIsDeletingIndex(indexToDelete);
+    
+    // Use consistent transition direction
+    setTransitionDirection('right');
+    
+    // Delay the actual state updates until animation completes
+    setTimeout(() => {
+      // Determine the new active index before modifying state
+      let newActiveIndex: number;
+      
+      if (indexToDelete === activeWorkbenchIndex) {
+        // If deleting active workbench, go to the next one, or previous if it's the last
+        newActiveIndex = indexToDelete === workbenchIds.length - 1 
+          ? indexToDelete - 1 
+          : indexToDelete;
+      } else if (indexToDelete < activeWorkbenchIndex) {
+        // If deleting a workbench before the active one, adjust the index
+        newActiveIndex = activeWorkbenchIndex - 1;
+      } else {
+        // If deleting a workbench after the active one, keep the same index
+        newActiveIndex = activeWorkbenchIndex;
+      }
+      
+      // Update workbench IDs first
+      setWorkbenchIds(prev => prev.filter((_, i) => i !== indexToDelete));
+      
+      // Then set the active index
       setActiveWorkbenchIndex(newActiveIndex);
-    } 
-    else if (indexToDelete < activeWorkbenchIndex) {
-      setActiveWorkbenchIndex(prev => prev - 1);
-    }
-  }, [workbenchIds.length, activeWorkbenchIndex]);
+      
+      // Update project data
+      setProjectData(prev => {
+        const { [idToDelete]: removed, ...remaining } = prev.workbenches;
+        
+        const updated = {
+          ...prev,
+          metadata: {
+            ...prev.metadata,
+            lastModified: new Date().toISOString()
+          },
+          workbenches: remaining
+        };
+        
+        // Save to database
+        mutate({ json: JSON.stringify(updated) });
+        
+        return updated;
+      });
+      
+      // Reset animation states after changes are applied
+      setIsDeletingIndex(null);
+      setTransitionDirection(null);
+      
+    }, 300);
+    
+  }, [workbenchIds, activeWorkbenchIndex, mutate]);
 
   /*** SAM WORKER IMPLEMENTATION ***/
   // Add these refs at the component level to track current state
@@ -560,6 +734,9 @@ export const CompositionStudio = ({ initialData }: CompositionStudioProps) => {
                 setMask={setMask}
                 maskBinary={maskBinary}
                 setMaskBinary={setMaskBinary}
+                projectData={projectData}
+                isDeletingIndex={isDeletingIndex}
+                transitionDirection={transitionDirection}
               />
               
               {/* Add workbench button */}

@@ -27,6 +27,7 @@ interface WorkbenchProps {
   }) => void;
   isActive: boolean;
   index: number;
+  workbenchId: string;
   onActive: (editor: EditorType, index: number) => void;
   activeTool: ActiveTool;
   onDelete: (index: number) => void;
@@ -50,6 +51,7 @@ export const Workbench = ({
   debouncedSave,
   isActive,
   index,
+  workbenchId,
   onActive,
   activeTool,
   onDelete,

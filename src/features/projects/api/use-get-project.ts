@@ -3,7 +3,40 @@ import { useQuery } from "@tanstack/react-query";
 
 import { client } from "@/lib/hono";
 
-export type ResponseType = InferResponseType<typeof client.api.projects[":id"]["$get"], 200>;
+export type ResponseType = {
+  data: {
+    json: string; // This will now store a structured JSON object
+    name: string;
+    userId: string;
+    id: string;
+    height: number;
+    width: number;
+    thumbnailUrl: string | null;
+    isTemplate: boolean | null;
+    isPro: boolean | null;
+    createdAt: string;
+    updatedAt: string;
+  };
+};
+
+// Add a helper type to represent the structured JSON content
+export interface ProjectJSON {
+  metadata?: {
+    version?: string;
+    lastModified: string;
+  };
+  defaultSettings?: {
+    width: number;
+    height: number;
+  };
+  workbenches: {
+    [id: string]: {
+      json: string;
+      width: number;
+      height: number;
+    }
+  }
+}
 
 export const useGetProject = (id: string) => {
   const query = useQuery({
