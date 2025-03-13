@@ -260,6 +260,8 @@ export interface SegmentedMask {
     isVisible: boolean;
   };
   rotation?: number;
+  isTextDetailsOpen?: boolean;
+  textDetails?: string;
 }
 
 export interface Editor {

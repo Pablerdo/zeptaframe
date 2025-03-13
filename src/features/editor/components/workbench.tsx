@@ -42,7 +42,7 @@ export const Workbench = ({
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const isInitializedRef = useRef(false);
-  const hasNotifiedActiveRef = useRef(false);
+  const isActiveNotifiedRef = useRef(false);
   
   // Initialize the editor with useEditor hook
   const { init, editor } = useEditor({
@@ -70,13 +70,21 @@ export const Workbench = ({
     }
   }, [init]);
 
-  // Notify parent component when this workbench becomes active
-  // But only do it once per active state change to prevent loops
+  // Notify parent component ONLY when this workbench BECOMES active,
+  // not on every editor change
   useEffect(() => {
+    // Only call onActive when the workbench becomes active and has an editor
     if (editor && isActive) {
-      onActive(editor, index);
+      // Use a ref to track if we've already notified for this active state
+      if (!isActiveNotifiedRef.current) {
+        onActive(editor, index);
+        isActiveNotifiedRef.current = true;
+      }
+    } else {
+      // Reset the flag when the workbench becomes inactive
+      isActiveNotifiedRef.current = false;
     }
-  }, [editor, isActive, index, onActive]);
+  }, [isActive, editor, index, onActive]);
 
   // Handle tool changes when this workbench is active
   useEffect(() => {

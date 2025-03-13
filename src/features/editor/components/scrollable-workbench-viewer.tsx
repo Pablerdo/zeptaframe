@@ -14,7 +14,6 @@ interface ScrollableWorkbenchViewerProps {
     json: string,
     height: number,
     width: number,
-    workbenchIndex: number,
   }) => void;
   onClearSelection: () => void;
   activeTool: ActiveTool;

@@ -24,11 +24,6 @@ export const PromptSidebar = ({
     onChangeActiveTool("select");
   };
 
-  const handleAutoPrompt = () => {
-    // TODO: Implement auto prompt functionality
-    console.log("Auto prompt clicked");
-  };
-
   const handleSavePrompt = () => {
     // TODO: Implement save prompt functionality
     console.log("Save prompt clicked");
@@ -43,27 +38,24 @@ export const PromptSidebar = ({
     >
       <ToolSidebarHeader
         title="Prompt"
-        description="Create and manage your prompts"
+        description="Add general prompt details to enhance the video generation"
       />
       <ScrollArea className="flex-1">
         <div className="p-4 space-y-4">
+          <div className="text-sm text-muted-foreground rounded-md bg-muted p-3 mb-2">
+            <p>The system will automatically generate a prompt based on your scene. 
+            You can add additional details below to further customize the results.</p>
+          </div>
           <Textarea
             placeholder="Enter your prompt here..."
             className="min-h-[400px] resize-none"
             value={editor?.prompt}
             onChange={(e) => editor?.setPrompt(e.target.value)}
           />
-          <div className="flex gap-2">
-            <Button 
-              onClick={handleAutoPrompt}
-              variant="outline"
-              className="flex-1"
-            >
-              Auto Prompt
-            </Button>
+          <div className="flex w-full">
             <Button 
               onClick={handleSavePrompt}
-              className="flex-1"
+              className="w-full"
             >
               Save Prompt
             </Button>

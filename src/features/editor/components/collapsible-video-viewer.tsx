@@ -56,7 +56,7 @@ const CollapsibleVideoViewer = ({
       > 
         <div className="flex items-center relative" ref={dropdownRef}>
           <Button 
-            className="bg-blue-500 text-white hover:bg-blue-600 flex gap-2 rounded-l-xl rounded-r-none transition-all duration-200 shadow-md w-[160px] justify-start pl-3"
+            className="bg-blue-500 text-white hover:bg-blue-600 flex gap-2 rounded-l-md rounded-r-none transition-all duration-200 shadow-md w-[160px] justify-start pl-3"
             onClick={() => onGenerateVideo(selectedModel)}
             disabled={isGenerating}
           >
@@ -73,7 +73,7 @@ const CollapsibleVideoViewer = ({
             )}
           </Button>
           <Button
-            className="bg-blue-500 text-white hover:bg-blue-600 px-2 rounded-l-none rounded-r-xl border-l border-blue-400 transition-all duration-200 shadow-md"
+            className="bg-blue-500 text-white hover:bg-blue-600 px-2 rounded-l-none rounded-r-md border-l border-blue-400 transition-all duration-200 shadow-md"
             onClick={() => setIsDropdownOpen(!isDropdownOpen)}
             disabled={isGenerating}
           >

@@ -56,7 +56,7 @@ const config = {
         editor: {
           bg: {
             DEFAULT: "#dfe0e2",
-            dark: "#323841"
+            dark: "#262e3f"
           },
           canvas: "hsl(var(--component-bg))",
           sidebar: "hsl(var(--component-bg))",

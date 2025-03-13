@@ -1,18 +1,6 @@
 import { useRef, useEffect, useState, useCallback, Dispatch, SetStateAction } from "react";
 import { fabric } from "fabric";
 
-import {
-  resizeCanvas,
-  mergeMasks,
-  maskImageCanvas,
-  resizeAndPadBox,
-  canvasToFloat32Array,
-  float32ArrayToCanvas,
-  sliceTensor,
-  maskCanvasToFloat32Array,
-  float32ArrayToBinaryMask
-} from "@/app/sam/lib/imageutils";
-
 import { 
   ActiveTool, 
   Editor,
@@ -24,34 +12,40 @@ import { cn } from "@/lib/utils";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { X, Check, Loader2, Trash2, Pencil, Plus } from "lucide-react";
+import { X, Check, Loader2, Trash2, Pencil, Plus, ChevronRight } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { interpolatePoints, interpolatePosition, smoothTrajectory } from "@/features/editor/utils";
-import { SegmentedMask } from "@/features/editor/types";
 
 interface SegmentationSidebarProps {
   editor: Editor | undefined;
   activeTool: ActiveTool;
   onChangeActiveTool: (tool: ActiveTool) => void;
+  samWorker: React.RefObject<Worker | null>;
+  samWorkerLoading: boolean;
+  prevMaskArray: Float32Array | null;
+  setPrevMaskArray: (prevMaskArray: Float32Array | null) => void;
+  mask: HTMLCanvasElement | null;
+  setMask: (mask: HTMLCanvasElement | null) => void;
+  maskBinary: HTMLCanvasElement | null;
+  setMaskBinary: (maskBinary: HTMLCanvasElement | null) => void;
 };
 
 export const SegmentationSidebar = ({
   editor,
   activeTool,
   onChangeActiveTool,
+  samWorker,
+  samWorkerLoading,
+  prevMaskArray,
+  setPrevMaskArray,
+  mask,
+  setMask,
+  maskBinary,
+  setMaskBinary,
 }: SegmentationSidebarProps) => {
 
   const [imageSize, setImageSize] = useState({ w: 1024, h: 1024 });
   const [maskSize, setMaskSize] = useState({ w: 256, h: 256 });
-
-  const samWorker = useRef<Worker | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [status, setStatus] = useState("");
-  const [imageEncoded, setImageEncoded] = useState(false);
-  const [device, setDevice] = useState(null);
-  const [prevMaskArray, setPrevMaskArray] = useState<Float32Array | null>(null);
-  const [mask, setMask] = useState<HTMLCanvasElement | null>(null);
-  const [maskBinary, setMaskBinary] = useState<HTMLCanvasElement | null>(null);
   const pointsRef = useRef<Array<{ x: number; y: number; label: number }>>([]);
   const [isSegmentationActive, setIsSegmentationActive] = useState(false);
   const [recordingMotion, setRecordingMotion] = useState<string | null>(null);
@@ -59,219 +53,11 @@ export const SegmentationSidebar = ({
     stop: () => void;
     isPlaying: boolean;
   }}>({});
-
-  const handleDecodingResults = useCallback((decodingResults: { 
-    masks: { dims: number[]; }; 
-    iou_predictions: { cpuData: number[]; }; 
-  }) => {
-
-    // SAM2 returns 3 mask along with scores -> select best one
-    const maskTensors = decodingResults.masks;
-    const [bs, noMasks, width, height] = maskTensors.dims;
-    const maskScores = decodingResults.iou_predictions.cpuData;
-    const bestMaskIdx = maskScores.indexOf(Math.max(...maskScores));
-    const bestMaskArray = sliceTensor(maskTensors, bestMaskIdx)
-    let bestMaskCanvas = float32ArrayToCanvas(bestMaskArray, width, height)
-    let bestMaskBinary = float32ArrayToBinaryMask(bestMaskArray, width, height)
-
-    bestMaskCanvas = resizeCanvas(bestMaskCanvas, { w: 720, h: 480 });
-    bestMaskBinary = resizeCanvas(bestMaskBinary, { w: 720, h: 480 });
-    setMask(bestMaskCanvas);
-    setMaskBinary(bestMaskBinary);
-    setPrevMaskArray(bestMaskArray);
-
-    // Add mask to canvas if in segment mode
-    if (activeTool === "segment" && editor?.canvas) {
-      const workspace = editor.getWorkspace();
-      if (!workspace) return;
-
-      // Get workspace dimensions with type assertion since we know these are fabric.Object properties
-      const workspaceWidth = (workspace as fabric.Object).width as number || 720;
-      const workspaceHeight = (workspace as fabric.Object).height as number || 480;
-
-      // Create a temporary canvas to properly scale the mask
-      const tempCanvas = document.createElement('canvas');
-      tempCanvas.width = workspaceWidth;  // Original workspace width
-      tempCanvas.height = workspaceHeight; // Original workspace height
-      const tempCtx = tempCanvas.getContext('2d');
-
-      if (!tempCtx) return;
-
-      // Draw the mask centered and scaled
-      tempCtx.drawImage(
-        bestMaskCanvas,
-        0,
-        0,
-        bestMaskCanvas.width,
-        bestMaskCanvas.height,
-      );
-
-      // Convert the properly scaled mask canvas to a Fabric image
-      fabric.Image.fromURL(tempCanvas.toDataURL(), (maskImage) => {
-        // Position the mask at the workspace coordinates
-        maskImage.set({
-          left: workspace.left || 0,
-          top: workspace.top || 0,
-          width: workspaceWidth,  // Original workspace width
-          height: workspaceHeight, // Original workspace height
-          selectable: false,
-          evented: false,
-          opacity: 0.9,
-        });
-
-        // Remove any existing mask before adding the new one
-        const existingMasks = editor.canvas.getObjects().filter(obj => obj.data?.isMask);
-        existingMasks.forEach(mask => editor.canvas.remove(mask));
-
-        // Add metadata to identify this as a mask
-        maskImage.data = { isMask: true };
-        
-        editor.canvas.add(maskImage);
-        editor.canvas.renderAll();
-      });
-    }
-  }, [activeTool, editor, imageSize]);
-
-  // Handle web worker messages
-  const onWorkerMessage = useCallback((event: MessageEvent) => {
-    const { type, data } = event.data;
-
-    if (type == "pong") {
-      const { success, device } = data;
-
-      if (success) {
-        setLoading(false);
-        setDevice(device);
-        setStatus("Encode image");
-      } else {
-        setStatus("Error (check JS console)");
-      }
-    } else if (type == "downloadInProgress" || type == "loadingInProgress") {
-      setLoading(true);
-      setStatus("Loading model");
-    } else if (type == "encodeImageDone") {
-      // alert(data.durationMs)
-      // console.log("Encode image done");
-      setImageEncoded(true);
-      setLoading(false);
-      setStatus("Ready. Click on image to start new mask");
-    } else if (type == "decodeMaskResult") {
-      handleDecodingResults(data);
-      // console.log("Decoding results");
-      setLoading(false);
-      setStatus("Ready. Click on image");
-    }
-  }, [handleDecodingResults]);
-
-  const initializeSamWorker = useCallback(() => {
-    if (!samWorker.current) {
-      console.log("Initializing SAM worker");
-      samWorker.current = new Worker(new URL("../../../app/sam/worker.js", import.meta.url), {
-        type: "module",
-      });
-      samWorker.current.addEventListener("message", onWorkerMessage);
-      samWorker.current.postMessage({ type: "ping" });
-      console.log("Worker started");
-      setLoading(true);
-    }
-  }, [onWorkerMessage]);
-
-  useEffect(() => {
-    if (activeTool === "segment") {
-      initializeSamWorker();
-    }
-  }, [activeTool, initializeSamWorker]);
-
-  // Separate effect for encoding after worker is ready
-  useEffect(() => {
-    if (activeTool === "segment" && editor?.canvas && samWorker.current && device) {
-      encodeImageClick();
-    }
-  }, [activeTool, editor?.canvas, device]);
-
-  useEffect(() => {
-    console.log("segmentedMasks updated:", editor?.segmentedMasks);
-    // Do something with the updated masks
-  }, [editor?.segmentedMasks]);
-
-  // Start encoding image
-  const encodeImageClick = async () => {
-    if (!samWorker.current || !editor?.canvas) return;
-    
-    const workspace = editor.getWorkspace();
-    if (!workspace) return;
-
-    // Get the workspace dimensions and position
-    const workspaceWidth = workspace.width || 720;
-    const workspaceHeight = workspace.height || 480;
-    const workspaceLeft = workspace.left || 0;
-    const workspaceTop = workspace.top || 0;
-    
-    // Create a temporary canvas with the workspace content
-    const tempCanvas = document.createElement('canvas');
-    tempCanvas.width = workspaceWidth;
-    tempCanvas.height = workspaceHeight;
-    const tempCtx = tempCanvas.getContext('2d');
-    
-    // Save current viewport transform and ensure it's not undefined
-    const currentViewportTransform = editor.canvas.viewportTransform || [1, 0, 0, 1, 0, 0];
-    
-    // Reset viewport transform temporarily to get accurate image
-    editor.canvas.setViewportTransform([1, 0, 0, 1, 0, 0]);
-    
-    // Draw the workspace content onto the temp canvas
-    const workspaceImage = editor.canvas.toDataURL({
-      format: 'png',  
-      quality: 1,
-      left: workspaceLeft,
-      top: workspaceTop,
-      width: workspaceWidth,
-      height: workspaceHeight
-    });
-
-    editor.setWorkspaceURL(workspaceImage);
-
-    // Restore viewport transform
-    editor.canvas.setViewportTransform(currentViewportTransform);
-
-    const img = new Image();
-    img.onload = () => {
-        const largestDim = Math.max(workspaceWidth, workspaceHeight);
-
-        const box = resizeAndPadBox(
-          { h: workspaceHeight, w: workspaceWidth },
-          { h: largestDim, w: largestDim }
-        );
-        
-        tempCtx?.drawImage(img, 0, 0, 720, 480, box?.x || 0, 0, box?.w, box?.h);
-
-        // tempCtx?.drawImage(img, 0, 0, workspaceWidth, workspaceHeight, box?.x || 0, box?.y || 0, box?.w, box?.h);
-      
-        samWorker.current?.postMessage({
-          type: "encodeImage",
-          data: canvasToFloat32Array(resizeCanvas(tempCanvas, imageSize)),
-        });
-
-        setLoading(true);
-        setStatus("Encoding");
-    };
-
-    img.src = workspaceImage;
-  };
   
   const onClose = () => {
+    setIsSegmentationActive(false);
     onChangeActiveTool("select");
   };
-
-  useEffect(() => {
-    // Cleanup worker when component unmounts
-    return () => {
-      if (samWorker.current) {
-        samWorker.current.terminate();
-        samWorker.current = null;
-      }
-    };
-  }, []);
 
   // Add this effect to handle canvas interactivity
   useEffect(() => {
@@ -288,7 +74,7 @@ export const SegmentationSidebar = ({
           obj.evented = true;
         }
       });
-    } else if (loading) {
+    } else if (samWorkerLoading) {
       // Disable all canvas interactions while loading
       editor.canvas.selection = false;
       editor.canvas.forEachObject((obj) => {
@@ -309,7 +95,7 @@ export const SegmentationSidebar = ({
     }
     
     editor.canvas.renderAll();
-  }, [loading, editor?.canvas, activeTool]);
+  }, [samWorkerLoading, editor?.canvas, activeTool]);
 
   const handleNewMask = () => {
     // Stop all active animations first
@@ -341,7 +127,7 @@ export const SegmentationSidebar = ({
       
       // Reset any current mask
       setMask(null);
-      setLoading(false);
+      // setSamWorkerLoading(false);
     }
   };
 
@@ -526,13 +312,19 @@ export const SegmentationSidebar = ({
   // Update click handling to only work when segmentation is active
   useEffect(() => {
     console.log("isSegmentationActive", isSegmentationActive);
+    console.log("activeTool", activeTool);
     // Add this isSegmentationActive check
     if (!editor?.canvas || activeTool !== "segment") return;
 
     const imageClick = (e: fabric.IEvent) => {
       console.log("imageClick", isSegmentationActive);
-      if (!imageEncoded || !editor?.canvas || !isSegmentationActive) return;
+      console.log("samWorkerLoading", samWorkerLoading);
+      console.log("editor?.canvas", editor?.canvas);
+      console.log("isSegmentationActive", isSegmentationActive);
 
+      if (samWorkerLoading || !editor?.canvas ||  !isSegmentationActive) return;
+
+      console.log("click detected, inside imageClick");
       const pointer = editor.canvas.getPointer(e.e);
       const workspace = editor.getWorkspace();
       if (!workspace) return;
@@ -565,6 +357,7 @@ export const SegmentationSidebar = ({
         };
 
         pointsRef.current.push(point);
+        console.log("click detected, inside imageClick");
         // do we have a mask already? ie. a refinement click?
         if (prevMaskArray) {
           const maskShape = [1, 1, maskSize.w, maskSize.h];
@@ -594,7 +387,8 @@ export const SegmentationSidebar = ({
     return () => {
       editor.canvas.off('mouse:down', imageClick);
     };
-  }, [editor?.canvas, activeTool, imageEncoded, isSegmentationActive]);
+  }, [editor?.canvas, activeTool, samWorkerLoading, isSegmentationActive]);
+
   // editor?.canvas, activeTool, imageEncoded, imageSize.w, imageSize.h, maskSize.w, maskSize.h
   // Clear masks when sidebar closes
   useEffect(() => {
@@ -1164,13 +958,13 @@ export const SegmentationSidebar = ({
           
           {/* Add loading and status indicator */}
           <div className="mt-4 space-y-2">
-            {loading && (
+            {samWorkerLoading && (
               <div className="flex items-center space-x-2 text-muted-foreground">
                 <Loader2 className="w-4 h-4 animate-spin" />
                 <span className="text-sm">{status}</span>
               </div>
             )}
-            {!loading && status && (
+            {!samWorkerLoading && status && (
               <div className="text-sm text-muted-foreground">
                 {status}
               </div>
@@ -1210,7 +1004,7 @@ export const SegmentationSidebar = ({
                     variant="ghost"
                     size="sm"
                     onClick={handleNewMask}
-                    disabled={loading}
+                    disabled={samWorkerLoading}
                   >
                     <Plus className="w-4 h-4 mr-1" />
                     New Mask
@@ -1218,6 +1012,28 @@ export const SegmentationSidebar = ({
                 )}
               </div>
             </div>
+
+            {/* Empty state message */}
+            {editor?.segmentedMasks.length === 0 && (
+              <div className="p-6 text-center border border-dashed border-gray-300 dark:border-gray-700 rounded-md mt-3 bg-gradient-to-b from-background to-muted/30 flex flex-col items-center justify-center space-y-3">
+                <div className="w-16 h-16 rounded-full bg-muted/40 flex items-center justify-center">
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 text-muted-foreground" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path>
+                    <polyline points="7.5 4.21 12 6.81 16.5 4.21"></polyline>
+                    <polyline points="7.5 19.79 7.5 14.6 3 12"></polyline>
+                    <polyline points="21 12 16.5 14.6 16.5 19.79"></polyline>
+                    <polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline>
+                    <line x1="12" y1="22.08" x2="12" y2="12"></line>
+                  </svg>
+                </div>
+                <div>
+                  <h4 className="text-base font-medium text-foreground">No segmented objects yet</h4>
+                  <p className="text-sm text-muted-foreground mt-1 max-w-xs mx-auto">
+                    Create your first object by clicking "New Mask" above to start segmenting content.
+                  </p>
+                </div>
+              </div>
+            )}
 
             {/* Show saved masks */}
             {editor?.segmentedMasks
@@ -1284,6 +1100,41 @@ export const SegmentationSidebar = ({
                           <Trash2 className="w-4 h-4" />
                         </Button>
                       </div>
+                    </div>
+                    <div className="rounded-md bg-gray-100 dark:bg-gray-800 p-2">
+                      <div className="flex items-center space-x-2 cursor-pointer select-none" 
+                          onClick={() => {
+                            if (editor) {
+                              const updatedMasks = editor.segmentedMasks.map((m, i) => 
+                                m.url === mask.url ? { ...m, isTextDetailsOpen: !m.isTextDetailsOpen } : m
+                              );
+                              editor.setSegmentedMasks(updatedMasks);
+                            }
+                          }}>
+                        <ChevronRight
+                          className={`w-4 h-4 transition-transform ${mask.isTextDetailsOpen ? 'rotate-90' : ''}`}
+                        />
+                        <span className="text-sm font-medium">Text Details</span>
+                        <span className="text-sm text-muted-foreground">(optional)</span>
+                      </div>
+                      {mask.isTextDetailsOpen && (
+                        <div className="mt-2">
+                          <textarea
+                            className="w-full p-2 text-sm border rounded-md min-h-[60px] resize-y"
+                            placeholder="Add specific object motion details to help with generation"
+                            value={mask.textDetails || ""}
+                            onChange={(e) => {
+                              if (editor) {
+                                const updatedMasks = editor.segmentedMasks.map((m, i) => 
+                                  m.url === mask.url ? { ...m, textDetails: e.target.value } : m
+                                );
+                                editor.setSegmentedMasks(updatedMasks);
+                              }
+                            }}
+                            rows={2}
+                          />
+                        </div>
+                      )}
                     </div>
                     {mask.trajectory ? (
                       <div className="flex space-x-2">
