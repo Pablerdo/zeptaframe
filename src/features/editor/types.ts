@@ -229,15 +229,16 @@ export type BuildEditorProps = {
 };
 
 export interface VideoGeneration {
+  id: string;
+  projectId: string;
+  workbenchId: string;
   runId: string;
   status: 'pending' | 'success' | 'error';
-  progress: number;
-  videoUrl?: string;
-  workbenchIndex?: number;
-  startTime?: number;       // When the generation started
-  estimatedDuration?: number; // How long we expect it to take
+  videoUrl?: string | null;
+  modelId?: string;
+  createdAt: string | Date;
+  updatedAt?: string | Date;
 }
-
 
 export type SupportedVideoModelId = 
   | "cogvideox"

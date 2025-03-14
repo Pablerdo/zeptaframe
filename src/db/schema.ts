@@ -173,3 +173,27 @@ export const uploadsRelations = relations(uploads, ({ one }) => ({
   }),
 }));
 
+export const videoGenerations = pgTable("video_generation", {
+  id: text("id")
+    .primaryKey()
+    .$defaultFn(() => crypto.randomUUID()),
+  projectId: text("projectId")
+    .notNull()
+    .references(() => projects.id, { onDelete: "cascade" }),
+  workbenchId: text("workbenchId").notNull(),
+  runId: text("runId").notNull().unique(),
+  status: text("status").$type<"pending" | "success" | "error">().notNull(),
+  videoUrl: text("videoUrl"),
+  modelId: text("modelId").notNull(),
+  startTime: timestamp("startTime", { mode: "date" }).notNull().defaultNow(),
+  createdAt: timestamp("createdAt", { mode: "date" }).notNull().defaultNow(),
+  updatedAt: timestamp("updatedAt", { mode: "date" }).notNull().defaultNow(),
+});
+
+export const videoGenerationsRelations = relations(videoGenerations, ({ one }) => ({
+  project: one(projects, {
+    fields: [videoGenerations.projectId],
+    references: [projects.id],
+  }),
+}));
+

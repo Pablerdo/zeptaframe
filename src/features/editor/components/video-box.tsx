@@ -1,19 +1,19 @@
 import { useRef, useEffect } from "react";
 import { Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { videoModels } from "../utils/videoModels";
+import { SupportedVideoModelId } from "../types";
 
 interface VideoBoxProps {
   video: string | null;
   isLoading?: boolean;
-  progress?: number;
   model?: string;
 }
 
 export const VideoBox = ({ 
   video, 
   isLoading = false, 
-  progress = 0,
-  model = "CogVideoX"
+  model = "cogvideox"
 }: VideoBoxProps) => {
   const videoRef = useRef<HTMLVideoElement>(null);
   
@@ -43,16 +43,7 @@ export const VideoBox = ({
         <div className="w-full h-full bg-gray-800/80 flex flex-col items-center justify-center">
           <Loader2 className="h-10 w-10 animate-spin text-blue-500 mb-4" />
           <span className="text-gray-300 text-sm font-medium tracking-wide mb-2">
-            Generating video with {model}...
-          </span>
-          <div className="w-[60%] h-2 bg-gray-700 rounded-full overflow-hidden">
-            <div 
-              className="h-full bg-blue-500 transition-all duration-300"
-              style={{ width: `${progress}%` }}
-            />
-          </div>
-          <span className="text-gray-400 text-xs mt-2">
-            {Math.round(progress)}%
+            Generating video with {videoModels[model as SupportedVideoModelId].name}...
           </span>
         </div>
       ) : (

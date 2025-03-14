@@ -1,7 +1,12 @@
 import { ComfyDeploy } from "comfydeploy"
 import { NextResponse } from "next/server"
+import { db } from "@/db/drizzle"
+import { videoGenerations } from "@/db/schema"
+import { eq } from "drizzle-orm"
 
-const cd = new ComfyDeploy()
+const cd = new ComfyDeploy({
+  bearer: process.env.COMFY_DEPLOY_API_KEY!,
+})
 
 // In-memory storage for video URLs (replace with a database in production)
 const videoStore: { [key: string]: string } = {}
@@ -13,6 +18,18 @@ function findGifUrl(outputs: any): string | undefined {
 
   return outputWithGifs?.data.gifs[0]?.url;
 }
+
+// Below was suggested by Cursor
+// function findGifUrl(outputs: any): string | null {
+//   if (!outputs || !Array.isArray(outputs)) return null;
+  
+//   for (const output of outputs) {
+//     if (output.url && (output.url.endsWith('.gif') || output.url.endsWith('.mp4'))) {
+//       return output.url;
+//     }
+//   }
+//   return null;
+// }
 
 export async function POST(request: Request) {
   try {
@@ -27,9 +44,28 @@ export async function POST(request: Request) {
     const videoUrl = findGifUrl(outputs)
 
     if (status === "success") {
-      // Get the URL from the first output's url field
-      console.log("Video generated:", videoUrl)
+      // Update in-memory store for GET requests
       videoStore[runId] = videoUrl || ""
+      
+      // Update database entry
+      await db.update(videoGenerations)
+        .set({ 
+          status: "success", 
+          videoUrl: videoUrl || "",
+          updatedAt: new Date()
+        })
+        .where(eq(videoGenerations.runId, runId))
+      
+      console.log(`Updated video generation ${runId} to success with URL ${videoUrl}`)
+    } else if (status === "failed") {
+      await db.update(videoGenerations)
+        .set({ 
+          status: "error",
+          updatedAt: new Date()
+        })
+        .where(eq(videoGenerations.runId, runId))
+      
+      console.log(`Updated video generation ${runId} to error status`)
     }
 
     // Return success to ComfyDeploy

@@ -95,6 +95,7 @@ export const ScrollableWorkbenchViewer = ({
             }}
           >
             <Workbench
+              projectId={initialData.id}
               index={index}
               isActive={index === activeWorkbenchIndex}
               workbenchId={id}

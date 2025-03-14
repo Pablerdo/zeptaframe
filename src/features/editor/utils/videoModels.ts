@@ -7,3 +7,5 @@ export const videoModels: Record<SupportedVideoModelId, BaseVideoModel> = {
   "cogvideox": { id: "cogvideox" as SupportedVideoModelId, name: "CogVideoX", icon: Film },
   "hunyuanvideo": { id: "hunyuanvideo" as SupportedVideoModelId, name: "HunyuanVideo", icon: Video },
 };
+
+export const defaultVideoModelId: SupportedVideoModelId = "cogvideox";

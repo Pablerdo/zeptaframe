@@ -23,8 +23,11 @@ import {
   resizeAndPadBox
 } from "@/app/sam/lib/imageutils";
 import debounce from "lodash/debounce";
+import { db } from "@/db/drizzle";
+import { videoGenerations } from "@/db/schema";
 
 interface WorkbenchProps {
+  projectId: string;
   defaultState?: string;
   defaultWidth?: number;
   defaultHeight?: number;
@@ -54,6 +57,7 @@ interface WorkbenchProps {
 }
 
 export const Workbench = ({
+  projectId,
   defaultState,
   defaultWidth,
   defaultHeight,
@@ -84,7 +88,7 @@ export const Workbench = ({
   const [activeWorkbenchTool, setActiveWorkbenchTool] = useState<ActiveWorkbenchTool>("select");
   const [isGenerating, setIsGenerating] = useState(false);
   const [selectedModel, setSelectedModel] = useState<BaseVideoModel>({ id: "cogvideox" as SupportedVideoModelId, name: "CogVideoX", icon: Film });
-  const [videoGeneration, setVideoGeneration] = useState<VideoGeneration | null>(null);
+  // const [videoGeneration, setVideoGeneration] = useState<VideoGeneration | null>(null);
   
   // Initialize the editor with useEditor hook
   const { init, editor } = useEditor({
@@ -153,44 +157,44 @@ export const Workbench = ({
     }
   };
 
-  // Check the status of the video generations
-  useEffect(() => {
-    console.log("setting up video status check intervals");
+  // // Check the status of the video generations
+  // useEffect(() => {
+  //   console.log("setting up video status check intervals");
 
-    // Only create intervals for pending generations
-    if (videoGeneration?.status === 'pending') {
-      console.log(`Setting up interval for video generation ${videoGeneration.runId}`);
+  //   // Only create intervals for pending generations
+  //   if (videoGeneration?.status === 'pending') {
+  //     console.log(`Setting up interval for video generation ${videoGeneration.runId}`);
       
-      // Status check interval
-      const intervalId = setInterval(async () => {
-        console.log(`Checking status for video generation ${videoGeneration.runId}`);
-        try {
-          const response = await fetch(`/api/comfydeploy/webhook-video?runId=${videoGeneration.runId}`);
-          const data = await response.json();
+  //     // Status check interval
+  //     const intervalId = setInterval(async () => {
+  //       console.log(`Checking status for video generation ${videoGeneration.runId}`);
+  //       try {
+  //         const response = await fetch(`/api/comfydeploy/webhook-video?runId=${videoGeneration.runId}`);
+  //         const data = await response.json();
           
-          if (data.status === "success") {
-            console.log(`Video generation ${videoGeneration.runId} completed successfully`);
-            setVideoGeneration(prev => prev ? {
-              ...prev,
-              status: 'success',
-              videoUrl: data.videoUrl,
-              progress: 100
-            } : null);
+  //         if (data.status === "success") {
+  //           console.log(`Video generation ${videoGeneration.runId} completed successfully`);
+  //           setVideoGeneration(prev => prev ? {
+  //             ...prev,
+  //             status: 'success',
+  //             videoUrl: data.videoUrl,
+  //             progress: 100
+  //           } : null);
             
-            // Clean up all timers and listeners for this generation
-            clearInterval(intervalId);
-          }
-        } catch (error) {
-          console.error(`Error checking status for video ${videoGeneration?.runId}:`, error);
-        }
-      }, 5000);
+  //           // Clean up all timers and listeners for this generation
+  //           clearInterval(intervalId);
+  //         }
+  //       } catch (error) {
+  //         console.error(`Error checking status for video ${videoGeneration?.runId}:`, error);
+  //       }
+  //     }, 5000);
       
-      // Return cleanup function
-      return () => {
-        clearInterval(intervalId);
-      };
-    }
-  }, [videoGeneration]);
+  //     // Return cleanup function
+  //     return () => {
+  //       clearInterval(intervalId);
+  //     };
+  //   }
+  // }, [videoGeneration]);
 
   const handleGenerateVideo = async (modelId?: SupportedVideoModelId) => {
     if (!editor) return;
@@ -237,6 +241,7 @@ export const Workbench = ({
         
         console.log("videoGenData", videoGenData);
 
+        // STEP 1: Call ComfyDeploy to start the generation
         const response = await fetch("/api/comfydeploy/generate-video", {
           method: "POST",
           headers: {
@@ -246,57 +251,26 @@ export const Workbench = ({
         });
         
         const data = await response.json();
-        console.log(data);
+        console.log("ComfyDeploy response:", data);
         
         if (data.runId) {
-          // Add new video generation to array with current workbench index
-          const startTime = Date.now();
-          const estimatedDuration = 5 * 60 * 1000; // 5 minutes in milliseconds
-          
-          setVideoGeneration({
-            runId: data.runId,
-            status: 'pending',
-            progress: 0,
-            workbenchIndex: index,
-            startTime: startTime, // Store when we started
-            estimatedDuration: estimatedDuration // Store how long we expect it to take
+          // STEP 2: Store the generation information in our database
+          const dbResponse = await fetch("/api/video-generations", {
+            method: "POST",
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              projectId: projectId,
+              workbenchId: workbenchId,
+              runId: data.runId,
+              status: "pending",
+              modelId: modelId,
+            }),
           });
           
-          // Create a function to update progress based on elapsed time
-          const updateProgress = () => {
-            const elapsedTime = Date.now() - startTime;
-            const calculatedProgress = Math.min((elapsedTime / estimatedDuration) * 100, 99);
-            
-            setVideoGeneration(prev => prev ? {
-              ...prev,
-              progress: calculatedProgress
-            } : null);
-          };
-          
-          // Use requestAnimationFrame when visible and setInterval as fallback
-          let progressInterval: number | NodeJS.Timeout;
-          let rafId: number;
-          
-          const handleVisibilityChange = () => {
-            if (document.hidden) {
-              // Tab is hidden, use setInterval (will be throttled but still runs occasionally)
-              cancelAnimationFrame(rafId);
-              progressInterval = setInterval(updateProgress, 2000);
-            } else {
-              // Tab is visible, use requestAnimationFrame for smooth updates
-              clearInterval(progressInterval as NodeJS.Timeout);
-              
-              const updateWithRAF = () => {
-                updateProgress();
-                rafId = requestAnimationFrame(updateWithRAF);
-              };
-              rafId = requestAnimationFrame(updateWithRAF);
-            }
-          };
-          
-          // Set up initial state based on current visibility
-          document.addEventListener('visibilitychange', handleVisibilityChange);
-          handleVisibilityChange();
+          const dbData = await dbResponse.json();
+          console.log("Database storage response:", dbData);
           
           console.log("Video generation started. Please wait...");
         } else {

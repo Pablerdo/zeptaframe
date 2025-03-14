@@ -615,6 +615,84 @@ export const CompositionStudio = ({ initialData }: CompositionStudioProps) => {
     };
   }, []);
 
+  // Add polling for video generations - both initial and pending updates
+  useEffect(() => {
+    // First, fetch all video generations for this project
+    const fetchAllVideoGenerations = async () => {
+      try {
+        const response = await fetch(`/api/video-generations?projectId=${initialData.id}`);
+        if (!response.ok) throw new Error('Failed to fetch video generations');
+        
+        const data = await response.json();
+        if (data.videoGenerations) {
+          setVideoGenerations(data.videoGenerations);
+          
+          // Check if any are still pending
+          const hasPending = data.videoGenerations.some((gen: any) => gen.status === 'pending');
+          setIsGenerating(hasPending);
+        }
+      } catch (error) {
+        console.error('Error fetching all video generations:', error);
+      }
+    };
+    
+    // Function to only fetch pending generations (for polling)
+    const fetchPendingVideoGenerations = async () => {
+      try {
+        console.log("Polling for pending video gen")
+        const response = await fetch(
+          `/api/video-generations?projectId=${initialData.id}&status=pending`
+        );
+        if (!response.ok) throw new Error('Failed to fetch pending video generations');
+        
+        const data = await response.json();
+        
+        if (data.videoGenerations && data.videoGenerations.length > 0) {
+          // Update only the pending ones in our state
+          setVideoGenerations(prev => {
+            const updatedGenerations = [...prev];
+            
+            // For each pending generation from the API
+            data.videoGenerations.forEach((pendingGen: any) => {
+              // Find if it exists in our current state
+              const index = updatedGenerations.findIndex(gen => gen.runId === pendingGen.runId);
+              
+              if (index !== -1) {
+                // Update existing entry
+                updatedGenerations[index] = {
+                  ...updatedGenerations[index],
+                  ...pendingGen
+                };
+              } else {
+                // Add new entry
+                updatedGenerations.push(pendingGen);
+              }
+            });
+            
+            return updatedGenerations;
+          });
+          
+          // We still have pending items
+          setIsGenerating(true);
+        } else if (data.videoGenerations && data.videoGenerations.length === 0) {
+          // No more pending items, do a full refresh to get latest completed items
+          fetchAllVideoGenerations();
+          setIsGenerating(false);
+        }
+      } catch (error) {
+        console.error('Error fetching pending video generations:', error);
+      }
+    };
+    
+    // Initial fetch of all video generations
+    fetchAllVideoGenerations();
+    
+    // Set up polling for pending updates
+    const intervalId = setInterval(fetchPendingVideoGenerations, 10000);
+    
+    return () => clearInterval(intervalId);
+  }, [initialData.id]);
+
   return (
     <ThemeProvider attribute="class" defaultTheme="light" enableSystem>
       <div className="w-full h-full flex flex-col overflow-hidden bg-editor-bg dark:bg-editor-bg-dark">
@@ -749,6 +827,7 @@ export const CompositionStudio = ({ initialData }: CompositionStudioProps) => {
             </div>
             
             <CollapsibleVideoViewer
+              workbenchIds={workbenchIds}
               videoGenerations={videoGenerations}
               isGenerating={isGenerating}
               workbenchCount={workbenchIds.length}

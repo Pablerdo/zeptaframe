@@ -1,11 +1,11 @@
-import { useState, useRef, useEffect } from "react";
-import { ChevronDown, Loader2 } from "lucide-react";
+import { useState } from "react";
+import { ChevronDown } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { Button } from "@/components/ui/button";
 import VideoTimeline from "@/features/editor/components/video-timeline";
 import { VideoGeneration } from "@/features/editor/types";
 
 interface CollapsibleVideoViewerProps {
+  workbenchIds: string[];
   videoGenerations: VideoGeneration[];
   isGenerating: boolean;
   workbenchCount: number;
@@ -13,26 +13,13 @@ interface CollapsibleVideoViewerProps {
 }
 
 const CollapsibleVideoViewer = ({
+  workbenchIds,
   videoGenerations,
   isGenerating,
   workbenchCount,
   activeWorkbenchIndex
 }: CollapsibleVideoViewerProps) => {
   const [timelineCollapsed, setTimelineCollapsed] = useState(false);
-  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
-  const [selectedModel, setSelectedModel] = useState("CogVideoX");
-  const dropdownRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
-        setIsDropdownOpen(false);
-      }
-    };
-
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, []);
 
   return (
     <div className={cn(
@@ -53,9 +40,9 @@ const CollapsibleVideoViewer = ({
           {/* Dot indicators for workbenches */}
           <div className="flex items-center gap-2 flex-grow justify-center px-4">
             <div className="flex items-center gap-1">
-              {Array.from({ length: workbenchCount }).map((_, index) => (
+              {workbenchIds.map((id, index) => (
                 <div
-                  key={index}
+                  key={id}
                   className={cn(
                     "w-2 h-2 rounded-full transition-colors duration-200",
                     index === activeWorkbenchIndex 
@@ -86,8 +73,8 @@ const CollapsibleVideoViewer = ({
       )}>
         <div className="min-w-[830px] h-full p-4">
           <VideoTimeline 
-            videoGenerations={videoGenerations} 
-            workbenchCount={workbenchCount}
+            videoGenerations={videoGenerations}
+            workbenchIds={workbenchIds}
             activeWorkbenchIndex={activeWorkbenchIndex}
           />
         </div>
