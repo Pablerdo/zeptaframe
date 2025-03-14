@@ -36,6 +36,13 @@
       "when": 1741938969577,
       "tag": "0004_opposite_nighthawk",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1741980562058,
+      "tag": "0005_giant_marvel_apes",
+      "breakpoints": true
     }
   ]
 }

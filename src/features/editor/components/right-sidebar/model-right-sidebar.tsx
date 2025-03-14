@@ -25,7 +25,6 @@ export const ModelRightSidebar = ({
   onSelectModel,
 }: ModelRightSidebarProps) => {
   
-
   const onClose = () => onChangeActiveWorkbenchTool("select");
 
   return (

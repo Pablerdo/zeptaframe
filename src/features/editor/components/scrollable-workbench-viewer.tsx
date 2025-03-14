@@ -17,6 +17,7 @@ interface ScrollableWorkbenchViewerProps {
     json: string,
     height: number,
     width: number,
+    promptData: string,
   }) => void;
   onClearSelection: () => void;
   activeTool: ActiveTool;
@@ -105,6 +106,7 @@ export const ScrollableWorkbenchViewer = ({
               defaultState={workbenchData.json}
               defaultWidth={workbenchData.width}
               defaultHeight={workbenchData.height}
+              defaultPromptData={workbenchData.promptData}
               clearSelectionCallback={onClearSelection}
               debouncedSave={(values) => debouncedSave({
                 workbenchId: id,

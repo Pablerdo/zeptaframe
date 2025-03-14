@@ -1,0 +1,1 @@
+DROP TABLE "segmented_object";

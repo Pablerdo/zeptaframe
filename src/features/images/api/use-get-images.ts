@@ -13,7 +13,6 @@ export const useGetImages = () => {
       }
 
       const { data } = await response.json();
-      console.log('▶️ Fetched images:', data);
       return data;
     },
   });

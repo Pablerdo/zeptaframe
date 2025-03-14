@@ -34,8 +34,9 @@ export interface ProjectJSON {
       json: string;
       width: number;
       height: number;
+      promptData?: string; // JSON stringified PromptData
     }
-  }
+  };
 }
 
 export const useGetProject = (id: string) => {

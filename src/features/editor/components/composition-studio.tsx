@@ -138,7 +138,7 @@ export const CompositionStudio = ({ initialData }: CompositionStudioProps) => {
   const [isDeletingIndex, setIsDeletingIndex] = useState<number | null>(null);
   const [transitionDirection, setTransitionDirection] = useState<'left' | 'right' | null>(null);
 
-  // Save callback with debounce - updated to include workbenchId
+  // Save callback with debounce - updated to include workbenchId and promptData
   const debouncedSave = useCallback(
     debounce(
       (values: { 
@@ -146,6 +146,7 @@ export const CompositionStudio = ({ initialData }: CompositionStudioProps) => {
         json: string,
         height: number,
         width: number,
+        promptData: string,
       }) => {
         // Update the project data state
         setProjectData(prev => {
@@ -160,7 +161,8 @@ export const CompositionStudio = ({ initialData }: CompositionStudioProps) => {
               [values.workbenchId]: {
                 json: values.json,
                 height: values.height,
-                width: values.width
+                width: values.width,
+                promptData: values.promptData
               }
             }
           };
@@ -712,13 +714,6 @@ export const CompositionStudio = ({ initialData }: CompositionStudioProps) => {
             activeTool={activeTool}
             onChangeActiveTool={onChangeActiveTool}
             samWorker={samWorker}
-            samWorkerLoading={samWorkerLoading}
-            prevMaskArray={prevMaskArray}
-            setPrevMaskArray={setPrevMaskArray}
-            mask={mask}
-            setMask={setMask}
-            maskBinary={maskBinary}
-            setMaskBinary={setMaskBinary}
           />
           <ShapeSidebar
             editor={activeEditor}

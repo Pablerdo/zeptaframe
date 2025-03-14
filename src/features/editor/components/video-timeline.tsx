@@ -72,7 +72,7 @@ const VideoTimeline = ({
                 )}
               </div>
               
-              <div className="mt-5 text-xs font-medium text-gray-500">
+              <div className="mt-5 text-xs font-medium text-gray-200">
                 Workbench {index + 1}
               </div>
             </div>

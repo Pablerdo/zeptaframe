@@ -1,18 +1,26 @@
 import { fabric } from "fabric";
 import { useCallback, useRef, useState } from "react";
-
+import { SegmentedMask, SupportedVideoModelId } from "@/features/editor/types";
 import { JSON_KEYS } from "@/features/editor/types";
+import { defaultVideoModelId } from "../utils/videoModels";
 
 interface UseHistoryProps {
   canvas: fabric.Canvas | null;
+  editorState?: {
+    segmentedMasks: SegmentedMask[];
+    prompt: string;
+    selectedModelId: SupportedVideoModelId;
+    cameraControl?: Record<string, any>;
+  };
   saveCallback?: (values: {
     json: string;
     height: number;
     width: number;
+    promptData: string;
   }) => void;
 };
 
-export const useHistory = ({ canvas, saveCallback }: UseHistoryProps) => {
+export const useHistory = ({ canvas, saveCallback, editorState }: UseHistoryProps) => {
   const [historyIndex, setHistoryIndex] = useState(0);
   const canvasHistory = useRef<string[]>([]);
   const skipSave = useRef(false);
@@ -42,11 +50,20 @@ export const useHistory = ({ canvas, saveCallback }: UseHistoryProps) => {
     const height = workspace?.height || 0;
     const width = workspace?.width || 0;
 
-    saveCallback?.({ json, height, width });
+    // Create promptData from editor state
+    const promptData = JSON.stringify({
+      segmentedMasks: editorState?.segmentedMasks || [],
+      cameraControl: editorState?.cameraControl || {},
+      textPrompt: editorState?.prompt || "",
+      selectedModelId: editorState?.selectedModelId || defaultVideoModelId
+    });
+
+    saveCallback?.({ json, height, width, promptData });
   }, 
   [
     canvas,
     saveCallback,
+    editorState
   ]);
 
   const undo = useCallback(() => {

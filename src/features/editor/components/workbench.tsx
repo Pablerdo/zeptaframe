@@ -1,16 +1,16 @@
 "use client";
 
 import { fabric } from "fabric";
-import { useEffect, useRef, useState, useCallback } from "react";
+import { useEffect, useRef, useState, useCallback, useMemo } from "react";
 import { Crosshair, MessageSquare, Trash2, Video, Film, ArrowRightSquare, PlayCircle, ArrowRightCircle, Loader2 } from "lucide-react";
 import { useEditor } from "@/features/editor/hooks/use-editor";
-import { ActiveTool, ActiveWorkbenchTool, BaseVideoModel, Editor as EditorType, SupportedVideoModelId, VideoGeneration } from "@/features/editor/types";
+import { ActiveTool, ActiveWorkbenchTool, BaseVideoModel, Editor as EditorType, JSON_KEYS, SegmentedMask, SupportedVideoModelId, VideoGeneration } from "@/features/editor/types";
 import { cn } from "@/lib/utils";
 import { SidebarItem } from "@/features/editor/components/sidebar-item";
 import { RightSidebarItem } from "./right-sidebar-item";
 import { AnimateRightSidebar } from "./right-sidebar/animate-right-sidebar";
 import { CameraControlRightSidebar } from "./right-sidebar/camera-control-right-sidebar";
-import { PromptRightSidebar } from "./right-sidebar/prompt-right-sidebar";
+import { TextPromptRightSidebar } from "./right-sidebar/text-prompt-right-sidebar";
 import { ModelRightSidebar } from "./right-sidebar/model-right-sidebar";
 import { uploadToUploadThingResidual } from "@/lib/uploadthing";
 import { dataUrlToFile } from "@/lib/uploadthing";
@@ -25,17 +25,20 @@ import {
 import debounce from "lodash/debounce";
 import { db } from "@/db/drizzle";
 import { videoGenerations } from "@/db/schema";
+import { defaultVideoModelId, videoModels } from "../utils/videoModels";
 
 interface WorkbenchProps {
   projectId: string;
   defaultState?: string;
   defaultWidth?: number;
   defaultHeight?: number;
+  defaultPromptData?: string;
   clearSelectionCallback?: () => void;
-  debouncedSave?: (values: {
+  debouncedSave?: (values: { 
     json: string;
     height: number;
     width: number;
+    promptData: string;
   }) => void;
   isActive: boolean;
   index: number;
@@ -61,6 +64,7 @@ export const Workbench = ({
   defaultState,
   defaultWidth,
   defaultHeight,
+  defaultPromptData,
   clearSelectionCallback,
   debouncedSave,
   isActive,
@@ -87,17 +91,76 @@ export const Workbench = ({
   const isActiveNotifiedRef = useRef(false);
   const [activeWorkbenchTool, setActiveWorkbenchTool] = useState<ActiveWorkbenchTool>("select");
   const [isGenerating, setIsGenerating] = useState(false);
-  const [selectedModel, setSelectedModel] = useState<BaseVideoModel>({ id: "cogvideox" as SupportedVideoModelId, name: "CogVideoX", icon: Film });
-  // const [videoGeneration, setVideoGeneration] = useState<VideoGeneration | null>(null);
   
-  // Initialize the editor with useEditor hook
+  // New state - promptData elements owned by workbench
+  const [generalTextPrompt, setGeneralTextPrompt] = useState<string>("");
+  const [segmentedMasks, setSegmentedMasks] = useState<SegmentedMask[]>([]);
+  const [selectedModel, setSelectedModel] = useState<BaseVideoModel>(videoModels[defaultVideoModelId]);
+  const [cameraControl, setCameraControl] = useState<Record<string, any>>({});
+
+  // Initialize from defaultPromptData if available
+  useEffect(() => {
+    if (typeof defaultPromptData === 'string') {
+      try {
+        const parsed = JSON.parse(defaultPromptData);
+        if (parsed) {
+          console.log("parsed", parsed);
+          // Look for either textPrompt or generalTextPrompt in the parsed data
+          setGeneralTextPrompt(parsed.generalTextPrompt || "");
+
+          if (parsed.segmentedMasks && parsed.segmentedMasks.length > 0) {
+            setSegmentedMasks(parsed.segmentedMasks || []);
+          }
+          
+          // For model, find the correct object based on ID
+          if (parsed.selectedModelId) {
+            const foundModel = Object.values(videoModels).find(
+              model => model.id === parsed.selectedModelId
+            );
+            if (foundModel) setSelectedModel(foundModel);
+          }
+          
+          setCameraControl(parsed.cameraControl || {});
+        }
+      } catch (e) {
+        console.error("Failed to parse promptData:", e);
+      }
+    }
+  }, [defaultPromptData]);
+
+  // Initialize the editor with useEditor hook (without promptData)
   const { init, editor } = useEditor({
     defaultState,
     defaultWidth,
     defaultHeight,
+    // defaultPromptData: parsedPromptData,
     clearSelectionCallback,
     saveCallback: debouncedSave,
   });
+
+  // Save promptData whenever it changes
+  useEffect(() => {
+    if (debouncedSave && editor?.canvas) {
+      const workspace = editor.canvas.getObjects().find(obj => obj.name === "clip");
+      const height = workspace?.height || defaultHeight || 0;
+      const width = workspace?.width || defaultWidth || 0;
+      
+      // Get JSON from canvas
+      const json = JSON.stringify(editor.canvas.toJSON(JSON_KEYS));
+      
+
+      // Create promptData JSON with consistently named keys
+      const promptData = JSON.stringify({
+        segmentedMasks,
+        cameraControl,
+        generalTextPrompt,  // Save as textPrompt in JSON
+        selectedModelId: selectedModel.id
+      });
+      
+      // Save everything
+      debouncedSave({ json, height, width, promptData });
+    }
+  }, [segmentedMasks, generalTextPrompt, selectedModel, cameraControl, editor?.canvas]);
 
   // Initialize canvas when component mounts
   useEffect(() => {
@@ -157,54 +220,14 @@ export const Workbench = ({
     }
   };
 
-  // // Check the status of the video generations
-  // useEffect(() => {
-  //   console.log("setting up video status check intervals");
-
-  //   // Only create intervals for pending generations
-  //   if (videoGeneration?.status === 'pending') {
-  //     console.log(`Setting up interval for video generation ${videoGeneration.runId}`);
-      
-  //     // Status check interval
-  //     const intervalId = setInterval(async () => {
-  //       console.log(`Checking status for video generation ${videoGeneration.runId}`);
-  //       try {
-  //         const response = await fetch(`/api/comfydeploy/webhook-video?runId=${videoGeneration.runId}`);
-  //         const data = await response.json();
-          
-  //         if (data.status === "success") {
-  //           console.log(`Video generation ${videoGeneration.runId} completed successfully`);
-  //           setVideoGeneration(prev => prev ? {
-  //             ...prev,
-  //             status: 'success',
-  //             videoUrl: data.videoUrl,
-  //             progress: 100
-  //           } : null);
-            
-  //           // Clean up all timers and listeners for this generation
-  //           clearInterval(intervalId);
-  //         }
-  //       } catch (error) {
-  //         console.error(`Error checking status for video ${videoGeneration?.runId}:`, error);
-  //       }
-  //     }, 5000);
-      
-  //     // Return cleanup function
-  //     return () => {
-  //       clearInterval(intervalId);
-  //     };
-  //   }
-  // }, [videoGeneration]);
-
   const handleGenerateVideo = async (modelId?: SupportedVideoModelId) => {
     if (!editor) return;
 
-    console.log("handleGenerateVideo, modelId", modelId);
     if (modelId === "cogvideox") {
       try {
         setIsGenerating(true);
         
-        const validMasks = editor.segmentedMasks.filter(mask => mask.id && mask.id.trim() !== '');
+        const validMasks = segmentedMasks.filter(mask => mask.id && mask.id.trim() !== '');
           
         const trajectories = validMasks.map(mask => mask.trajectory?.points || []);
         const rotations = validMasks.map(mask => mask.rotation || 0);
@@ -214,7 +237,6 @@ export const Workbench = ({
         if (editor.workspaceURL) {
           const workbenchFile = await dataUrlToFile(editor.workspaceURL, "workspace.png");
           workbenchImageUrl = await uploadToUploadThingResidual(workbenchFile);
-          console.log("Workbench image uploaded:", workbenchImageUrl);
         } else {
           throw new Error("No workbench image available");
         }
@@ -228,13 +250,12 @@ export const Workbench = ({
         });
         
         const uploadedMaskUrls = await Promise.all(maskUploadPromises);
-        console.log("Masks uploaded:", uploadedMaskUrls);
         
         // Now construct the videoGenData with the uploaded URLs
         const videoGenData = {
           "input_image": JSON.stringify([workbenchImageUrl]),
           "input_masks": JSON.stringify(uploadedMaskUrls),
-          "input_prompt": editor.prompt,
+          "input_prompt": generalTextPrompt,
           "input_trajectories": JSON.stringify(trajectories),
           "input_rotations": JSON.stringify(rotations)
         };
@@ -251,7 +272,6 @@ export const Workbench = ({
         });
         
         const data = await response.json();
-        console.log("ComfyDeploy response:", data);
         
         if (data.runId) {
           // STEP 2: Store the generation information in our database
@@ -270,7 +290,6 @@ export const Workbench = ({
           });
           
           const dbData = await dbResponse.json();
-          console.log("Database storage response:", dbData);
           
           console.log("Video generation started. Please wait...");
         } else {
@@ -293,7 +312,6 @@ export const Workbench = ({
     masks: { dims: number[]; }; 
     iou_predictions: { cpuData: number[]; }; 
   }) {
-    console.log("inside workbench handleDecodingResults", decodingResults);
     
     // SAM2 returns 3 mask along with scores -> select best one
     const maskTensors = decodingResults.masks;
@@ -311,12 +329,10 @@ export const Workbench = ({
     setPrevMaskArray(bestMaskArray);
 
     // We have direct access to activeWorkbenchTool and editor within the workbench component
-    console.log("activeWorkbenchTool", activeWorkbenchTool);
-    console.log("editor?.canvas", editor?.canvas);
+
     
     // Add mask to canvas if in animate mode
     if (activeWorkbenchTool === "animate" && editor?.canvas) {
-      console.log("inside handleDecodingResults, activeWorkbenchTool === 'animate' && editor?.canvas");
       const workspace = editor.getWorkspace();
       if (!workspace) return;
 
@@ -396,8 +412,6 @@ export const Workbench = ({
     const workspace = editor?.getWorkspace();
     if (!workspace) return;
 
-    console.log("calling encodeWorkbenchImage inside workbench");
-
     // Get the workspace dimensions and position
     const workspaceWidth = workspace.width || 720;
     const workspaceHeight = workspace.height || 480;
@@ -465,7 +479,6 @@ export const Workbench = ({
         // Encode the current workbench image when it becomes active
         // This ensures the SAM worker has the correct image for the currently visible workbench
         if (samWorker.current && editor.canvas) {
-          console.log("Workbench became active, encoding current workbench image");
           encodeWorkbenchImage();
         }
       }
@@ -480,7 +493,6 @@ export const Workbench = ({
     if (editor?.canvas && activeTool !== "segment" && isActive) {
       // Create a debounced version of the canvas change handler
       const debouncedHandleCanvasChange = debounce(() => {
-        console.log("Canvas object changed in workbench, re-encoding workbench image");
         encodeWorkbenchImage();
       }, 500);
       
@@ -498,6 +510,15 @@ export const Workbench = ({
       };
     }
   }, [editor?.canvas, activeTool, isActive, encodeWorkbenchImage]);
+
+  // When models or other sidebar data changes, sync with the editor state
+
+  // TODO: This is not working, need to fix it
+  // useEffect(() => {
+  //   if (editor && selectedModel) {
+  //     editor.setSelectedModelId(selectedModel.id);
+  //   }
+  // }, [editor, selectedModel]);
 
   return (
     <div className="flex flex-row w-full h-full">
@@ -561,6 +582,8 @@ export const Workbench = ({
           editor={editor}
           activeWorkbenchTool={activeWorkbenchTool}
           onChangeActiveWorkbenchTool={setActiveWorkbenchTool}
+          segmentedMasks={segmentedMasks}
+          setSegmentedMasks={setSegmentedMasks}
           samWorker={samWorker}
           samWorkerLoading={samWorkerLoading}
           prevMaskArray={prevMaskArray}
@@ -574,11 +597,14 @@ export const Workbench = ({
           editor={editor}
           activeWorkbenchTool={activeWorkbenchTool}
           onChangeActiveWorkbenchTool={setActiveWorkbenchTool}
+          cameraControl={cameraControl}
+          setCameraControl={setCameraControl}
         />
-        <PromptRightSidebar
-          editor={editor}
+        <TextPromptRightSidebar
           activeWorkbenchTool={activeWorkbenchTool}
           onChangeActiveWorkbenchTool={setActiveWorkbenchTool}
+          generalTextPrompt={generalTextPrompt}
+          onGeneralTextPromptChange={setGeneralTextPrompt}
         />
         <ModelRightSidebar
           editor={editor}

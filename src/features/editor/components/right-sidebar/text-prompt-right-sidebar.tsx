@@ -9,24 +9,22 @@ import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Textarea } from "@/components/ui/textarea";
 
-interface PromptRightSidebarProps {
-  editor: Editor | undefined;
+interface TextPromptRightSidebarProps {
   activeWorkbenchTool: ActiveWorkbenchTool;
   onChangeActiveWorkbenchTool: (tool: ActiveWorkbenchTool) => void;
+  generalTextPrompt: string;
+  onGeneralTextPromptChange: (prompt: string) => void;
 }
 
-export const PromptRightSidebar = ({
-  editor,
+export const TextPromptRightSidebar = ({
   activeWorkbenchTool,
   onChangeActiveWorkbenchTool,
-}: PromptRightSidebarProps) => {
+  generalTextPrompt,
+  onGeneralTextPromptChange,
+}: TextPromptRightSidebarProps) => {
+  
   const onClose = () => {
     onChangeActiveWorkbenchTool("select");
-  };
-
-  const handleSavePrompt = () => {
-    // TODO: Implement save prompt functionality
-    console.log("Save prompt clicked");
   };
 
   return (
@@ -58,12 +56,12 @@ export const PromptRightSidebar = ({
           <Textarea
             placeholder="Enter your prompt here..."
             className="min-h-[400px] resize-none"
-            value={editor?.prompt}
-            onChange={(e) => editor?.setPrompt(e.target.value)}
+            value={generalTextPrompt}
+            onChange={(e) => onGeneralTextPromptChange(e.target.value)}
           />
           <div className="flex w-full">
             <Button 
-              onClick={handleSavePrompt}
+              onClick={() => void 0}
               className="w-full"
             >
               Save Prompt

@@ -4,6 +4,7 @@ import { fabric } from "fabric";
 import { 
   ActiveWorkbenchTool, 
   Editor,
+  SegmentedMask,
 } from "@/features/editor/types";
 import { ToolSidebarHeader } from "@/features/editor/components/tool-sidebar-header";
 
@@ -27,6 +28,8 @@ interface AnimateRightSidebarProps {
   setMask: (mask: HTMLCanvasElement | null) => void;
   maskBinary: HTMLCanvasElement | null;
   setMaskBinary: (maskBinary: HTMLCanvasElement | null) => void;
+  segmentedMasks: SegmentedMask[];
+  setSegmentedMasks: (masks: SegmentedMask[]) => void;
 };
 
 export const AnimateRightSidebar = ({
@@ -41,6 +44,8 @@ export const AnimateRightSidebar = ({
   setMask,
   maskBinary,
   setMaskBinary,
+  segmentedMasks,
+  setSegmentedMasks,
 }: AnimateRightSidebarProps) => {
 
   const [imageSize, setImageSize] = useState({ w: 1024, h: 1024 });
@@ -113,16 +118,12 @@ export const AnimateRightSidebar = ({
       // Create a completely new array with a unique ID for the in-progress mask
       const updatedMasks = [
         { id: crypto.randomUUID(), url: '', binaryUrl: '', name: 'New Object', inProgress: true },
-        ...editor.segmentedMasks.map(mask => ({ ...mask, isApplied: false }))
+        ...segmentedMasks.map(mask => ({ ...mask, isApplied: false }))
       ];
 
       // Force update by creating a new array
-      editor.setSegmentedMasks([...updatedMasks]);
+      setSegmentedMasks([...updatedMasks]);
       
-      // Add a setTimeout to check if state updated
-      setTimeout(() => {
-        console.log("segmentedMasks after update:", editor.segmentedMasks);
-      }, 0);
       
       // Reset any current mask
       setMask(null);
@@ -131,25 +132,19 @@ export const AnimateRightSidebar = ({
   };
 
   const handleSaveInProgressMask = () => {
-    console.log("handleSaveInProgressMask");
-    console.log("mask", mask);
-    console.log("maskBinary", maskBinary);
-    console.log("editor", editor);
-    console.log("editor.segmentedMasks", editor?.segmentedMasks);
     if (mask && maskBinary && editor) {
       const maskDataUrl = mask.toDataURL('image/png');
       const maskBinaryDataUrl = maskBinary.toDataURL('image/png');
       const newMaskId = crypto.randomUUID();
       
       // Get count of actual saved masks (excluding the stub)
-      const savedMasksCount = editor.segmentedMasks.filter(mask => mask.url).length;
+      const savedMasksCount = segmentedMasks.filter(mask => mask.url).length;
 
-      console.log("segmentedMasks before setup", editor.segmentedMasks);
 
       // First update the state with a new array
       const updatedMasks = [
         { id: "", url: '', binaryUrl: '', name: 'New Object', inProgress: false }, // New stub at top
-        ...editor.segmentedMasks.map((mask, index) => 
+        ...segmentedMasks.map((mask, index) => 
           index === 0 ? 
           { 
             ...mask, 
@@ -165,9 +160,8 @@ export const AnimateRightSidebar = ({
           }
         ).filter(mask => !mask.inProgress)
       ];
-      editor.setSegmentedMasks([...updatedMasks]);
-
-      console.log("segmentedMasks after setup", editor.segmentedMasks);
+      setSegmentedMasks(updatedMasks);
+      
       // Then set up the mask in Fabric.js
       if (editor.canvas) {
         // Remove any existing masks
@@ -201,7 +195,6 @@ export const AnimateRightSidebar = ({
           
           // Double check the data is set
           const addedObject = editor.canvas.getObjects().find(obj => obj.data?.isMask);
-          console.log('New mask saved with data:', addedObject?.data);
           setIsSegmentationActive(false);
           editor.canvas.renderAll();
         });
@@ -233,9 +226,9 @@ export const AnimateRightSidebar = ({
     if (editor) {
       const updatedMasks = [
         { id: "", url: '', binaryUrl: '', name: 'New Object', inProgress: false },
-        ...editor.segmentedMasks.filter(mask => !mask.inProgress)
+        ...segmentedMasks.filter(mask => !mask.inProgress)
       ];
-      editor.setSegmentedMasks(updatedMasks);
+      setSegmentedMasks(updatedMasks);
     }
   };
 
@@ -243,19 +236,19 @@ export const AnimateRightSidebar = ({
     if (!editor?.canvas) return;
 
     // Get the actual index in the full segmentedMasks array
-    const actualIndex = editor.segmentedMasks.findIndex(mask => mask.url === maskUrl);
+    const actualIndex = segmentedMasks.findIndex(mask => mask.url === maskUrl);
     
     // If the mask is already applied, just remove it and update state
-    if (editor.segmentedMasks[actualIndex].isApplied) {
+    if (segmentedMasks[actualIndex].isApplied) {
       const existingMasks = editor.canvas.getObjects().filter(obj => obj.data?.isMask);
       existingMasks.forEach(mask => editor.canvas.remove(mask));
       editor.canvas.renderAll();
       
-      const updatedMasks = editor.segmentedMasks.map(mask => ({
+      const updatedMasks = segmentedMasks.map(mask => ({
         ...mask,
         isApplied: false
       }));
-      editor.setSegmentedMasks(updatedMasks);
+      setSegmentedMasks(updatedMasks);
       return;
     }
 
@@ -294,36 +287,29 @@ export const AnimateRightSidebar = ({
       
       // Double check the data is set
       const addedObject = editor.canvas.getObjects().find(obj => obj.data?.isMask);
-      console.log('Mask applied with data:', addedObject?.data);
       
       editor.canvas.renderAll();
 
       // Update state to reflect which mask is applied
-      const updatedMasks = editor.segmentedMasks.map((mask, i) => ({
+      const updatedMasks = segmentedMasks.map((mask, i) => ({
         ...mask,
         isApplied: i === actualIndex,
         inProgress: false
       }));
-      editor.setSegmentedMasks(updatedMasks);
+      setSegmentedMasks(updatedMasks);
     });
   };
 
   // Update click handling to only work when segmentation is active
   useEffect(() => {
-    console.log("isSegmentationActive", isSegmentationActive);
-    console.log("activeTool", activeWorkbenchTool);
+
     // Add this isSegmentationActive check
     if (!editor?.canvas || activeWorkbenchTool !== "animate") return;
 
     const imageClick = (e: fabric.IEvent) => {
-      console.log("imageClick", isSegmentationActive);
-      console.log("samWorkerLoading", samWorkerLoading);
-      console.log("editor?.canvas", editor?.canvas);
-      console.log("isSegmentationActive", isSegmentationActive);
 
       if (samWorkerLoading || !editor?.canvas ||  !isSegmentationActive) return;
 
-      console.log("click detected, inside imageClick");
       const pointer = editor.canvas.getPointer(e.e);
       const workspace = editor.getWorkspace();
       if (!workspace) return;
@@ -356,7 +342,6 @@ export const AnimateRightSidebar = ({
         };
 
         pointsRef.current.push(point);
-        console.log("click detected, inside imageClick");
         // do we have a mask already? ie. a refinement click?
         if (prevMaskArray) {
           const maskShape = [1, 1, maskSize.w, maskSize.h];
@@ -401,10 +386,10 @@ export const AnimateRightSidebar = ({
 
   const handleRenameMask = (index: number, newName: string) => {
     if (editor) {
-      const updatedMasks = editor.segmentedMasks.map((mask, i) => 
+      const updatedMasks = segmentedMasks.map((mask, i) => 
         i === index ? { ...mask, name: newName } : mask
       );
-      editor.setSegmentedMasks(updatedMasks);
+      setSegmentedMasks(updatedMasks);
     }
   };
 
@@ -412,7 +397,7 @@ export const AnimateRightSidebar = ({
     if (!editor) return;
     
     // Get the mask URL before removing it from state
-    const maskToDelete = editor.segmentedMasks[index];
+    const maskToDelete = segmentedMasks[index];
     if (maskToDelete?.url && activeAnimations[maskToDelete.url]) {
       // Stop the animation for this specific mask
       activeAnimations[maskToDelete.url].stop();
@@ -425,8 +410,8 @@ export const AnimateRightSidebar = ({
     }
     
     // Continue with deletion
-    const updatedMasks = editor.segmentedMasks.filter((_, i) => i !== index);
-    editor.setSegmentedMasks(updatedMasks);
+    const updatedMasks = segmentedMasks.filter((_, i) => i !== index);
+    setSegmentedMasks(updatedMasks);
     
     if (editor.canvas) {
       const existingMasks = editor.canvas.getObjects().filter(obj => obj.data?.isMask);
@@ -437,19 +422,19 @@ export const AnimateRightSidebar = ({
 
   const handleStartRename = (index: number) => {
     if (editor) {
-      const updatedMasks = editor.segmentedMasks.map((mask, i) => 
+      const updatedMasks = segmentedMasks.map((mask, i) => 
         i === index ? { ...mask, isEditing: true } : mask
       );
-      editor.setSegmentedMasks(updatedMasks);
+      setSegmentedMasks(updatedMasks);
     }
   };
 
   const handleFinishRename = (index: number, newName: string) => {
     if (editor) {
-      const updatedMasks = editor.segmentedMasks.map((mask, i) => 
+      const updatedMasks = segmentedMasks.map((mask, i) => 
         i === index ? { ...mask, name: newName, isEditing: false } : mask
       );
-      editor.setSegmentedMasks(updatedMasks);
+      setSegmentedMasks(updatedMasks);
     }
   };
 
@@ -469,20 +454,18 @@ export const AnimateRightSidebar = ({
       
       // Reset all masks' applied status
       if (editor) {
-        const updatedMasks = editor.segmentedMasks.map(mask => ({
+        const updatedMasks = segmentedMasks.map(mask => ({
           ...mask,
           isApplied: false
         }));
-        editor.setSegmentedMasks(updatedMasks);
+        setSegmentedMasks(updatedMasks);
       }
     }
   }, [activeWorkbenchTool, editor?.canvas]);
 
   const handleControlMotion = (maskId: string, maskUrl: string) => {
-    console.log('🎮 Starting Control Motion:', { maskId, maskUrl });
 
     if (!editor?.canvas) {
-      console.warn('❌ No canvas available');
       return;
     }
 
@@ -495,14 +478,8 @@ export const AnimateRightSidebar = ({
     
     // Find the mask object
     const maskObject = editor.canvas.getObjects().find(obj => obj.data?.isMask && obj.data.url === maskUrl);
-    console.log('🎭 Found mask object:', { 
-      found: !!maskObject,
-      maskData: maskObject?.data,
-      totalObjects: editor.canvas.getObjects().length
-    });
     
     if (!maskObject) {
-      console.warn('❌ Mask object not found in canvas');
       setRecordingMotion(null);
       return;
     }
@@ -540,7 +517,6 @@ export const AnimateRightSidebar = ({
         x: maskObject.left! + (maskObject.width! * (maskObject.scaleX || 1)) / 2,
         y: maskObject.top! + (maskObject.height! * (maskObject.scaleY || 1)) / 2
       });
-      console.log('👆 Started recording trajectory');
     };
 
     // Add mouse move handler
@@ -563,7 +539,6 @@ export const AnimateRightSidebar = ({
         x: maskObject.left! + (maskObject.width! * (maskObject.scaleX || 1)) / 2,
         y: maskObject.top! + (maskObject.height! * (maskObject.scaleY || 1)) / 2
       });
-      console.log('👆 Finished recording trajectory:', trajectoryPoints.length, 'points');
       
       // Store the trajectory points in the mask's data
       maskObject.data = {
@@ -588,7 +563,6 @@ export const AnimateRightSidebar = ({
     };
     
     editor.canvas.renderAll();
-    console.log('🎯 Control motion setup complete');
   };
 
   const handleSaveMotion = () => {
@@ -614,16 +588,8 @@ export const AnimateRightSidebar = ({
       points = interpolatePoints(points, 49); // Then interpolate to exactly 49 points
     }
 
-    console.log('🛣️ Trajectory saved:', {
-      maskUrl: recordingMotion,
-      startPoint: points[0],
-      endPoint: points[points.length - 1],
-      totalPoints: points.length,
-      isInterpolated: points.length === 49
-    });
-
     // Update mask state with trajectory (visible by default when saving)
-    const updatedMasks = editor.segmentedMasks.map(mask => 
+    const updatedMasks = segmentedMasks.map(mask => 
       mask.url === recordingMotion ? {
         ...mask,
         trajectory: {
@@ -632,10 +598,9 @@ export const AnimateRightSidebar = ({
         }
       } : mask
     );
-    editor.setSegmentedMasks(updatedMasks);
+    setSegmentedMasks(updatedMasks);
 
     // Create and start the animation with the current points
-    console.log('▶️ Creating new animation');
     const animation = createTrajectoryAnimation(editor, recordingMotion, points);
     if (animation) {
       animation.start();
@@ -661,7 +626,6 @@ export const AnimateRightSidebar = ({
     editor.canvas.renderAll();
 
     setRecordingMotion(null);
-    console.log('💾 Saved motion trajectory');
   };
 
   const handleCancelMotion = () => {
@@ -688,7 +652,6 @@ export const AnimateRightSidebar = ({
     editor.canvas.renderAll();
 
     setRecordingMotion(null);
-    console.log('🚫 Cancelled motion recording');
   };
 
   const createTrajectoryAnimation = (
@@ -734,7 +697,6 @@ export const AnimateRightSidebar = ({
     // Load mask image
     const maskImage = new Image();
     maskImage.src = maskUrl;
-    console.log('🖼️ Loading mask image:', maskUrl);
 
     maskImage.onload = () => {
       // console.log('✅ Mask image loaded:', {
@@ -751,7 +713,6 @@ export const AnimateRightSidebar = ({
     const animate = (timestamp: number) => {
       if (!startTime) {
         startTime = timestamp;
-        // console.log('⏱️ Animation started at:', timestamp);
       }
       
       const elapsed = timestamp - startTime;
@@ -779,15 +740,6 @@ export const AnimateRightSidebar = ({
       const screenX = currentPos.x * vpt[0] + vpt[4];
       const screenY = currentPos.y * vpt[3] + vpt[5];
 
-      // if (elapsed % 500 < 16) {
-      //   console.log('📍 Current position:', {
-      //     original: currentPos,
-      //     transformed: { x: screenX, y: screenY },
-      //     zoom,
-      //     vpt
-      //   });
-      // }
-
       // Draw mask centered at the transformed position
       ctx.globalAlpha = 0.8;
       ctx.drawImage(
@@ -802,14 +754,12 @@ export const AnimateRightSidebar = ({
     };
 
     const start = () => {
-      console.log('▶️ Starting animation');
       parentElement?.appendChild(animationCanvas);
       startTime = 0;
       animate(0);
     };
 
     const stop = () => {
-      console.log('⏹️ Stopping animation');
       cancelAnimationFrame(animationFrame);
       if (animationCanvas && animationCanvas.parentElement) {
         animationCanvas.parentElement.removeChild(animationCanvas);
@@ -820,11 +770,10 @@ export const AnimateRightSidebar = ({
   };
 
   const handleToggleTrajectory = (maskUrl: string) => {
-    console.log('🔄 Toggling trajectory for mask:', maskUrl);
     
     if (editor) {
       // Create a new array by mapping the existing masks
-      const updatedMasks = editor.segmentedMasks.map(mask => 
+      const updatedMasks = segmentedMasks.map(mask => 
         mask.url === maskUrl && mask.trajectory ? {
           ...mask,
           trajectory: {
@@ -835,17 +784,14 @@ export const AnimateRightSidebar = ({
       );
       
       // Set the new array directly
-      editor.setSegmentedMasks(updatedMasks);
-      console.log('📝 Updated masks:', updatedMasks);
+      setSegmentedMasks(updatedMasks);
     }
 
     if (editor?.canvas) {
-      const mask = editor.segmentedMasks.find(m => m.url === maskUrl);
-      console.log('🎭 Found mask:', mask);
+      const mask = segmentedMasks.find(m => m.url === maskUrl);
       
       if (mask?.trajectory?.points) {
         if (activeAnimations[maskUrl]) {
-          console.log('⏹️ Stopping existing animation');
           activeAnimations[maskUrl].stop();
           setActiveAnimations(prev => {
             const newAnimations = { ...prev };
@@ -853,7 +799,6 @@ export const AnimateRightSidebar = ({
             return newAnimations;
           });
         } else {
-          console.log('▶️ Creating new animation');
           const animation = createTrajectoryAnimation(editor, maskUrl, mask.trajectory.points);
           if (animation) {
             animation.start();
@@ -872,13 +817,13 @@ export const AnimateRightSidebar = ({
 
   const handleRedoTrajectory = (maskUrl: string) => {
     if (editor) {
-      const updatedMasks = editor.segmentedMasks.map(mask => 
+      const updatedMasks = segmentedMasks.map(mask => 
         mask.url === maskUrl ? {
           ...mask,
           trajectory: undefined
         } : mask
       );
-      editor.setSegmentedMasks(updatedMasks);
+      setSegmentedMasks(updatedMasks);
     }
 
     // Remove trajectory from canvas
@@ -904,7 +849,7 @@ export const AnimateRightSidebar = ({
 
       // Update state to reflect hidden trajectories
       if (editor) {
-        const updatedMasks = editor.segmentedMasks.map(mask => 
+        const updatedMasks = segmentedMasks.map(mask => 
           mask.trajectory ? {
             ...mask,
             trajectory: {
@@ -913,7 +858,7 @@ export const AnimateRightSidebar = ({
             }
           } : mask
         );
-        editor.setSegmentedMasks(updatedMasks);
+        setSegmentedMasks(updatedMasks);
       }
     }
   }, [activeWorkbenchTool, editor?.canvas]);
@@ -1019,7 +964,7 @@ export const AnimateRightSidebar = ({
             </div>
 
             {/* Empty state message */}
-            {editor?.segmentedMasks.length === 0 && (
+            {segmentedMasks.length === 0 && (
               <div className="p-6 text-center border border-dashed border-gray-300 dark:border-gray-700 rounded-md mt-3 bg-gradient-to-b from-background to-muted/30 flex flex-col items-center justify-center space-y-3">
                 <div className="w-16 h-16 rounded-full bg-muted/40 flex items-center justify-center">
                   <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 text-muted-foreground" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
@@ -1041,11 +986,11 @@ export const AnimateRightSidebar = ({
             )}
 
             {/* Show saved masks */}
-            {editor?.segmentedMasks
+            {segmentedMasks
               .filter(mask => !mask.inProgress && mask.url)
               .map((mask, index) => {
                 // Get the actual index in the full array
-                const actualIndex = editor?.segmentedMasks.findIndex(m => m.url === mask.url);
+                const actualIndex = segmentedMasks.findIndex(m => m.url === mask.url);
                 
                 return (
                   <div key={mask.url} className="flex flex-col p-2 border rounded-md space-y-2">
@@ -1110,10 +1055,10 @@ export const AnimateRightSidebar = ({
                       <div className="flex items-center space-x-2 cursor-pointer select-none" 
                           onClick={() => {
                             if (editor) {
-                              const updatedMasks = editor.segmentedMasks.map((m, i) => 
+                              const updatedMasks = segmentedMasks.map((m, i) => 
                                 m.url === mask.url ? { ...m, isTextDetailsOpen: !m.isTextDetailsOpen } : m
                               );
-                              editor.setSegmentedMasks(updatedMasks);
+                              setSegmentedMasks(updatedMasks);
                             }
                           }}>
                         <ChevronRight
@@ -1130,10 +1075,10 @@ export const AnimateRightSidebar = ({
                             value={mask.textDetails || ""}
                             onChange={(e) => {
                               if (editor) {
-                                const updatedMasks = editor.segmentedMasks.map((m, i) => 
+                                const updatedMasks = segmentedMasks.map((m, i) => 
                                   m.url === mask.url ? { ...m, textDetails: e.target.value } : m
                                 );
-                                editor.setSegmentedMasks(updatedMasks);
+                                setSegmentedMasks(updatedMasks);
                               }
                             }}
                             rows={2}

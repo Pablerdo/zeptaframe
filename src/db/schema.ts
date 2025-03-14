@@ -94,15 +94,6 @@ export const authenticators = pgTable(
   })
 )
 
-export const segmentedObjects = pgTable("segmented_object", {
-  id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
-  projectId: text("project_id").notNull().references(() => projects.id, { onDelete: "cascade" }),
-  url: text("url").notNull(),
-  coordinatePath: jsonb("coordinate_path").notNull(),
-  createdAt: timestamp("created_at").notNull().defaultNow(),
-  updatedAt: timestamp("updated_at").notNull().defaultNow(),
-});
-
 export const projects = pgTable("project", {
   id: text("id")
     .primaryKey()
@@ -128,7 +119,6 @@ export const projectsRelations = relations(projects, ({ one, many }) => ({
     fields: [projects.userId],
     references: [users.id],
   }),
-  segmentedObjects: many(segmentedObjects),
 }));
 
 export const projectsInsertSchema = createInsertSchema(projects);

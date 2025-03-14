@@ -19,6 +19,8 @@ import {
   FONT_SIZE,
   JSON_KEYS,
   SegmentedMask,
+  SupportedVideoModelId,
+  PromptData,
 } from "@/features/editor/types";
 import { useHistory } from "@/features/editor/hooks/use-history";
 import { 
@@ -33,6 +35,7 @@ import { useAutoResize } from "@/features/editor/hooks/use-auto-resize";
 import { useCanvasEvents } from "@/features/editor/hooks/use-canvas-events";
 import { useWindowEvents } from "@/features/editor/hooks/use-window-events";
 import { useLoadState } from "@/features/editor/hooks/use-load-state";
+import { defaultVideoModelId } from "../utils/videoModels";
 
 const buildEditor = ({
   save,
@@ -55,12 +58,8 @@ const buildEditor = ({
   selectedObjects,
   strokeDashArray,
   setStrokeDashArray,
-  prompt,
-  setPrompt,
   workspaceURL,
   setWorkspaceURL,
-  segmentedMasks,
-  setSegmentedMasks,
 }: BuildEditorProps): Editor => {
   const generateSaveOptions = () => {
     const { width, height, left, top } = getWorkspace() as fabric.Rect;
@@ -634,12 +633,8 @@ const buildEditor = ({
         obj.evented = true;
       });
     },
-    prompt,
-    setPrompt,
     workspaceURL,
     setWorkspaceURL,
-    segmentedMasks,
-    setSegmentedMasks,
   };
 };
 
@@ -658,9 +653,7 @@ export const useEditor = ({
   const [container, setContainer] = useState<HTMLDivElement | null>(null);
   const [selectedObjects, setSelectedObjects] = useState<fabric.Object[]>([]);
 
-  const [prompt, setPrompt] = useState("");
   const [workspaceURL, setWorkspaceURL] = useState<string | null>(null);
-  const [segmentedMasks, setSegmentedMasks] = useState<SegmentedMask[]>([]);
 
   const [fontFamily, setFontFamily] = useState(FONT_FAMILY);
   const [fillColor, setFillColor] = useState(FILL_COLOR);
@@ -737,12 +730,8 @@ export const useEditor = ({
         setStrokeDashArray,
         fontFamily,
         setFontFamily,
-        prompt,
-        setPrompt,
         workspaceURL,
         setWorkspaceURL,
-        segmentedMasks,
-        setSegmentedMasks,
       });
     }
 
@@ -764,9 +753,7 @@ export const useEditor = ({
     selectedObjects,
     strokeDashArray,
     fontFamily,
-    prompt,
     workspaceURL,
-    segmentedMasks,
   ]);
 
   const init = useCallback(

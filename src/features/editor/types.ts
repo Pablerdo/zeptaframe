@@ -182,15 +182,18 @@ export const TEXT_OPTIONS = {
 
 export interface EditorHookProps {
   defaultState?: string;
-  defaultWidth?: number;
   defaultHeight?: number;
+  defaultWidth?: number;
+  defaultPromptData?: PromptData;
   clearSelectionCallback?: () => void;
   saveCallback?: (values: {
     json: string;
     height: number;
     width: number;
+    promptData: string;
   }) => void;
-};
+}
+
 
 export interface Workbench {
   id: string;
@@ -220,12 +223,8 @@ export type BuildEditorProps = {
   setStrokeColor: (value: string) => void;
   setStrokeWidth: (value: number) => void;
   setFontFamily: (value: string) => void;
-  prompt: string;
-  setPrompt: (value: string) => void;
   workspaceURL: string | null;
   setWorkspaceURL: (value: string | null) => void;
-  segmentedMasks: SegmentedMask[];
-  setSegmentedMasks: (value: SegmentedMask[]) => void;
 };
 
 export interface VideoGeneration {
@@ -284,6 +283,17 @@ export interface SegmentedMask {
   textDetails?: string;
 }
 
+export interface PromptData {
+  segmentedMasks: SegmentedMask[];
+  cameraControl?: {
+    // Stub for future implementation
+    type?: string;
+    parameters?: Record<string, any>;
+  };
+  generalTextPrompt: string;
+  selectedModelId: SupportedVideoModelId;
+}
+
 export interface Editor {
   savePng: () => void;
   saveJpg: () => void;
@@ -304,8 +314,6 @@ export interface Editor {
   disableDrawingMode: () => void;
   enableSegmentationMode: () => void;
   disableSegmentationMode: () => void;
-  // addSegmentationPoint: (x: number, y: number) => void;
-  // clearSegmentationPoints: () => void;
   onCopy: () => void;
   onPaste: () => void;
   changeImageFilter: (value: string) => void;
@@ -346,10 +354,6 @@ export interface Editor {
   getActiveStrokeWidth: () => number;
   getActiveStrokeDashArray: () => number[];
   selectedObjects: fabric.Object[];
-  prompt: string;
-  setPrompt: (value: string) => void;
   workspaceURL: string | null;
   setWorkspaceURL: (value: string | null) => void;
-  segmentedMasks: SegmentedMask[];
-  setSegmentedMasks: (value: SegmentedMask[]) => void;
-};
+}
