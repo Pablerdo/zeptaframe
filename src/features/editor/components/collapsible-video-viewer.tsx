@@ -28,7 +28,7 @@ const CollapsibleVideoViewer = ({
       "mx-2 mb-2 flex-shrink-0 self-end w-[calc(100%-1rem)]"
     )}>
       <div 
-        className="flex items-center justify-between px-4 pb-1 border-gray-700 cursor-pointer hover:bg-zinc-750 transition-colors duration-200"
+        className="flex items-center justify-between px-4 pb-1 border-gray-700 cursor-pointer hover:bg-zinc-750 transition-colors duration-200 pt-1"
         onClick={(e) => {
           if (e.target === e.currentTarget) {
             setTimelineCollapsed(!timelineCollapsed);
