@@ -39,7 +39,7 @@ export const SegmentationSidebar = ({
         activeTool === "segment" ? "visible" : "hidden"
       )}
     >
-      <ToolSidebarHeader title="Segmented Objects" description="Add objects to your canvas" />
+      <ToolSidebarHeader title="Segmented Objects" description="Crop objects from your canvas and save them. Coming soon..." />
       <div className="p-4 border-b">
         <Button
           onClick={() => void 0}

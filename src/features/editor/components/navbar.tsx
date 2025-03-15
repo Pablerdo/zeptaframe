@@ -4,13 +4,16 @@ import { CiFileOn } from "react-icons/ci";
 import { BsCloudCheck, BsCloudSlash } from "react-icons/bs";
 import { useFilePicker } from "use-file-picker";
 import { useMutationState } from "@tanstack/react-query";
+import { useState, KeyboardEvent } from "react";
 import { 
   ChevronDown, 
   Download, 
   Loader, 
   MousePointerClick, 
   Redo2, 
-  Undo2
+  Undo2,
+  Pencil,
+  Check
 } from "lucide-react";
 
 import { UserButton } from "@/features/auth/components/user-button";
@@ -23,6 +26,7 @@ import { cn } from "@/lib/utils";
 import { Hint } from "@/components/hint";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
+import { Input } from "@/components/ui/input";
 import {
   DropdownMenu,
   DropdownMenuItem,
@@ -32,17 +36,44 @@ import {
 
 interface NavbarProps {
   id: string;
+  projectName: string;
+  setProjectName: (name: string) => void;
   editor: Editor | undefined;
   activeTool: ActiveTool;
   onChangeActiveTool: (tool: ActiveTool) => void;
 };
 
 export const Navbar = ({
+  projectName,
+  setProjectName,
   id,
   editor,
   activeTool,
   onChangeActiveTool,
 }: NavbarProps) => {
+  const [isEditingName, setIsEditingName] = useState(false);
+  const [editedName, setEditedName] = useState(projectName);
+
+  const handleStartRename = () => {
+    setEditedName(projectName);
+    setIsEditingName(true);
+  };
+
+  const handleFinishRename = () => {
+    if (editedName.trim() !== "") {
+      setProjectName(editedName.trim());
+    }
+    setIsEditingName(false);
+  };
+
+  const handleKeyPress = (e: KeyboardEvent) => {
+    if (e.key === "Enter") {
+      handleFinishRename();
+    } else if (e.key === "Escape") {
+      setIsEditingName(false);
+    }
+  };
+
   const data = useMutationState({
     filters: {
       mutationKey: ["project", { id }],
@@ -73,6 +104,41 @@ export const Navbar = ({
   return (
     <nav className="w-full flex items-center p-4 h-[68px] gap-x-8 border-b-2 border-gray-300 dark:border-gray-900 lg:pl-[34px] bg-background text-foreground dark:shadow-dark-raised">
       <Logo />
+      <div className="flex items-center gap-x-2">
+        {isEditingName ? (
+          <div className="flex items-center space-x-2">
+            <Input
+              value={editedName}
+              onChange={(e) => setEditedName(e.target.value)}
+              onKeyDown={handleKeyPress}
+              className="h-8 w-40 text-sm"
+              autoFocus
+            />
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={handleFinishRename}
+              className="h-8 w-8"
+            >
+              <Check className="w-4 h-4" />
+            </Button>
+          </div>
+        ) : (
+          <div className="flex items-center space-x-1">
+            <div className="flex">
+              <span className="text-sm whitespace-nowrap">{projectName}</span>
+            </div>
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              className="h-8 w-8" 
+              onClick={handleStartRename}
+            >
+              <Pencil className="h-4 w-4 text-muted-foreground" />
+            </Button>
+          </div>
+        )}
+      </div>
       <div className="w-full flex items-center gap-x-1 h-full">
         <DropdownMenu modal={false}>
           <DropdownMenuTrigger asChild>

@@ -50,6 +50,7 @@ export const CompositionStudio = ({ initialData }: CompositionStudioProps) => {
   const [isGenerating, setIsGenerating] = useState(false);
   const [activeTool, setActiveTool] = useState<ActiveTool>("select");
   const [allowEncodeWorkbenchImage, setAllowEncodeWorkbenchImage] = useState(true);
+  const [projectName, setProjectName] = useState(initialData.name);
 
   // Add a new function to parse the project JSON
   const parseProjectData = (jsonString: string): ProjectJSON => {
@@ -690,10 +691,37 @@ export const CompositionStudio = ({ initialData }: CompositionStudioProps) => {
     return () => clearInterval(intervalId);
   }, [initialData.id]);
 
+  // Function to update project name (locally and on server)
+  const updateProjectName = useCallback(async (name: string) => {
+    // Update local state
+    setProjectName(name);
+    
+    // Update on server
+    try {
+      await fetch(`/api/projects/${initialData.id}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ name }),
+      });
+      
+      // You could show a success toast here if you want
+    } catch (error) {
+      console.error('Failed to update project name:', error);
+      // Optionally, revert to the old name if the server update fails
+      // setProjectName(initialData.name);
+      
+      // You could show an error toast here
+    }
+  }, [initialData.id]);
+
   return (
     <ThemeProvider attribute="class" defaultTheme="light" enableSystem>
       <div className="w-full h-full flex flex-col overflow-hidden bg-editor-bg dark:bg-editor-bg-dark">
         <Navbar
+          projectName={projectName}
+          setProjectName={updateProjectName}
           id={initialData.id}
           editor={activeEditor}
           activeTool={activeTool}

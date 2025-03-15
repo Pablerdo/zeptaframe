@@ -59,7 +59,7 @@ export const GenerateSidebar = ({
     >
       <ToolSidebarHeader
         title="Generate Image"
-        description="Generate an image using AI"
+        description="Generate an image using AI. Coming soon..."
       />
       <ScrollArea>
         <form onSubmit={onSubmit} className="p-4 space-y-6">
@@ -74,9 +74,10 @@ export const GenerateSidebar = ({
             onChange={(e) => setValue(e.target.value)}
           />
           <Button
-            disabled={mutation.isPending}
+            disabled={true} //{mutation.isPending}
             type="submit"
             className="w-full"
+
           >
             Generate
           </Button>

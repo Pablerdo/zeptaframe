@@ -38,9 +38,9 @@ export const Banner = () => {
         </div>
       </div>
       <div className="flex flex-col gap-y-2">
-        <h1 className="text-xl md:text-3xl font-semibold">Create precise movies with Zeptaframe</h1>
+        <h1 className="text-xl md:text-3xl font-semibold">Create precise AI-generated movies with Zeptaframe</h1>
         <p className="text-xs md:text-sm mb-2">
-          Turn inspiration into design in no time. Simply upload an image and let AI do the rest.
+          Upload an image and drag your objects around.
         </p>
         <Button
           disabled={mutation.isPending}
