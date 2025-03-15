@@ -1,11 +1,10 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
-import { Button } from '@/components/ui/button';
-import { ChevronRight, Plus } from 'lucide-react';
-import { VideoBox } from './video-box';
+import { useEffect, useMemo } from 'react';
+import { ChevronRight } from 'lucide-react';
 import { VideoGeneration } from '@/features/editor/types';
 import { cn } from '@/lib/utils';
+import WorkbenchGenerations from './workbench-generations';
 
 interface VideoTimelineProps {
   videoGenerations: VideoGeneration[];
@@ -18,66 +17,54 @@ const VideoTimeline = ({
   workbenchIds,
   activeWorkbenchIndex 
 }: VideoTimelineProps) => {
-  // Use useMemo to create a map of the latest video generation for each workbenchId
-  const latestVideoGenerationsByWorkbench = useMemo(() => {
-    // Create a Map to hold the latest video generation for each workbenchId
-    const videoMap = new Map<string, VideoGeneration>();
-    
-    // Group video generations by workbenchId and keep only the most recent one
-    videoGenerations.forEach(videoGen => {
-      if (!videoGen.workbenchId) return;
-      
-      const existingGen = videoMap.get(videoGen.workbenchId);
-      
-      // If we don't have this workbenchId yet, or this generation is newer, update the map
-      if (!existingGen || new Date(videoGen.createdAt) > new Date(existingGen.createdAt)) {
-        videoMap.set(videoGen.workbenchId, videoGen);
+  // Add custom scrollbar style in useEffect
+  useEffect(() => {
+    const styleElement = document.createElement('style');
+    styleElement.textContent = `
+      .custom-scrollbar::-webkit-scrollbar {
+        width: 6px;
+        height: 6px;
       }
-    });
+      .custom-scrollbar::-webkit-scrollbar-track {
+        background: rgba(0, 0, 0, 0.1);
+        border-radius: 4px;
+      }
+      .custom-scrollbar::-webkit-scrollbar-thumb {
+        background: rgba(100, 100, 100, 0.5);
+        border-radius: 4px;
+      }
+      .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+        background: rgba(120, 120, 120, 0.8);
+      }
+    `;
+    document.head.appendChild(styleElement);
     
-    return videoMap;
-  }, [videoGenerations]);
+    return () => {
+      document.head.removeChild(styleElement);
+    };
+  }, []);
 
   return (
-    <div className="w-full overflow-x-auto px-6">
+    <div className="w-full overflow-x-auto custom-scrollbar px-6">
       <div className="flex items-center space-x-4">
-        {workbenchIds.map((workbenchId, index) => {
-          // Find the video generation for this workbench ID
-          const videoGen = latestVideoGenerationsByWorkbench.get(workbenchId);
-          const isLoading = videoGen?.status === 'pending';
-          const videoUrl = videoGen?.videoUrl || null;
-          const modelName = videoGen?.modelId || "cogvideox";
-          
-          return (
-            <div key={workbenchId} className="flex flex-col items-center">
-              <div className="flex items-center">
-                <div className="relative">
-                  <VideoBox
-                    video={videoUrl}
-                    isLoading={isLoading}
-                    model={modelName}
-                  />
-                  <div 
-                    className={cn(
-                      "h-2 mt-2 w-full absolute -bottom-3 rounded-md transition-colors duration-300",
-                      index === activeWorkbenchIndex ? "bg-blue-500" : "bg-transparent"
-                    )}
-                  />
-                </div>
-                
-                {index < workbenchIds.length - 1 && (
-                  <div className="flex items-center mx-2">
-                    <ChevronRight className="w-5 h-5 text-gray-300" />
-                  </div>
-                )}
-              </div>
+        {workbenchIds.map((workbenchId, index) => (
+          <div key={workbenchId} className="flex flex-col items-center">
+            <div className="flex items-center">
+              <WorkbenchGenerations
+                workbenchId={workbenchId}
+                videoGenerations={videoGenerations}
+                isActiveWorkbench={index === activeWorkbenchIndex}
+                workbenchIndex={index}
+              />
               
-              <div className="mt-5 text-xs font-medium text-gray-200">
-                Workbench {index + 1}
-              </div>
+              {index < workbenchIds.length - 1 && (
+                <div className="flex items-center mx-2">
+                  <ChevronRight className="w-5 h-5 text-gray-300" />
+                </div>
+              )}
             </div>
-          );
-        })}
+          </div>
+        ))}
       </div>
     </div>
   );

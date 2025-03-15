@@ -19,16 +19,16 @@ const CollapsibleVideoViewer = ({
   workbenchCount,
   activeWorkbenchIndex
 }: CollapsibleVideoViewerProps) => {
-  const [timelineCollapsed, setTimelineCollapsed] = useState(false);
+  const [timelineCollapsed, setTimelineCollapsed] = useState(true);
 
   return (
     <div className={cn(
       "modern-timeline rounded-xl flex flex-col transition-all duration-200 shadow-lg",
-      timelineCollapsed ? "h-[35px]" : "h-[580px]",
+      timelineCollapsed ? "h-[35px]" : "h-[620px]",
       "mx-2 mb-2 flex-shrink-0 self-end w-[calc(100%-1rem)]"
     )}>
       <div 
-        className="flex items-center justify-between px-4 pt-1 pb-1 border-gray-700 cursor-pointer hover:bg-zinc-750 transition-colors duration-200"
+        className="flex items-center justify-between px-4 pb-1 border-gray-700 cursor-pointer hover:bg-zinc-750 transition-colors duration-200"
         onClick={(e) => {
           if (e.target === e.currentTarget) {
             setTimelineCollapsed(!timelineCollapsed);
@@ -71,7 +71,7 @@ const CollapsibleVideoViewer = ({
         "flex-1 overflow-x-auto border-zinc-700 transition-all",
         timelineCollapsed && "h-0"
       )}>
-        <div className="min-w-[830px] h-full p-4">
+        <div className="min-w-[830px] h-full p-1">
           <VideoTimeline 
             videoGenerations={videoGenerations}
             workbenchIds={workbenchIds}

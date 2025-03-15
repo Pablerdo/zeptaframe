@@ -1,0 +1,136 @@
+import { useState, useMemo } from "react";
+import { VideoBox } from './video-box';
+import { VideoGeneration } from "../types";
+import { cn } from "@/lib/utils";
+import { Calendar, Check, ChevronDown } from "lucide-react";
+
+interface WorkbenchGenerationsProps {
+  workbenchId: string;
+  videoGenerations: VideoGeneration[];
+  isActiveWorkbench: boolean;
+  workbenchIndex: number;
+}
+
+const WorkbenchGenerations = ({
+  workbenchId,
+  videoGenerations,
+  isActiveWorkbench,
+  workbenchIndex
+}: WorkbenchGenerationsProps) => {
+  // Filter generations for this workbench only
+  const workbenchVideoGenerations = useMemo(() => 
+    videoGenerations
+      .filter(gen => gen.workbenchId === workbenchId)
+      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()),
+    [workbenchId, videoGenerations]
+  );
+
+  // Find the latest video generation
+  const latestGeneration = useMemo(() => 
+    workbenchVideoGenerations.length > 0 ? workbenchVideoGenerations[0] : null,
+    [workbenchVideoGenerations]
+  );
+
+  // State to track which video generation is currently displayed
+  const [selectedGeneration, setSelectedGeneration] = useState<string | null>(
+    latestGeneration?.id || null
+  );
+
+  // Update selected generation when latest changes (e.g. when a pending generation completes)
+  useMemo(() => {
+    if (latestGeneration && (!selectedGeneration || !workbenchVideoGenerations.find(gen => gen.id === selectedGeneration))) {
+      setSelectedGeneration(latestGeneration.id);
+    }
+  }, [latestGeneration, selectedGeneration, workbenchVideoGenerations]);
+
+  // Get the currently selected video generation
+  const displayedGeneration = useMemo(() => 
+    workbenchVideoGenerations.find(gen => gen.id === selectedGeneration) || latestGeneration,
+    [workbenchVideoGenerations, selectedGeneration, latestGeneration]
+  );
+
+  // Format timestamp for display
+  const formatTimestamp = (timestamp: string | Date) => {
+    const date = new Date(timestamp);
+    return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  };
+
+  // If no generations, show empty state
+  if (workbenchVideoGenerations.length === 0) {
+    return (
+      <div className="flex flex-col items-center h-[550px]">
+        <div className="mt-1 text-sm font-medium text-gray-100 mb-1">
+          Workbench {workbenchIndex + 1}
+        </div>
+        <VideoBox 
+          video={null}
+          isLoading={false}
+          model="cogvideox"
+        />
+      </div>
+    );
+  }
+
+  return (
+    <div className={cn(
+      "flex flex-col items-center p-1 rounded-md transition-all h-[550px] mb-2",
+      isActiveWorkbench ? "bg-[hsl(222,47%,20%)]" : "border border-transparent hover:border-gray-700"
+    )}>
+      {/* Fixed header - always visible */}
+      <div className="mt-1 text-sm font-medium text-gray-100 mb-1">
+        Workbench {workbenchIndex + 1}
+      </div>
+      
+      {/* Single scrollable container for all content */}
+      <div className="w-full h-[calc(100%-30px)] overflow-y-auto custom-scrollbar">
+        {/* VideoBox (scrolls with history) */}
+        <VideoBox 
+          video={displayedGeneration?.status === 'success' ? displayedGeneration?.videoUrl || null : null}
+          isLoading={displayedGeneration?.status === 'pending'}
+          model={displayedGeneration?.modelId || "cogvideox"}
+        />
+        
+        {/* Generation history (same scrollable context as VideoBox) */}
+        <div className="w-full mt-2 bg-black/20 rounded-md p-1">
+          <div className="text-xs font-medium text-gray-400 mb-1 flex items-center px-1 py-1 bg-black/40 sticky top-0 z-10">
+            <Calendar className="w-3 h-3 mr-1" />
+            <span>Generation History</span>
+            <ChevronDown className="w-3 h-3 ml-1" />
+          </div>
+          
+          <div className="space-y-1">
+            {workbenchVideoGenerations.map((gen) => (
+              <div 
+                key={gen.id}
+                onClick={() => setSelectedGeneration(gen.id)}
+                className={cn(
+                  "flex items-center justify-between px-2 py-1.5 rounded cursor-pointer text-xs",
+                  gen.id === selectedGeneration 
+                    ? "bg-blue-600/40 border border-blue-500/60" 
+                    : "hover:bg-gray-700/40"
+                )}
+              >
+                <div className="flex items-center">
+                  {gen.id === selectedGeneration && (
+                    <Check className="w-3 h-3 mr-1 text-blue-400" />
+                  )}
+                  <span className={cn(
+                    "font-medium",
+                    gen.id === selectedGeneration ? "text-blue-200" : "text-gray-300"
+                  )}>
+                    {gen.status === 'pending' ? 'Processing...' : 'Generation'}
+                  </span>
+                </div>
+                <div className="text-gray-400">
+                  {formatTimestamp(gen.createdAt)}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default WorkbenchGenerations;

@@ -1,6 +1,5 @@
 import { useRef, useEffect } from "react";
 import { Loader2 } from "lucide-react";
-import { Button } from "@/components/ui/button";
 import { videoModels } from "../utils/videoModels";
 import { SupportedVideoModelId } from "../types";
 
@@ -8,11 +7,13 @@ interface VideoBoxProps {
   video: string | null;
   isLoading?: boolean;
   model?: string;
+  progress?: number;
 }
 
 export const VideoBox = ({ 
   video, 
-  isLoading = false, 
+  isLoading = false,
+  progress = 0,
   model = "cogvideox"
 }: VideoBoxProps) => {
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -43,12 +44,20 @@ export const VideoBox = ({
         <div className="w-full h-full bg-gray-800/80 flex flex-col items-center justify-center">
           <Loader2 className="h-10 w-10 animate-spin text-blue-500 mb-4" />
           <span className="text-gray-300 text-sm font-medium tracking-wide mb-2">
-            Generating video with {videoModels[model as SupportedVideoModelId].name}...
+            Generating video with {videoModels[model as SupportedVideoModelId]?.name || "AI"}...
           </span>
+          {progress > 0 && (
+            <div className="w-48 h-2 bg-gray-700 rounded-full overflow-hidden mt-2">
+              <div 
+                className="h-full bg-blue-500 transition-all duration-300"
+                style={{ width: `${Math.min(100, progress)}%` }}
+              />
+            </div>
+          )}
         </div>
       ) : (
-        <div className="w-full h-full bg-gray-200 rounded-lg flex items-center justify-center">
-          <span className="text-gray-500 text-sm font-medium tracking-wide">
+        <div className="w-full h-full bg-gray-800/30 flex items-center justify-center">
+          <span className="text-gray-400 text-sm font-medium tracking-wide">
             No video has been generated yet
           </span>
         </div>

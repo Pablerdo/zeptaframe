@@ -32,6 +32,7 @@ export const useLoadState = ({
         canvasHistory.current = [currentState];
         setHistoryIndex(0);
         autoZoom();
+        
       });
       initialized.current = true;
     }
