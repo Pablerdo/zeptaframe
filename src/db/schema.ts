@@ -187,3 +187,25 @@ export const videoGenerationsRelations = relations(videoGenerations, ({ one }) =
   }),
 }));
 
+export const segmentedObjects = pgTable("segmented_object", {
+  id: text("id")
+    .primaryKey()
+    .$defaultFn(() => crypto.randomUUID()),
+  url: text("url").notNull(),
+  name: text("name"),
+  userId: text("userId")
+    .notNull()
+    .references(() => users.id, {
+      onDelete: "cascade"
+    }),
+  createdAt: timestamp("createdAt", { mode: "date" }).notNull(),
+  updatedAt: timestamp("updatedAt", { mode: "date" }).notNull(),
+});
+
+export const segmentedObjectsRelations = relations(segmentedObjects, ({ one }) => ({
+  user: one(users, {
+    fields: [segmentedObjects.userId],
+    references: [users.id],
+  }),
+}));
+

@@ -526,8 +526,9 @@ export const Workbench = ({
       gridTemplateColumns: activeWorkbenchTool !== "select" 
         ? "minmax(0, 1fr) 350px 100px" 
         : "minmax(0, 1fr) 0px 100px",
-      transition: "grid-template-columns 0.2s ease-in-out"
+      transition: "grid-template-columns 0s ease-in-out" // TODO: Figure out how to not make canvas flicker when adding a non-zero transition.
     }}>
+
       {/* Left column - canvas area */}
       <div className="flex flex-col h-full overflow-hidden">
         <div 

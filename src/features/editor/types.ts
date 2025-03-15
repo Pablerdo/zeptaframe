@@ -263,9 +263,7 @@ export interface CoordinatePath {
 export interface SegmentedObject {
   id: string;
   url: string;
-  canvasId: string;  // Reference to the canvas/project
-  coordinatePath: CoordinatePath;
-  // Add any other properties needed for segmentation
+  name: string;
 }
 
 export interface SegmentedMask {

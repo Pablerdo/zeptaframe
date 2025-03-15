@@ -43,6 +43,13 @@
       "when": 1741980562058,
       "tag": "0005_giant_marvel_apes",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1742022523898,
+      "tag": "0006_slimy_onslaught",
+      "breakpoints": true
     }
   ]
 }

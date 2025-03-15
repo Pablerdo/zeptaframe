@@ -10,6 +10,7 @@ import subscriptions from "./subscriptions";
 import videoGenerations from "./video-generations";
 
 import authConfig from "@/auth.config";
+import segmentedObjects from "./segmented-objects";
 
 // Revert to "edge" if planning on running on the edge
 export const runtime = "nodejs";
@@ -31,7 +32,8 @@ const routes = app
   .route("/images", images)
   .route("/projects", projects)
   .route("/subscriptions", subscriptions)
-  .route("/video-generations", videoGenerations);
+  .route("/video-generations", videoGenerations)
+  .route("/segmented-objects", segmentedObjects);
 
 export const GET = handle(app);
 export const POST = handle(app);
