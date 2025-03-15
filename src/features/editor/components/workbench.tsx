@@ -2,7 +2,7 @@
 
 import { fabric } from "fabric";
 import { useEffect, useRef, useState, useCallback, useMemo } from "react";
-import { Crosshair, MessageSquare, Trash2, Video, Film, ArrowRightSquare, PlayCircle, ArrowRightCircle, Loader2 } from "lucide-react";
+import { Crosshair, MessageSquare, Trash2, Video, Film, ArrowRightSquare, PlayCircle, ArrowRightCircle, Loader2, ArrowRight, CornerUpRight } from "lucide-react";
 import { useEditor } from "@/features/editor/hooks/use-editor";
 import { ActiveTool, ActiveWorkbenchTool, BaseVideoModel, Editor as EditorType, JSON_KEYS, SegmentedMask, SupportedVideoModelId, VideoGeneration } from "@/features/editor/types";
 import { cn } from "@/lib/utils";
@@ -26,6 +26,7 @@ import debounce from "lodash/debounce";
 import { db } from "@/db/drizzle";
 import { videoGenerations } from "@/db/schema";
 import { defaultVideoModelId, videoModels } from "../utils/videoModels";
+import { precisionReplacer } from "../utils/json-helpers";
 
 interface WorkbenchProps {
   projectId: string;
@@ -98,6 +99,7 @@ export const Workbench = ({
   const [selectedModel, setSelectedModel] = useState<BaseVideoModel>(videoModels[defaultVideoModelId]);
   const [cameraControl, setCameraControl] = useState<Record<string, any>>({});
 
+  const [canImportPreviousLastFrame, setCanImportPreviousLastFrame] = useState(true);
   // Initialize from defaultPromptData if available
   useEffect(() => {
     if (typeof defaultPromptData === 'string') {
@@ -145,9 +147,8 @@ export const Workbench = ({
       const height = workspace?.height || defaultHeight || 0;
       const width = workspace?.width || defaultWidth || 0;
       
-      // Get JSON from canvas
-      const json = JSON.stringify(editor.canvas.toJSON(JSON_KEYS));
-      
+      // Get JSON from canvas with precision
+      const json = JSON.stringify(editor.canvas.toJSON(JSON_KEYS), precisionReplacer);      
 
       // Create promptData JSON with consistently named keys
       const promptData = JSON.stringify({
@@ -521,15 +522,14 @@ export const Workbench = ({
   // }, [editor, selectedModel]);
 
   return (
-    <div className="flex flex-row w-full h-full">
-      {/* Left column - dynamic width */}
-      <div 
-        className="flex flex-col h-full" 
-        style={{ 
-          width: activeWorkbenchTool !== "select" ? "74%" : "94%",
-          transition: "width 0.3s ease-in-out"
-        }}
-      >
+    <div className="grid h-full" style={{
+      gridTemplateColumns: activeWorkbenchTool !== "select" 
+        ? "minmax(0, 1fr) 350px 100px" 
+        : "minmax(0, 1fr) 0px 100px",
+      transition: "grid-template-columns 0.2s ease-in-out"
+    }}>
+      {/* Left column - canvas area */}
+      <div className="flex flex-col h-full overflow-hidden">
         <div 
           ref={containerRef}
           className={cn("modern-canvas relative flex-shrink-0 h-full shadow-soft overflow-hidden")}
@@ -549,7 +549,7 @@ export const Workbench = ({
           />
           {/* workbench number indicator */}
           <div className="absolute top-2 left-2 flex items-center space-x-2">
-            <div className="bg-blue-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs font-bold">
+            <div className="bg-blue-700 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs font-bold">
               {index + 1}
             </div>
 
@@ -566,53 +566,60 @@ export const Workbench = ({
               <Trash2 className="h-4 w-4" />
             </button>
           </div>
+          <div className="absolute bottom-2 left-2 flex items-center space-x-2">
+            <button 
+              className="bg-blue-700 hover:bg-blue-600 text-white text-sm px-2 rounded-full transition-colors duration-200 flex items-center"
+              onClick={() => {
+                // TODO: Implement import previous last frame
+              }}
+              disabled={!canImportPreviousLastFrame}
+            >
+              <CornerUpRight className="h-4 w-4 mr-1" />
+              Import Previous Last Frame
+            </button>
+          </div>
         </div>
       </div>
 
-      {/* Middle sidebar content - dynamic width */}
-      <div 
-        className="flex flex-col h-full"
-        style={{ 
-          width: activeWorkbenchTool !== "select" ? "350px" : "0px",
-          overflow: "hidden",
-          transition: "width 0.2s ease-in-out"
-        }}
-      >
-        <AnimateRightSidebar 
-          editor={editor}
-          activeWorkbenchTool={activeWorkbenchTool}
-          onChangeActiveWorkbenchTool={setActiveWorkbenchTool}
-          segmentedMasks={segmentedMasks}
-          setSegmentedMasks={setSegmentedMasks}
-          samWorker={samWorker}
-          samWorkerLoading={samWorkerLoading}
-          prevMaskArray={prevMaskArray}
-          setPrevMaskArray={setPrevMaskArray}
-          mask={mask}
-          setMask={setMask}
-          maskBinary={maskBinary}
-          setMaskBinary={setMaskBinary}
-        />
-        <CameraControlRightSidebar 
-          editor={editor}
-          activeWorkbenchTool={activeWorkbenchTool}
-          onChangeActiveWorkbenchTool={setActiveWorkbenchTool}
-          cameraControl={cameraControl}
-          setCameraControl={setCameraControl}
-        />
-        <TextPromptRightSidebar
-          activeWorkbenchTool={activeWorkbenchTool}
-          onChangeActiveWorkbenchTool={setActiveWorkbenchTool}
-          generalTextPrompt={generalTextPrompt}
-          onGeneralTextPromptChange={setGeneralTextPrompt}
-        />
-        <ModelRightSidebar
-          editor={editor}
-          activeWorkbenchTool={activeWorkbenchTool}
-          onChangeActiveWorkbenchTool={setActiveWorkbenchTool}
-          selectedModel={selectedModel}
-          onSelectModel={(model: BaseVideoModel) => setSelectedModel(model)}
-        />
+      {/* Middle sidebar content column - with overflow hidden */}
+      <div className="h-full overflow-hidden">
+        <div className="h-full w-[350px]"> {/* Fixed width container */}
+          <AnimateRightSidebar 
+            editor={editor}
+            activeWorkbenchTool={activeWorkbenchTool}
+            onChangeActiveWorkbenchTool={setActiveWorkbenchTool}
+            segmentedMasks={segmentedMasks}
+            setSegmentedMasks={setSegmentedMasks}
+            samWorker={samWorker}
+            samWorkerLoading={samWorkerLoading}
+            prevMaskArray={prevMaskArray}
+            setPrevMaskArray={setPrevMaskArray}
+            mask={mask}
+            setMask={setMask}
+            maskBinary={maskBinary}
+            setMaskBinary={setMaskBinary}
+          />
+          <CameraControlRightSidebar 
+            editor={editor}
+            activeWorkbenchTool={activeWorkbenchTool}
+            onChangeActiveWorkbenchTool={setActiveWorkbenchTool}
+            cameraControl={cameraControl}
+            setCameraControl={setCameraControl}
+          />
+          <TextPromptRightSidebar
+            activeWorkbenchTool={activeWorkbenchTool}
+            onChangeActiveWorkbenchTool={setActiveWorkbenchTool}
+            generalTextPrompt={generalTextPrompt}
+            onGeneralTextPromptChange={setGeneralTextPrompt}
+          />
+          <ModelRightSidebar
+            editor={editor}
+            activeWorkbenchTool={activeWorkbenchTool}
+            onChangeActiveWorkbenchTool={setActiveWorkbenchTool}
+            selectedModel={selectedModel}
+            onSelectModel={(model: BaseVideoModel) => setSelectedModel(model)}
+          />
+        </div>
       </div>
 
       {/* Right buttons column - fixed width */}

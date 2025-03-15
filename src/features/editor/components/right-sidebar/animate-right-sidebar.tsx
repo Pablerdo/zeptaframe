@@ -698,12 +698,7 @@ export const AnimateRightSidebar = ({
     const maskImage = new Image();
     maskImage.src = maskUrl;
 
-    maskImage.onload = () => {
-      // console.log('✅ Mask image loaded:', {
-      //   width: maskImage.width,
-      //   height: maskImage.height
-      // });
-    };
+    maskImage.onload = () => {};
 
     let animationFrame: number;
     let progress = 0;

@@ -36,6 +36,7 @@ import { useCanvasEvents } from "@/features/editor/hooks/use-canvas-events";
 import { useWindowEvents } from "@/features/editor/hooks/use-window-events";
 import { useLoadState } from "@/features/editor/hooks/use-load-state";
 import { defaultVideoModelId } from "../utils/videoModels";
+import { precisionReplacer } from "../utils/json-helpers";
 
 const buildEditor = ({
   save,
@@ -110,7 +111,7 @@ const buildEditor = ({
 
     await transformText(dataUrl.objects);
     const fileString = `data:text/json;charset=utf-8,${encodeURIComponent(
-      JSON.stringify(dataUrl, null, "\t"),
+      JSON.stringify(dataUrl, precisionReplacer, "\t"),
     )}`;
     downloadFile(fileString, "json");
   };
@@ -220,8 +221,17 @@ const buildEditor = ({
         (image) => {
           const workspace = getWorkspace();
 
-          image.scaleToWidth(workspace?.width || 0);
-          image.scaleToHeight(workspace?.height || 0);
+          // Calculate scale factors for both dimensions
+          const scaleX = Number(((workspace?.width || 0) / image.width!).toFixed(10));
+          const scaleY = Number(((workspace?.height || 0) / image.height!).toFixed(10));
+          
+          // Use the smaller scale to maintain aspect ratio
+          const scale = Math.max(scaleX, scaleY);
+
+          image.set({
+            scaleX: scale,
+            scaleY: scale
+          });
 
           addToCanvas(image);
         },
@@ -836,7 +846,8 @@ export const useEditor = ({
       setContainer(initialContainer);
 
       const currentState = JSON.stringify(
-        initialCanvas.toJSON(JSON_KEYS)
+        initialCanvas.toJSON(JSON_KEYS),
+        precisionReplacer
       );
       canvasHistory.current = [currentState];
       setHistoryIndex(0);

@@ -38,6 +38,7 @@ import { float32ArrayToBinaryMask, float32ArrayToCanvas, resizeCanvas, sliceTens
 import { canvasToFloat32Array } from "@/app/sam/lib/imageutils";
 import { resizeAndPadBox } from "@/app/sam/lib/imageutils";
 import { fabric } from "fabric";
+import { GenerateSidebar } from "./generate-sidebar";
 
 interface CompositionStudioProps {
   initialData: ResponseType["data"];
@@ -193,7 +194,6 @@ export const CompositionStudio = ({ initialData }: CompositionStudioProps) => {
   const handleSetActiveEditor = useCallback((editor: EditorType, index: number) => {
     setActiveEditor(editor);
     setActiveWorkbenchIndex(index);
-    console.log(`Editor from workbench ${index + 1} is now active`);
   }, []);
 
   // Create initial workbenches on mount - with more restrictive dependencies
@@ -226,7 +226,6 @@ export const CompositionStudio = ({ initialData }: CompositionStudioProps) => {
         const visibleIndex = Math.round(scrollLeft / workbenchWidth);
         if (visibleIndex !== activeWorkbenchIndex && visibleIndex < workbenchIds.length) {
           setActiveWorkbenchIndex(visibleIndex);
-          console.log(`Workbench ${visibleIndex + 1} is now active after scroll`);
         }
       }, 150); // Short delay to ensure scrolling has stopped
     };
@@ -470,9 +469,6 @@ export const CompositionStudio = ({ initialData }: CompositionStudioProps) => {
     const workspace = activeEditor?.getWorkspace();
     if (!workspace) return;
 
-    console.log("calling encodeWorkbenchImage inside composition studio, after the condition check");
-
-
     // Get the workspace dimensions and position
     const workspaceWidth = workspace.width || 720;
     const workspaceHeight = workspace.height || 480;
@@ -537,7 +533,6 @@ export const CompositionStudio = ({ initialData }: CompositionStudioProps) => {
       // This will wait 800ms after the last change before executing
       const debouncedHandleCanvasChange = debounce(() => {
         if (samWorker.current && samWorkerDevice) {
-          console.log("Canvas object changed, re-encoding workbench image");
           encodeWorkbenchImage();
         }
       }, 500);
@@ -714,6 +709,11 @@ export const CompositionStudio = ({ initialData }: CompositionStudioProps) => {
             activeTool={activeTool}
             onChangeActiveTool={onChangeActiveTool}
             samWorker={samWorker}
+          />
+          <GenerateSidebar
+            editor={activeEditor}
+            activeTool={activeTool}
+            onChangeActiveTool={onChangeActiveTool}
           />
           <ShapeSidebar
             editor={activeEditor}

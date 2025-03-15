@@ -3,6 +3,7 @@ import { useCallback, useRef, useState } from "react";
 import { SegmentedMask, SupportedVideoModelId } from "@/features/editor/types";
 import { JSON_KEYS } from "@/features/editor/types";
 import { defaultVideoModelId } from "../utils/videoModels";
+import { precisionReplacer } from "../utils/json-helpers";
 
 interface UseHistoryProps {
   canvas: fabric.Canvas | null;
@@ -37,7 +38,8 @@ export const useHistory = ({ canvas, saveCallback, editorState }: UseHistoryProp
     if (!canvas) return;
 
     const currentState = canvas.toJSON(JSON_KEYS);
-    const json = JSON.stringify(currentState);
+
+    const json = JSON.stringify(currentState, precisionReplacer);
 
     if (!skip && !skipSave.current) {
       canvasHistory.current.push(json);

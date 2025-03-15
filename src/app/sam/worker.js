@@ -13,7 +13,6 @@ const stats = {
 };
 
 self.onmessage = async (e) => {
-  // console.log("worker received message")
 
   const { type, data } = e.data;
 

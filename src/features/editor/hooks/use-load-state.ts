@@ -2,6 +2,7 @@ import { fabric } from "fabric";
 import { useEffect, useRef } from "react";
 
 import { JSON_KEYS } from "@/features/editor/types";
+import { precisionReplacer, precisionReviver } from "../utils/json-helpers";
 
 interface UseLoadStateProps {
   autoZoom: () => void;
@@ -22,11 +23,12 @@ export const useLoadState = ({
 
   useEffect(() => {
     if (!initialized.current && initialState?.current && canvas) {
-      const data = JSON.parse(initialState.current);
+      const data = JSON.parse(initialState.current, precisionReviver);
 
       canvas.loadFromJSON(data, () => {
         const currentState = JSON.stringify(
           canvas.toJSON(JSON_KEYS),
+          precisionReplacer
         );
 
         canvasHistory.current = [currentState];

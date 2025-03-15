@@ -10,7 +10,9 @@ export const JSON_KEYS = [
   "linkData",
   "editable",
   "extensionType",
-  "extension"
+  "extension",
+  "scaleX",
+  "scaleY",
 ];
 
 export const filters = [
@@ -105,7 +107,7 @@ export type ActiveTool =
   | "opacity"
   | "filter"
   | "settings"
-  | "ai"
+  | "generate"
   | "remove-bg"
   | "templates"
   | "control-motion"
