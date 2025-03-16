@@ -75,7 +75,7 @@ const WorkbenchGenerations = ({
 
   return (
     <div className={cn(
-      "flex flex-col items-center px-2 py-1 rounded-md transition-all h-[550px] mb-2 bg-gray-200 dark:bg-[hsl(222,47%,20%)] ",
+      "flex flex-col items-center px-2 py-1 rounded-md transition-all h-[560px] mb-2 bg-gray-200 dark:bg-[hsl(222,47%,20%)] ",
       isActiveWorkbench ? "border-2 border-blue-500 shadow-[0_0_15px_rgba(59,130,246,0.5)]" : "border border-transparent hover:border-gray-700"
     )}>
       {/* Fixed header - always visible */}

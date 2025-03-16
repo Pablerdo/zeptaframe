@@ -24,7 +24,7 @@ const CollapsibleVideoViewer = ({
   return (
     <div className={cn(
       "modern-timeline rounded-tr-lg rounded-bl-lg rounded-br-lg flex-col transition-all duration-120 shadow-lg",
-      timelineCollapsed ? "h-[0px]" : "h-[600px]",
+      timelineCollapsed ? "h-[0px]" : "h-[580px]",
       "mx-2 mb-2 flex-shrink-0 self-end w-[calc(100%-1rem)]"
     )}>
 
