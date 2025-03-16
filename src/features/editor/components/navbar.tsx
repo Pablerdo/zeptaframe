@@ -287,7 +287,7 @@ export const Navbar = ({
               asChild
               className="h-8 w-8 mr-2"
             >
-              <a href="https://discord.gg/yourprojectlink" target="_blank" rel="noopener noreferrer">
+              <a href="https://discord.gg/yHDEzFQ5cK" target="_blank" rel="noopener noreferrer">
                 <FaDiscord className="h-5 w-5" />
               </a>
             </Button>
