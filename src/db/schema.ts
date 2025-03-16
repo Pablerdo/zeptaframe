@@ -8,6 +8,7 @@ import {
   primaryKey,
   integer,
   jsonb,
+  uuid,
 } from "drizzle-orm/pg-core"
 import type { AdapterAccountType } from "next-auth/adapters"
  
@@ -210,3 +211,25 @@ export const segmentedObjectsRelations = relations(segmentedObjects, ({ one }) =
   }),
 }));
 
+export const videoExports = pgTable("video_exports", {
+  id: text("id")
+    .primaryKey()
+    .$defaultFn(() => crypto.randomUUID()),
+  projectId: text("projectId")
+    .notNull()
+    .references(() => projects.id, { onDelete: "cascade" }),
+  jobId: text("job_id"),
+  status: text("status").$type<"pending" | "success" | "error">().notNull().default("pending"),
+  videoUrl: text("video_url"),
+  error: text("error"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  completedAt: timestamp("completed_at"),
+  metadata: text("metadata"),
+});
+
+export const videoExportsRelations = relations(videoExports, ({ one }) => ({
+  project: one(projects, {
+    fields: [videoExports.projectId],
+    references: [projects.id],
+  }),
+}));

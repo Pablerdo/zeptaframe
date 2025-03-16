@@ -11,16 +11,20 @@ import videoGenerations from "./video-generations";
 
 import authConfig from "@/auth.config";
 import segmentedObjects from "./segmented-objects";
+import videoExports from "./video-exports";
 
 // Revert to "edge" if planning on running on the edge
 export const runtime = "nodejs";
 
 function getAuthConfig(c: Context): AuthConfig {
   return {
-    secret: c.env.AUTH_SECRET,
-    ...authConfig
+    secret: process.env.AUTH_SECRET,
+    session: authConfig.session,
+    pages: authConfig.pages,
+    callbacks: authConfig.callbacks,
+    providers: authConfig.providers
   };
-};
+}
 
 const app = new Hono().basePath("/api");
 
@@ -33,7 +37,8 @@ const routes = app
   .route("/projects", projects)
   .route("/subscriptions", subscriptions)
   .route("/video-generations", videoGenerations)
-  .route("/segmented-objects", segmentedObjects);
+  .route("/segmented-objects", segmentedObjects)
+  .route("/video-exports", videoExports);
 
 export const GET = handle(app);
 export const POST = handle(app);

@@ -13,9 +13,7 @@ export async function POST(req: NextRequest) {
 
   const webhookUrl = process.env.DEPLOYMENT_MODE === 'production' 
   ? process.env.NEXT_PUBLIC_WEBHOOK_URL_PROD
-  : process.env.NEXT_PUBLIC_WEBHOOK_URL_NGROK;
-
-  // const webhookUrl = process.env.NEXT_PUBLIC_WEBHOOK_URL_NGROK;
+  : `${process.env.NEXT_PUBLIC_WEBHOOK_URL_NGROK}/api/comfydeploy/webhook-video`;
 
   try {
     const result = await cd.run.deployment.queue({

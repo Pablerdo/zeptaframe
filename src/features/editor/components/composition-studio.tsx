@@ -1,7 +1,7 @@
 "use client";
 import { useCallback, useEffect, useRef, useState } from "react";
 import debounce from "lodash.debounce";
-import { Plus, ChevronLeft, ChevronRight, ChevronDown } from "lucide-react";
+import { Plus, ChevronDown } from "lucide-react";
 import { ThemeProvider } from "next-themes";
 
 import { ProjectJSON, ResponseType } from "@/features/projects/api/use-get-project";
@@ -11,7 +11,8 @@ import {
   ActiveTool, 
   selectionDependentTools,
   VideoGeneration,
-  Editor as EditorType
+  Editor as EditorType,
+  VideoExport
 } from "@/features/editor/types";
 import { Navbar } from "@/features/editor/components/navbar";
 import { Footer } from "@/features/editor/components/footer";
@@ -31,13 +32,11 @@ import { TemplateSidebar } from "@/features/editor/components/template-sidebar";
 import { SettingsSidebar } from "@/features/editor/components/settings-sidebar";
 import { SegmentationSidebar } from "@/features/editor/components/segmentation-sidebar";
 import { cn } from "@/lib/utils";
-import { dataUrlToFile, uploadToUploadThingResidual } from "@/lib/uploadthing";
 import CollapsibleVideoViewer from "@/features/editor/components/collapsible-video-viewer";
 import { ScrollableWorkbenchViewer } from "@/features/editor/components/scrollable-workbench-viewer";
 import { float32ArrayToBinaryMask, float32ArrayToCanvas, resizeCanvas, sliceTensor } from "@/app/sam/lib/imageutils";
 import { canvasToFloat32Array } from "@/app/sam/lib/imageutils";
 import { resizeAndPadBox } from "@/app/sam/lib/imageutils";
-import { fabric } from "fabric";
 import { GenerateSidebar } from "./generate-sidebar";
 import { LastFrameProvider } from '@/features/editor/contexts/last-frame-context';
 import { WorkbenchNavigator } from "@/features/editor/components/workbench-navigator";
@@ -49,6 +48,7 @@ interface CompositionStudioProps {
 export const CompositionStudio = ({ initialData }: CompositionStudioProps) => {
   const { mutate } = useUpdateProject(initialData.id);
   const [videoGenerations, setVideoGenerations] = useState<VideoGeneration[]>([]);
+  const [videoExports, setVideoExports] = useState<VideoExport[]>([]);
   const [isGenerating, setIsGenerating] = useState(false);
   const [activeTool, setActiveTool] = useState<ActiveTool>("select");
   const [allowEncodeWorkbenchImage, setAllowEncodeWorkbenchImage] = useState(true);
@@ -474,6 +474,7 @@ export const CompositionStudio = ({ initialData }: CompositionStudioProps) => {
   // }
   
   // Start encoding image
+  
   const encodeWorkbenchImage = async () => {
     if (!samWorker.current || !activeEditor?.canvas) return;
     
@@ -699,6 +700,32 @@ export const CompositionStudio = ({ initialData }: CompositionStudioProps) => {
     return () => clearInterval(intervalId);
   }, [initialData.id]);
 
+  useEffect(() => {
+    const fetchAllVideoExports = async () => {
+      try {
+        const response = await fetch(`/api/video-exports?projectId=${initialData.id}`);
+
+        if (!response.ok) {
+          throw new Error('Failed to fetch video exports');
+        }
+        
+        const data = await response.json();
+        
+        if (data.videoExports) {
+          setVideoExports(data.videoExports);
+        }
+      } catch (err) {
+        console.error('Error fetching video exports:', err);
+      }
+    };
+    
+    fetchAllVideoExports();
+
+    const intervalId = setInterval(fetchAllVideoExports, 5000);
+
+    return () => clearInterval(intervalId);
+  }, [initialData.id]);
+  
   // Function to update project name (locally and on server)
   const updateProjectName = useCallback(async (name: string) => {
     // Update local state
@@ -894,6 +921,8 @@ export const CompositionStudio = ({ initialData }: CompositionStudioProps) => {
                 isGenerating={isGenerating}
                 workbenchCount={workbenchIds.length}
                 activeWorkbenchIndex={activeWorkbenchIndex}
+                projectId={initialData.id}
+                videoExports={videoExports}
               />
               
               {/* <Footer editor={activeEditor} /> */}

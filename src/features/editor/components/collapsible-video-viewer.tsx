@@ -2,7 +2,7 @@ import { useState } from "react";
 import { ChevronDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 import VideoTimeline from "@/features/editor/components/video-timeline";
-import { VideoGeneration } from "@/features/editor/types";
+import { VideoExport, VideoGeneration } from "@/features/editor/types";
 
 interface CollapsibleVideoViewerProps {
   timelineCollapsed: boolean;
@@ -11,6 +11,8 @@ interface CollapsibleVideoViewerProps {
   isGenerating: boolean;
   workbenchCount: number;
   activeWorkbenchIndex: number;
+  projectId: string;
+  videoExports: VideoExport[];
 }
 
 const CollapsibleVideoViewer = ({
@@ -19,11 +21,13 @@ const CollapsibleVideoViewer = ({
   videoGenerations,
   isGenerating,
   workbenchCount,
-  activeWorkbenchIndex
+  activeWorkbenchIndex,
+  projectId,
+  videoExports
 }: CollapsibleVideoViewerProps) => {
   return (
     <div className={cn(
-      "modern-timeline rounded-tr-lg rounded-bl-lg rounded-br-lg flex-col transition-all duration-120 shadow-lg",
+      "modern-timeline rounded-tr-lg rounded-bl-lg rounded-br-lg flex-col transition-all duration-0 shadow-lg",
       timelineCollapsed ? "h-[0px]" : "h-[580px]",
       "mx-2 mb-2 flex-shrink-0 self-end w-[calc(100%-1rem)]"
     )}>
@@ -37,6 +41,8 @@ const CollapsibleVideoViewer = ({
             videoGenerations={videoGenerations}
             workbenchIds={workbenchIds}
             activeWorkbenchIndex={activeWorkbenchIndex}
+            projectId={projectId}
+            videoExports={videoExports}
           />
         </div>
       </div>

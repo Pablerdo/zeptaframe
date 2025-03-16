@@ -229,6 +229,16 @@ export type BuildEditorProps = {
   setWorkspaceURL: (value: string | null) => void;
 };
 
+export interface VideoExport {
+  id: string;
+  projectId: string;
+  status: 'pending' | 'success' | 'error';
+  videoUrl: string | null;
+  createdAt: string;
+  completedAt: string | null;
+  jobId?: string;
+}
+
 export interface VideoGeneration {
   id: string;
   projectId: string;

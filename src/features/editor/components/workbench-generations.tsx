@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { VideoBox } from './video-box';
 import { VideoGeneration } from "../types";
 import { cn } from "@/lib/utils";
@@ -9,13 +9,15 @@ interface WorkbenchGenerationsProps {
   videoGenerations: VideoGeneration[];
   isActiveWorkbench: boolean;
   workbenchIndex: number;
+  setSelectedVideoUrls: React.Dispatch<React.SetStateAction<Record<string, string>>>;
 }
 
 const WorkbenchGenerations = ({
   workbenchId,
   videoGenerations,
   isActiveWorkbench,
-  workbenchIndex
+  workbenchIndex,
+  setSelectedVideoUrls
 }: WorkbenchGenerationsProps) => {
   // Filter generations for this workbench only
   const workbenchVideoGenerations = useMemo(() => 
@@ -55,12 +57,26 @@ const WorkbenchGenerations = ({
     return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
   };
 
+  // Update the parent's selectedVideoUrls when selectedGeneration or its status changes
+  useEffect(() => {
+    if (selectedGeneration) {
+      const currentGeneration = workbenchVideoGenerations.find(gen => gen.id === selectedGeneration);
+      
+      if (currentGeneration?.status === 'success' && currentGeneration?.videoUrl) {
+        setSelectedVideoUrls(prev => ({
+          ...prev,
+          [workbenchId]: currentGeneration.videoUrl as string
+        }));
+      }
+    }
+  }, [selectedGeneration, workbenchVideoGenerations, workbenchId, setSelectedVideoUrls]);
+
   // If no generations, show empty state
   if (workbenchVideoGenerations.length === 0) {
     return (
       <div className={cn(
         "flex flex-col items-center px-2 py-1 rounded-md transition-all h-[550px] mb-2 bg-gray-200 dark:bg-[hsl(222,47%,20%)]",
-        isActiveWorkbench ? "border-2 border-blue-500 shadow-[0_0_15px_rgba(59,130,246,0.5)]" : "border border-transparent hover:border-gray-700"
+        isActiveWorkbench ? "border-2 border-blue-500 shadow-[0_0_15px_rgba(59,130,246,0.3)]" : "border border-transparent hover:border-gray-700"
       )}>
       <span className="font-medium text-sm text-gray-900 dark:text-gray-100">Workbench {workbenchIndex + 1}</span>
         <VideoBox 
@@ -76,7 +92,7 @@ const WorkbenchGenerations = ({
   return (
     <div className={cn(
       "flex flex-col items-center px-2 py-1 rounded-md transition-all h-[560px] mb-2 bg-gray-200 dark:bg-[hsl(222,47%,20%)] ",
-      isActiveWorkbench ? "border-2 border-blue-500 shadow-[0_0_15px_rgba(59,130,246,0.5)]" : "border border-transparent hover:border-gray-700"
+      isActiveWorkbench ? "border-2 border-blue-500 shadow-[0_0_8px_rgba(59,130,246,0.3)]" : "border border-transparent hover:border-gray-700"
     )}>
       {/* Fixed header - always visible */}
       <span className="font-medium text-sm text-gray-900 dark:text-gray-100">Workbench {workbenchIndex + 1}</span>
