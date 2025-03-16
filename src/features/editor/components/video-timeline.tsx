@@ -129,7 +129,7 @@ const VideoTimeline = ({
               </div>
             </div>
           ))}
-                    {/* Export button container */}
+          {/* Export button container */}
           <div className="px-4 flex items-center">
             <div className="pointer-events-none">
               <svg width="96" height="48" viewBox="0 0 96 48" fill="none" xmlns="http://www.w3.org/2000/svg">

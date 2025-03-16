@@ -45,7 +45,7 @@ export const VideoBox = ({
       )}
 
       {videoStatus === 'pending' && (
-        <div className="w-full h-full bg-gray-800/30 flex items-center justify-center">
+        <div className="w-full h-full bg-gray-800/30 flex flex-col items-center justify-center">
           <Loader2 className="h-10 w-10 animate-spin text-blue-500 mb-4" />
           <span className="text-gray-300 text-sm font-medium tracking-wide mb-2">
             Generating video with {videoModels[model as SupportedVideoModelId]?.name || "AI"}...

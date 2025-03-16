@@ -766,7 +766,7 @@ export const Workbench = ({
           {/* Generate Video Submit Button */}
           <div className="mt-auto">
             <button 
-              className="w-full aspect-square bg-blue-600 hover:bg-blue-600 text-white rounded-lg transition-colors duration-200 flex flex-col items-center justify-center gap-1 px-2 py-1"
+              className="w-full aspect-square bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors duration-200 flex flex-col items-center justify-center gap-1 px-2 py-1"
               onClick={() => handleGenerateVideo(selectedModel.id)}
               disabled={isGenerating}
             >

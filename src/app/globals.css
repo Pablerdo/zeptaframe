@@ -133,7 +133,7 @@ body {
   }
 
   .modern-timeline {
-    @apply bg-editor-canvas shadow-sm dark:shadow-dark-raised  rounded-xl border-0;
+    @apply bg-editor-canvas shadow-sm dark:shadow-dark-raised border-0;
   }
   
   .canvas-grid {

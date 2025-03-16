@@ -58,10 +58,11 @@ const WorkbenchGenerations = ({
   // If no generations, show empty state
   if (workbenchVideoGenerations.length === 0) {
     return (
-      <div className="flex flex-col items-center h-[550px]">
-        <div className="mt-1 text-sm font-medium text-gray-100 mb-1">
-          Workbench {workbenchIndex + 1}
-        </div>
+      <div className={cn(
+        "flex flex-col items-center px-2 py-1 rounded-md transition-all h-[550px] mb-2 bg-gray-200 dark:bg-[hsl(222,47%,20%)]",
+        isActiveWorkbench ? "border-2 border-blue-500 shadow-[0_0_15px_rgba(59,130,246,0.5)]" : "border border-transparent hover:border-gray-700"
+      )}>
+      <span className="font-medium text-sm text-gray-900 dark:text-gray-100">Workbench {workbenchIndex + 1}</span>
         <VideoBox 
           videoStatus={null}
           videoUrl={null}
@@ -74,13 +75,11 @@ const WorkbenchGenerations = ({
 
   return (
     <div className={cn(
-      "flex flex-col items-center p-1 rounded-md transition-all h-[550px] mb-2",
-      isActiveWorkbench ? "bg-[hsl(222,47%,20%)]" : "border border-transparent hover:border-gray-700"
+      "flex flex-col items-center px-2 py-1 rounded-md transition-all h-[550px] mb-2 bg-gray-200 dark:bg-[hsl(222,47%,20%)] ",
+      isActiveWorkbench ? "border-2 border-blue-500 shadow-[0_0_15px_rgba(59,130,246,0.5)]" : "border border-transparent hover:border-gray-700"
     )}>
       {/* Fixed header - always visible */}
-      <div className="mt-1 text-sm font-medium text-gray-100 mb-1">
-        Workbench {workbenchIndex + 1}
-      </div>
+      <span className="font-medium text-sm text-gray-900 dark:text-gray-100">Workbench {workbenchIndex + 1}</span>
       
       {/* Single scrollable container for all content */}
       <div className="w-full h-[calc(100%-30px)] overflow-y-auto custom-scrollbar">
@@ -97,7 +96,6 @@ const WorkbenchGenerations = ({
           <div className="text-xs font-medium text-gray-400 mb-1 flex items-center px-1 py-1 bg-black/40 sticky top-0 z-10">
             <Calendar className="w-3 h-3 mr-1" />
             <span>Generation History</span>
-            <ChevronDown className="w-3 h-3 ml-1" />
           </div>
           
           <div className="space-y-1">

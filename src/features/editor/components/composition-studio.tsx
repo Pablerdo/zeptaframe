@@ -1,7 +1,7 @@
 "use client";
 import { useCallback, useEffect, useRef, useState } from "react";
 import debounce from "lodash.debounce";
-import { Plus } from "lucide-react";
+import { Plus, ChevronLeft, ChevronRight, ChevronDown } from "lucide-react";
 import { ThemeProvider } from "next-themes";
 
 import { ProjectJSON, ResponseType } from "@/features/projects/api/use-get-project";
@@ -40,6 +40,7 @@ import { resizeAndPadBox } from "@/app/sam/lib/imageutils";
 import { fabric } from "fabric";
 import { GenerateSidebar } from "./generate-sidebar";
 import { LastFrameProvider } from '@/features/editor/contexts/last-frame-context';
+import { WorkbenchNavigator } from "@/features/editor/components/workbench-navigator";
 
 interface CompositionStudioProps {
   initialData: ResponseType["data"];
@@ -140,6 +141,9 @@ export const CompositionStudio = ({ initialData }: CompositionStudioProps) => {
   // Add these new state variables to composition-studio.tsx
   const [isDeletingIndex, setIsDeletingIndex] = useState<number | null>(null);
   const [transitionDirection, setTransitionDirection] = useState<'left' | 'right' | null>(null);
+
+  // Video timeline collapsed state
+  const [timelineCollapsed, setTimelineCollapsed] = useState(true);
 
   // Save callback with debounce - updated to include workbenchId and promptData
   const debouncedSave = useCallback(
@@ -849,8 +853,38 @@ export const CompositionStudio = ({ initialData }: CompositionStudioProps) => {
                 </div>
 
               </div>
-              
+              <div className="flex w-full">
+                <div 
+                  className="w-[41%] bg-editor-sidebar flex items-center px-4 ml-2 pb-1 border-gray-700 cursor-pointer hover:bg-zinc-750 transition-colors duration-200 pt-1 rounded-t-lg"
+                  onClick={(e) => {
+                    if (e.target === e.currentTarget) {
+                      setTimelineCollapsed(!timelineCollapsed);
+                    }
+                  }}
+                > 
+                  <div className="flex items-center">
+                    <span className="font-bold">Timeline</span>
+                    <div 
+                        className="flex items-center justify-between gap-2 px-3 py-1 rounded-full hover:bg-zinc-700/50 transition-colors duration-200"
+                        onClick={() => setTimelineCollapsed(!timelineCollapsed)}
+                      >
+                        <ChevronDown 
+                          className={cn(
+                            "h-5 w-5 text-zinc-300 transition-transform duration-200",
+                            timelineCollapsed && "rotate-180"
+                          )}
+                        />
+                    </div>
+                  </div>
+                </div>
+                <WorkbenchNavigator 
+                  workbenchIds={workbenchIds}
+                  activeWorkbenchIndex={activeWorkbenchIndex}
+                  setActiveWorkbenchIndex={setActiveWorkbenchIndex}
+                />
+              </div>
               <CollapsibleVideoViewer
+                timelineCollapsed={timelineCollapsed}
                 workbenchIds={workbenchIds}
                 videoGenerations={videoGenerations}
                 isGenerating={isGenerating}
