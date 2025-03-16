@@ -2,7 +2,7 @@ import { useState, useMemo } from "react";
 import { VideoBox } from './video-box';
 import { VideoGeneration } from "../types";
 import { cn } from "@/lib/utils";
-import { Calendar, Check, ChevronDown } from "lucide-react";
+import { Calendar, Check, ChevronDown, Loader2, X } from "lucide-react";
 
 interface WorkbenchGenerationsProps {
   workbenchId: string;
@@ -63,7 +63,8 @@ const WorkbenchGenerations = ({
           Workbench {workbenchIndex + 1}
         </div>
         <VideoBox 
-          video={null}
+          videoStatus={null}
+          videoUrl={null}
           isLoading={false}
           model="cogvideox"
         />
@@ -85,7 +86,8 @@ const WorkbenchGenerations = ({
       <div className="w-full h-[calc(100%-30px)] overflow-y-auto custom-scrollbar">
         {/* VideoBox (scrolls with history) */}
         <VideoBox 
-          video={displayedGeneration?.status === 'success' ? displayedGeneration?.videoUrl || null : null}
+          videoStatus={displayedGeneration?.status || null}
+          videoUrl={displayedGeneration?.status === 'success' ? displayedGeneration?.videoUrl || null : null}
           isLoading={displayedGeneration?.status === 'pending'}
           model={displayedGeneration?.modelId || "cogvideox"}
         />
@@ -111,8 +113,14 @@ const WorkbenchGenerations = ({
                 )}
               >
                 <div className="flex items-center">
-                  {gen.id === selectedGeneration && (
+                  {gen.status === 'success' && (
                     <Check className="w-3 h-3 mr-1 text-blue-400" />
+                  )}
+                  {gen.status === 'pending' && (
+                    <Loader2 className="w-3 h-3 mr-1 text-blue-400 animate-spin" />
+                  )}
+                  {gen.status === 'error' && (
+                    <X className="w-3 h-3 mr-1 text-red-400" />
                   )}
                   <span className={cn(
                     "font-medium",

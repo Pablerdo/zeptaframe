@@ -236,6 +236,7 @@ export interface VideoGeneration {
   runId: string;
   status: 'pending' | 'success' | 'error';
   videoUrl?: string | null;
+  lastFrameUrl?: string | null;
   modelId?: string;
   createdAt: string | Date;
   updatedAt?: string | Date;

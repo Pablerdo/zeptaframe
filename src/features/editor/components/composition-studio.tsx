@@ -39,6 +39,7 @@ import { canvasToFloat32Array } from "@/app/sam/lib/imageutils";
 import { resizeAndPadBox } from "@/app/sam/lib/imageutils";
 import { fabric } from "fabric";
 import { GenerateSidebar } from "./generate-sidebar";
+import { LastFrameProvider } from '@/features/editor/contexts/last-frame-context';
 
 interface CompositionStudioProps {
   initialData: ResponseType["data"];
@@ -718,149 +719,151 @@ export const CompositionStudio = ({ initialData }: CompositionStudioProps) => {
 
   return (
     <ThemeProvider attribute="class" defaultTheme="light" enableSystem>
-      <div className="w-full h-full flex flex-col overflow-hidden bg-editor-bg dark:bg-editor-bg-dark">
-        <Navbar
-          projectName={projectName}
-          setProjectName={updateProjectName}
-          id={initialData.id}
-          editor={activeEditor}
-          activeTool={activeTool}
-          onChangeActiveTool={onChangeActiveTool}
-        />
-        <div className="absolute h-[calc(100%-68px)] w-full top-[68px] flex p-2">
-          <Sidebar
-            activeTool={activeTool}
-            onChangeActiveTool={onChangeActiveTool}
-          />
-          <SegmentationSidebar
-            editor={activeEditor}
-            activeTool={activeTool}
-            onChangeActiveTool={onChangeActiveTool}
-            samWorker={samWorker}
-          />
-          <GenerateSidebar
+      <LastFrameProvider videoGenerations={videoGenerations}>
+        <div className="w-full h-full flex flex-col overflow-hidden bg-editor-bg dark:bg-editor-bg-dark">
+          <Navbar
+            projectName={projectName}
+            setProjectName={updateProjectName}
+            id={initialData.id}
             editor={activeEditor}
             activeTool={activeTool}
             onChangeActiveTool={onChangeActiveTool}
           />
-          <ShapeSidebar
-            editor={activeEditor}
-            activeTool={activeTool}
-            onChangeActiveTool={onChangeActiveTool}
-          />
-          <FillColorSidebar
-            editor={activeEditor}
-            activeTool={activeTool}
-            onChangeActiveTool={onChangeActiveTool}
-          />
-          <StrokeColorSidebar
-            editor={activeEditor}
-            activeTool={activeTool}
-            onChangeActiveTool={onChangeActiveTool}
-          />
-          <StrokeWidthSidebar
-            editor={activeEditor}
-            activeTool={activeTool}
-            onChangeActiveTool={onChangeActiveTool}
-          />
-          <OpacitySidebar
-            editor={activeEditor}
-            activeTool={activeTool}
-            onChangeActiveTool={onChangeActiveTool}
-          />
-          <TextSidebar
-            editor={activeEditor}
-            activeTool={activeTool}
-            onChangeActiveTool={onChangeActiveTool}
-          />
-          <FontSidebar
-            editor={activeEditor}
-            activeTool={activeTool}
-            onChangeActiveTool={onChangeActiveTool}
-          />
-          <ImageSidebar
-            editor={activeEditor}
-            activeTool={activeTool}
-            onChangeActiveTool={onChangeActiveTool}
-          />
-          <TemplateSidebar
-            editor={activeEditor}
-            activeTool={activeTool}
-            onChangeActiveTool={onChangeActiveTool}
-          />
-          <FilterSidebar
-            editor={activeEditor}
-            activeTool={activeTool}
-            onChangeActiveTool={onChangeActiveTool}
-          />
-          <DrawSidebar
-            editor={activeEditor}
-            activeTool={activeTool}
-            onChangeActiveTool={onChangeActiveTool}
-          />
-          <SettingsSidebar
-            editor={activeEditor}
-            activeTool={activeTool}
-            onChangeActiveTool={onChangeActiveTool}
-          />
-          <main className="bg-transparent flex-1 overflow-hidden relative flex flex-col rounded-xl mx-2">
-            <Toolbar
+          <div className="absolute h-[calc(100%-68px)] w-full top-[68px] flex p-2">
+            <Sidebar
+              activeTool={activeTool}
+              onChangeActiveTool={onChangeActiveTool}
+            />
+            <SegmentationSidebar
+              editor={activeEditor}
+              activeTool={activeTool}
+              onChangeActiveTool={onChangeActiveTool}
+              samWorker={samWorker}
+            />
+            <GenerateSidebar
               editor={activeEditor}
               activeTool={activeTool}
               onChangeActiveTool={onChangeActiveTool}
             />
-
-            
-            <div className="flex flex-row h-full w-full mb-4 relative overflow-hidden">
-              <ScrollableWorkbenchViewer
-                editorsContainerRef={editorsContainerRef}
-                workbenchIds={workbenchIds}
-                activeWorkbenchIndex={activeWorkbenchIndex}
-                handleSetActiveEditor={handleSetActiveEditor}
-                handleDeleteWorkbench={handleDeleteWorkbench}
-                initialData={initialData}
-                debouncedSave={debouncedSave}
-                onClearSelection={onClearSelection}
+            <ShapeSidebar
+              editor={activeEditor}
+              activeTool={activeTool}
+              onChangeActiveTool={onChangeActiveTool}
+            />
+            <FillColorSidebar
+              editor={activeEditor}
+              activeTool={activeTool}
+              onChangeActiveTool={onChangeActiveTool}
+            />
+            <StrokeColorSidebar
+              editor={activeEditor}
+              activeTool={activeTool}
+              onChangeActiveTool={onChangeActiveTool}
+            />
+            <StrokeWidthSidebar
+              editor={activeEditor}
+              activeTool={activeTool}
+              onChangeActiveTool={onChangeActiveTool}
+            />
+            <OpacitySidebar
+              editor={activeEditor}
+              activeTool={activeTool}
+              onChangeActiveTool={onChangeActiveTool}
+            />
+            <TextSidebar
+              editor={activeEditor}
+              activeTool={activeTool}
+              onChangeActiveTool={onChangeActiveTool}
+            />
+            <FontSidebar
+              editor={activeEditor}
+              activeTool={activeTool}
+              onChangeActiveTool={onChangeActiveTool}
+            />
+            <ImageSidebar
+              editor={activeEditor}
+              activeTool={activeTool}
+              onChangeActiveTool={onChangeActiveTool}
+            />
+            <TemplateSidebar
+              editor={activeEditor}
+              activeTool={activeTool}
+              onChangeActiveTool={onChangeActiveTool}
+            />
+            <FilterSidebar
+              editor={activeEditor}
+              activeTool={activeTool}
+              onChangeActiveTool={onChangeActiveTool}
+            />
+            <DrawSidebar
+              editor={activeEditor}
+              activeTool={activeTool}
+              onChangeActiveTool={onChangeActiveTool}
+            />
+            <SettingsSidebar
+              editor={activeEditor}
+              activeTool={activeTool}
+              onChangeActiveTool={onChangeActiveTool}
+            />
+            <main className="bg-transparent flex-1 overflow-hidden relative flex flex-col rounded-xl mx-2">
+              <Toolbar
+                editor={activeEditor}
                 activeTool={activeTool}
                 onChangeActiveTool={onChangeActiveTool}
-                samWorker={samWorker}
-                samWorkerLoading={samWorkerLoading}
-                prevMaskArray={prevMaskArray}
-                setPrevMaskArray={setPrevMaskArray}
-                mask={mask}
-                setMask={setMask}
-                maskBinary={maskBinary}
-                setMaskBinary={setMaskBinary}
-                projectData={projectData}
-                isDeletingIndex={isDeletingIndex}
-                transitionDirection={transitionDirection}
-                setAllowEncodeWorkbenchImage={setAllowEncodeWorkbenchImage}
+              />
+
+
+              <div className="flex flex-row h-full w-full mb-4 relative overflow-hidden">
+                <ScrollableWorkbenchViewer
+                  editorsContainerRef={editorsContainerRef}
+                  workbenchIds={workbenchIds}
+                  activeWorkbenchIndex={activeWorkbenchIndex}
+                  handleSetActiveEditor={handleSetActiveEditor}
+                  handleDeleteWorkbench={handleDeleteWorkbench}
+                  initialData={initialData}
+                  debouncedSave={debouncedSave}
+                  onClearSelection={onClearSelection}
+                  activeTool={activeTool}
+                  onChangeActiveTool={onChangeActiveTool}
+                  samWorker={samWorker}
+                  samWorkerLoading={samWorkerLoading}
+                  prevMaskArray={prevMaskArray}
+                  setPrevMaskArray={setPrevMaskArray}
+                  mask={mask}
+                  setMask={setMask}
+                  maskBinary={maskBinary}
+                  setMaskBinary={setMaskBinary}
+                  projectData={projectData}
+                  isDeletingIndex={isDeletingIndex}
+                  transitionDirection={transitionDirection}
+                  setAllowEncodeWorkbenchImage={setAllowEncodeWorkbenchImage}
+                />
+                
+                {/* Add workbench button */}
+                <div className="w-10 flex items-center justify-center">
+                  <button
+                    onClick={handleAddWorkbench}
+                    className={cn("bg-editor-sidebar rounded-xl p-2")}
+                  >
+                    <Plus className="h-6 w-6" strokeWidth={3} />
+                  </button>
+                </div>
+
+              </div>
+              
+              <CollapsibleVideoViewer
+                workbenchIds={workbenchIds}
+                videoGenerations={videoGenerations}
+                isGenerating={isGenerating}
+                workbenchCount={workbenchIds.length}
+                activeWorkbenchIndex={activeWorkbenchIndex}
               />
               
-              {/* Add workbench button */}
-              <div className="w-10 flex items-center justify-center">
-                <button
-                  onClick={handleAddWorkbench}
-                  className={cn("bg-editor-sidebar rounded-xl p-2")}
-                >
-                  <Plus className="h-6 w-6" strokeWidth={3} />
-                </button>
-              </div>
-
-            </div>
-            
-            <CollapsibleVideoViewer
-              workbenchIds={workbenchIds}
-              videoGenerations={videoGenerations}
-              isGenerating={isGenerating}
-              workbenchCount={workbenchIds.length}
-              activeWorkbenchIndex={activeWorkbenchIndex}
-            />
-            
-            {/* <Footer editor={activeEditor} /> */}
-          </main>
+              {/* <Footer editor={activeEditor} /> */}
+            </main>
+          </div>
         </div>
-      </div>
+      </LastFrameProvider>
     </ThemeProvider>
   );
 }

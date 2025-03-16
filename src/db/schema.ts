@@ -175,6 +175,7 @@ export const videoGenerations = pgTable("video_generation", {
   status: text("status").$type<"pending" | "success" | "error">().notNull(),
   videoUrl: text("videoUrl"),
   modelId: text("modelId").notNull(),
+  lastFrameUrl: text("lastFrameUrl"),
   startTime: timestamp("startTime", { mode: "date" }).notNull().defaultNow(),
   createdAt: timestamp("createdAt", { mode: "date" }).notNull().defaultNow(),
   updatedAt: timestamp("updatedAt", { mode: "date" }).notNull().defaultNow(),

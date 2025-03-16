@@ -19,6 +19,14 @@ function findGifUrl(outputs: any): string | undefined {
   return outputWithGifs?.data.gifs[0]?.url;
 }
 
+function findLastFrameUrl(outputs: any): string | undefined {
+  const outputWithLastFrame = outputs.find((output: any) => 
+    Array.isArray(output.data?.images) && output.data.images.length > 0
+  );
+
+  return outputWithLastFrame?.data.images[0]?.url;
+}
+
 // Below was suggested by Cursor
 // function findGifUrl(outputs: any): string | null {
 //   if (!outputs || !Array.isArray(outputs)) return null;
@@ -43,6 +51,8 @@ export async function POST(request: Request) {
 
     const videoUrl = findGifUrl(outputs)
 
+    const lastFrameUrl = findLastFrameUrl(outputs)
+
     if (status === "success") {
       // Update in-memory store for GET requests
       videoStore[runId] = videoUrl || ""
@@ -52,6 +62,7 @@ export async function POST(request: Request) {
         .set({ 
           status: "success", 
           videoUrl: videoUrl || "",
+          lastFrameUrl: lastFrameUrl || "",
           updatedAt: new Date()
         })
         .where(eq(videoGenerations.runId, runId))

@@ -2,7 +2,7 @@
 
 import { fabric } from "fabric";
 import { useEffect, useRef, useState, useCallback, useMemo } from "react";
-import { Crosshair, MessageSquare, Trash2, Video, Film, ArrowRightSquare, PlayCircle, ArrowRightCircle, Loader2, ArrowRight, CornerUpRight } from "lucide-react";
+import { Crosshair, MessageSquare, Trash2, Video, Film, ArrowRightSquare, PlayCircle, ArrowRightCircle, Loader2, ArrowRight, CornerUpRight, ChevronDown, X } from "lucide-react";
 import { useEditor } from "@/features/editor/hooks/use-editor";
 import { ActiveTool, ActiveWorkbenchTool, BaseVideoModel, Editor as EditorType, JSON_KEYS, SegmentedMask, SupportedVideoModelId, VideoGeneration } from "@/features/editor/types";
 import { cn } from "@/lib/utils";
@@ -27,6 +27,7 @@ import { db } from "@/db/drizzle";
 import { videoGenerations } from "@/db/schema";
 import { defaultVideoModelId, videoModels } from "../utils/videoModels";
 import { precisionReplacer } from "../utils/json-helpers";
+import { useLastFrames } from '@/features/editor/contexts/last-frame-context';
 
 interface WorkbenchProps {
   projectId: string;
@@ -100,6 +101,10 @@ export const Workbench = ({
   const [cameraControl, setCameraControl] = useState<Record<string, any>>({});
 
   const [canImportPreviousLastFrame, setCanImportPreviousLastFrame] = useState(true);
+  const { lastFrameGenerations, importLastFrame, setActiveEditor } = useLastFrames();
+  const [dropdownOpen, setDropdownOpen] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
   // Initialize from defaultPromptData if available
   useEffect(() => {
     if (typeof defaultPromptData === 'string') {
@@ -521,6 +526,41 @@ export const Workbench = ({
   //   }
   // }, [editor, selectedModel]);
 
+  // When this workbench becomes active, set its editor as the active editor in context
+  useEffect(() => {
+    if (isActive && editor) {
+      setActiveEditor(editor);
+    }
+  }, [isActive, editor, setActiveEditor]);
+
+  // Function to handle clicking outside the dropdown to close it
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setDropdownOpen(false);
+      }
+    };
+    
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
+
+  // Group last frames by workbench for display in dropdown
+  const groupedLastFrames = useMemo(() => {
+    const grouped: Record<string, VideoGeneration[]> = {};
+    
+    lastFrameGenerations.forEach(gen => {
+      if (!grouped[gen.workbenchId]) {
+        grouped[gen.workbenchId] = [];
+      }
+      grouped[gen.workbenchId].push(gen);
+    });
+    
+    return grouped;
+  }, [lastFrameGenerations]);
+
   return (
     <div className="grid h-full" style={{
       gridTemplateColumns: activeWorkbenchTool !== "select" 
@@ -565,17 +605,89 @@ export const Workbench = ({
               <Trash2 className="h-4 w-4" />
             </button>
           </div>
-          <div className="absolute bottom-2 left-2 flex items-center space-x-2">
+          <div className="absolute bottom-2 left-2" ref={dropdownRef}>
             <button 
-              className="bg-blue-700 hover:bg-blue-600 text-white text-sm px-2 rounded-full transition-colors duration-200 flex items-center"
-              onClick={() => {
-                // TODO: Implement import previous last frame
-              }}
-              disabled={!canImportPreviousLastFrame}
+              className="bg-blue-700 hover:bg-blue-600 text-white text-sm px-2 py-1 rounded-full transition-colors duration-200 flex items-center"
+              onClick={() => setDropdownOpen(!dropdownOpen)}
+              disabled={lastFrameGenerations.length === 0}
             >
               <CornerUpRight className="h-4 w-4 mr-1" />
-              Import Previous Last Frame
+              Import Last Frame
+              <ChevronDown className={`h-3 w-3 ml-1 transition-transform ${dropdownOpen ? 'rotate-180' : ''}`} />
             </button>
+            {/* Dropdown content for importing last frames */}
+            {dropdownOpen && (
+              <div className="absolute bottom-full mb-2 left-0 w-64 bg-gray-800 border border-gray-700 rounded-md shadow-lg z-10">
+                <div className="max-h-60 overflow-y-auto p-2">
+                  {Object.keys(groupedLastFrames).length > 0 ? (
+                    Object.entries(groupedLastFrames).map(([workbenchId, generations]) => (
+                      <div key={workbenchId} className="mb-2">
+                        <div className="text-xs font-semibold text-gray-400 mb-1 border-b border-gray-700 pb-1">
+                          Workbench ({workbenchId})
+                        </div>
+                        <div className="space-y-1">
+                          {generations.map(gen => (
+                            <div 
+                              key={gen.id} 
+                              className="flex items-center justify-between hover:bg-gray-700 p-1 rounded-sm cursor-pointer group"
+                              onClick={() => {
+                                if (gen.lastFrameUrl) {
+                                  importLastFrame(gen.lastFrameUrl);
+                                  setDropdownOpen(false);
+                                }
+                              }}
+                            >
+                              <div className="flex items-center">
+                                <div className="w-8 h-8 bg-gray-900 rounded-sm overflow-hidden mr-2 flex-shrink-0">
+                                  {gen.lastFrameUrl && (
+                                    <img
+                                      src={gen.lastFrameUrl}
+                                      alt="Last frame thumbnail"
+                                      className="w-full h-full object-cover"
+                                    />
+                                  )}
+                                </div>
+                                <div className="text-xs text-gray-300 truncate">
+                                  {new Date(gen.createdAt).toLocaleTimeString([], { 
+                                    hour: '2-digit', 
+                                    minute: '2-digit' 
+                                  })}
+                                </div>
+                              </div>
+                              <button
+                                className="text-blue-400 opacity-0 group-hover:opacity-100 transition-opacity"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  if (gen.lastFrameUrl) {
+                                    importLastFrame(gen.lastFrameUrl);
+                                    setDropdownOpen(false);
+                                  }
+                                }}
+                              >
+                                Import
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    ))
+                  ) : (
+                    <div className="text-center text-gray-400 py-4">
+                      No last frames available
+                    </div>
+                  )}
+                </div>
+                <div className="border-t border-gray-700 p-2 flex justify-end">
+                  <button 
+                    className="text-xs text-gray-400 hover:text-gray-300"
+                    onClick={() => setDropdownOpen(false)}
+                  >
+                    <X className="h-3 w-3 inline mr-1" />
+                    Close
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </div>
