@@ -15,6 +15,7 @@ import {
   Pencil,
   Check
 } from "lucide-react";
+import { FaDiscord } from "react-icons/fa";
 
 import { UserButton } from "@/features/auth/components/user-button";
 import { DarkModeToggle } from "@/features/editor/components/dark-mode-toggle";
@@ -218,11 +219,12 @@ export const Navbar = ({
             </div>
           </div>
         )}
+
         <div className="ml-auto flex items-center gap-x-4">
           <DropdownMenu modal={false}>
             <DropdownMenuTrigger asChild>
               <Button size="sm" variant="ghost">
-                Export
+                Export Project JSON
                 <Download className="size-4 ml-4" />
               </Button>
             </DropdownMenuTrigger>
@@ -278,6 +280,18 @@ export const Navbar = ({
             </DropdownMenuContent>
           </DropdownMenu>
           <DarkModeToggle />
+          <Hint label="Join our Discord" side="bottom" sideOffset={10}>
+            <Button
+              variant="ghost"
+              size="icon"
+              asChild
+              className="h-8 w-8 mr-2"
+            >
+              <a href="https://discord.gg/yourprojectlink" target="_blank" rel="noopener noreferrer">
+                <FaDiscord className="h-5 w-5" />
+              </a>
+            </Button>
+          </Hint>
           <UserButton />
         </div>
       </div>

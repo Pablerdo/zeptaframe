@@ -590,7 +590,6 @@ export const CompositionStudio = ({ initialData }: CompositionStudioProps) => {
     }
   };
 
-
   const initializeSamWorker = useCallback(() => {
     if (!samWorker.current) {
       console.log("Initializing SAM worker");
