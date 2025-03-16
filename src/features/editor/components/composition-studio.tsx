@@ -145,16 +145,21 @@ export const CompositionStudio = ({ initialData }: CompositionStudioProps) => {
   // Video timeline collapsed state
   const [timelineCollapsed, setTimelineCollapsed] = useState(true);
 
-  // Save callback with debounce - updated to include workbenchId and promptData
+  // Save callback with debounce - updated to standardize workbenchId
   const debouncedSave = useCallback(
     debounce(
       (values: { 
-        workbenchId: string,
+        workbenchId: string,  // Make this mandatory
         json: string,
         height: number,
         width: number,
         promptData: string,
       }) => {
+        if (!values.workbenchId) {
+          console.error("Missing workbenchId in debouncedSave call");
+          return;
+        }
+        
         // Update the project data state
         setProjectData(prev => {
           const updated = {

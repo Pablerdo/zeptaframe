@@ -36,7 +36,6 @@ interface ScrollableWorkbenchViewerProps {
   setAllowEncodeWorkbenchImage: (allowEncodeWorkbenchImage: boolean) => void;
 }
 
-
 export const ScrollableWorkbenchViewer = ({
   editorsContainerRef,
   workbenchIds,

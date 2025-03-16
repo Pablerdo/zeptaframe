@@ -61,7 +61,12 @@ export const TextPromptRightSidebar = ({
           />
           <div className="flex w-full">
             <Button 
-              onClick={() => void 0}
+              onClick={() => {
+                // Ensure we force a save by making a small change then reverting
+                const originalPrompt = generalTextPrompt;
+                onGeneralTextPromptChange(originalPrompt + " ");
+                setTimeout(() => onGeneralTextPromptChange(originalPrompt), 10);
+              }}
               className="w-full"
             >
               Save Prompt
