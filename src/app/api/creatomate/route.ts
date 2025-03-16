@@ -30,9 +30,9 @@ export async function POST(req: NextRequest) {
       source: url
     }));
 
-    // Generate the webhook URL (absolute URL)
-    const baseUrl = process.env.NEXT_PUBLIC_WEBHOOK_URL_NGROK || 'http://localhost:3000';
-    const webhookUrl = `${baseUrl}/api/creatomate/webhook`;
+    const webhookUrl = process.env.DEPLOYMENT_MODE === 'production' 
+    ? `${process.env.NEXT_PUBLIC_WEBHOOK_URL_PROD}/api/creatomate/webhook`
+    : `${process.env.NEXT_PUBLIC_WEBHOOK_URL_NGROK}/api/creatomate/webhook`;
 
     console.log('Using webhook URL:', webhookUrl); // Add this for debugging
 
