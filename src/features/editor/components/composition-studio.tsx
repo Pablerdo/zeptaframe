@@ -638,7 +638,6 @@ export const CompositionStudio = ({ initialData }: CompositionStudioProps) => {
     // Function to only fetch pending generations (for polling)
     const fetchPendingVideoGenerations = async () => {
       try {
-        console.log("Polling for pending video gen")
         const response = await fetch(
           `/api/video-generations?projectId=${initialData.id}&status=pending`
         );

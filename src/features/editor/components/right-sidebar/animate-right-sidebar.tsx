@@ -877,7 +877,7 @@ export const AnimateRightSidebar = ({
   return (
     <aside
       className={cn(
-        "bg-editor-sidebar h-full relative border-r border-l z-[40] w-full flex flex-col",
+        "bg-editor-sidebar h-full relative border-r border-l border-gray-300 dark:border-gray-700 z-[40] w-full flex flex-col",
         activeWorkbenchTool === "animate" ? "visible" : "hidden",
       )}
     >
@@ -919,7 +919,7 @@ export const AnimateRightSidebar = ({
           {/* Segmented masks list */}
           <div className="space-y-2">
             {/* Always show the "New Object" stub at the top */}
-            <div className="flex items-center justify-between p-2 border rounded-md">
+            <div className="flex items-center justify-between p-2 border-2 border-gray-300 dark:border-gray-700 rounded-md">
               <div className="flex items-center space-x-2">
                 <span className="text-sm">New Object</span>
               </div>
@@ -988,7 +988,7 @@ export const AnimateRightSidebar = ({
                 const actualIndex = segmentedMasks.findIndex(m => m.url === mask.url);
                 
                 return (
-                  <div key={mask.url} className="flex flex-col p-2 border rounded-md space-y-2">
+                  <div key={mask.url} className="flex flex-col p-2 border-2 border-gray-300 dark:border-gray-700 rounded-md space-y-2">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center space-x-2">
                         <img 

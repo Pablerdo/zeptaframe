@@ -588,7 +588,7 @@ export const Workbench = ({
           />
           {/* workbench number indicator */}
           <div className="absolute top-2 left-2 flex items-center space-x-2">
-            <div className="bg-blue-700 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs font-bold">
+            <div className="bg-blue-600 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs font-bold">
               {index + 1}
             </div>
 
@@ -766,7 +766,7 @@ export const Workbench = ({
           {/* Generate Video Submit Button */}
           <div className="mt-auto">
             <button 
-              className="w-full aspect-square bg-blue-500 hover:bg-blue-600 text-white rounded-lg transition-colors duration-200 flex flex-col items-center justify-center gap-1 px-2 py-1"
+              className="w-full aspect-square bg-blue-600 hover:bg-blue-600 text-white rounded-lg transition-colors duration-200 flex flex-col items-center justify-center gap-1 px-2 py-1"
               onClick={() => handleGenerateVideo(selectedModel.id)}
               disabled={isGenerating}
             >
