@@ -108,7 +108,7 @@ const VideoTimeline = ({
   // };
 
   return (
-    <div className="w-full overflow-x-auto custom-scrollbar px-6">
+    <div className="w-full overflow-x-auto custom-scrollbar px-6 pt-2">
       <div className="flex items-center justify-between">
         <div className="flex items-center space-x-4">
           {workbenchIds.map((workbenchId, index) => (
@@ -131,16 +131,8 @@ const VideoTimeline = ({
           ))}
           {/* Export button container */}
           <div className="px-4 flex items-center">
-            <div className="pointer-events-none">
-              <svg width="96" height="48" viewBox="0 0 96 48" fill="none" xmlns="http://www.w3.org/2000/svg">
-                {/* Top funnel line with arrow */}
-                <path d="M8 14L80 22L88 22" stroke="white" strokeWidth="1.5" strokeOpacity="0.7"/>
-                <path d="M88 22L82 18" stroke="white" strokeWidth="1.5" strokeOpacity="0.7"/>
-                
-                {/* Bottom funnel line with arrow */}
-                <path d="M8 34L80 26L88 26" stroke="white" strokeWidth="1.5" strokeOpacity="0.7"/>
-                <path d="M88 26L82 30" stroke="white" strokeWidth="1.5" strokeOpacity="0.7"/>
-              </svg>
+            <div className="pointer-events-none pr-2">
+              <ChevronRight className="w-5 h-5 text-gray-300" />
             </div>
             <button 
               className={cn(
