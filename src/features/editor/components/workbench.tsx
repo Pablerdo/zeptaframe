@@ -28,6 +28,7 @@ import { videoGenerations } from "@/db/schema";
 import { defaultVideoModelId, videoModels } from "../utils/videoModels";
 import { precisionReplacer } from "../utils/json-helpers";
 import { useLastFrames } from '@/features/editor/contexts/last-frame-context';
+import { toast } from "sonner";
 
 interface WorkbenchProps {
   projectId: string;
@@ -299,7 +300,7 @@ export const Workbench = ({
           });
           
           const dbData = await dbResponse.json();
-          
+          toast.success("Video generation started successfully. Check timeline for progress.");
           console.log("Video generation started. Please wait...");
         } else {
           throw new Error("No video runId received");
@@ -307,6 +308,7 @@ export const Workbench = ({
       } catch (error) {
         console.error("Error:", error);
         console.log("Error generating video");
+        toast.error("Error generating video. Please try again.");
       } finally {
         setIsGenerating(false);
       }
