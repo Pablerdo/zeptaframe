@@ -52,6 +52,7 @@ interface WorkbenchProps {
   onChangeActiveTool: (tool: ActiveTool) => void;
   samWorker: React.RefObject<Worker | null>;
   samWorkerLoading: boolean;
+  setSamWorkerLoading: (samWorkerLoading: boolean) => void;
   prevMaskArray: Float32Array | null;
   setPrevMaskArray: (prevMaskArray: Float32Array | null) => void;
   mask: HTMLCanvasElement | null;
@@ -59,6 +60,7 @@ interface WorkbenchProps {
   maskBinary: HTMLCanvasElement | null;
   setMaskBinary: (maskBinary: HTMLCanvasElement | null) => void;
   setAllowEncodeWorkbenchImage: (allowEncodeWorkbenchImage: boolean) => void;
+  samWorkerInitialized: boolean;
 }
 
 export const Workbench = ({
@@ -78,6 +80,7 @@ export const Workbench = ({
   canDelete,
   samWorker,
   samWorkerLoading,
+  setSamWorkerLoading,
   prevMaskArray,
   setPrevMaskArray,
   mask,
@@ -85,6 +88,7 @@ export const Workbench = ({
   maskBinary,
   setMaskBinary,
   setAllowEncodeWorkbenchImage,
+  samWorkerInitialized,
 }: WorkbenchProps) => {
   // Create refs for canvas and container
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -100,7 +104,6 @@ export const Workbench = ({
   const [selectedModel, setSelectedModel] = useState<BaseVideoModel>(videoModels[defaultVideoModelId]);
   const [cameraControl, setCameraControl] = useState<Record<string, any>>({});
 
-  const [canImportPreviousLastFrame, setCanImportPreviousLastFrame] = useState(true);
   const { lastFrameGenerations, importLastFrame, setActiveEditor } = useLastFrames();
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -413,11 +416,13 @@ export const Workbench = ({
 
   // Add this function to handle encoding the workbench image
   const encodeWorkbenchImage = useCallback(async () => {
+
     if (!samWorker.current || !editor?.canvas) return;
     
     const workspace = editor?.getWorkspace();
     if (!workspace) return;
 
+    setSamWorkerLoading(true);
     // Get the workspace dimensions and position
     const workspaceWidth = workspace.width || 720;
     const workspaceHeight = workspace.height || 480;
@@ -472,7 +477,7 @@ export const Workbench = ({
     img.src = workspaceImage;
   }, [editor, samWorker]);
 
-    // Notify parent component ONLY when this workbench BECOMES active,
+  // Notify parent component ONLY when this workbench BECOMES active,
   // not on every editor change
   useEffect(() => {
     // Only call onActive when the workbench becomes active and has an editor
@@ -481,119 +486,36 @@ export const Workbench = ({
       if (!isActiveNotifiedRef.current) {
         onActive(editor, index);
         isActiveNotifiedRef.current = true;
-        
-        // Encode the current workbench image when it becomes active
-        // This ensures the SAM worker has the correct image for the currently visible workbench
-        if (samWorker.current && editor.canvas) {
-          encodeWorkbenchImage();
-        }
       }
     } else {
       // Reset the flag when the workbench becomes inactive
       isActiveNotifiedRef.current = false;
     }
   }, [isActive, editor, index, onActive, encodeWorkbenchImage, samWorker]);
-  
-  // // Add this effect to handle canvas changes
-  // useEffect(() => {
-  //   if (editor?.canvas) {
-  //     // console.log(`Setting up comprehensive canvas listeners for workbench ${index}`);
 
-  //     // Use a single debounced handler for all events
-  //     const debouncedEncodeWorkbench = debounce(() => {
-  //       console.log("Canvas changed - encoding workbench image");
-  //       encodeWorkbenchImage();
-  //     }, 1500);
+  // TODO: Review this function, ideally it would have event listeners ,but they were not working.
 
-  //     // List of all events that should trigger an encode
-  //     const eventsToMonitor = [
-  //       // Object lifecycle events
-  //       'object:added',
-  //       'object:removed',
-  //       'object:modified',
-        
-  //       // Text-specific events
-  //       // 'text:changed',
-  //       // 'text:editing:exited',
-        
-  //       // // Drawing events
-  //       // 'path:created',
-        
-  //       // // Rendering events
-  //       'after:render',
-        
-  //       // // Selection events (optional - might cause too many updates)
-  //       // // 'selection:created',
-  //       // // 'selection:updated',
-  //       // // 'selection:cleared',
-        
-  //       // // Canvas-wide events
-  //       //'canvas:cleared',
-        
-  //       // // Property changes
-  //       // 'object:properties:changed'
-  //     ];
-
-  //     // Register all event listeners
-  //     eventsToMonitor.forEach(eventName => {
-  //       editor.canvas.on(eventName, debouncedEncodeWorkbench);
-  //     });
-
-  //     // Cleanup function to remove all listeners
-  //     return () => {
-  //       eventsToMonitor.forEach(eventName => {
-  //         editor.canvas.off(eventName, debouncedEncodeWorkbench);
-  //       });
-  //       debouncedEncodeWorkbench.cancel();
-  //     };
-  //   }
-  // }, [editor?.canvas.on(), isActive, encodeWorkbenchImage, index]);
-
-  const debouncedEncodeRef = useRef(
-    debounce(() => {
-      console.log("Canvas changed - encoding workbench image");
-      encodeWorkbenchImage();
-    }, 1500, { maxWait: 3000 })
-  );
-  
+  // We don't need the debounced function reference anymore since we're using a direct interval
   useEffect(() => {
-    if (editor?.canvas) {
-      const eventsToMonitor = [
-        'object:added',
-        'object:removed',
-        'object:modified',
-        // 'after:render'
-      ];
+    if (editor?.canvas && activeWorkbenchTool !== "animate" && samWorkerInitialized && isActive && !samWorkerLoading) {
+      console.log("Setting up periodic encoding for workbench");
       
-      // Optionally, add logging to verify events fire as expected:
-      const logEvent = (eventName: string) => () => {
-        console.log(`Event fired: ${eventName}`);
-        debouncedEncodeRef.current();
-      };
-  
-      // Attach listeners
-      eventsToMonitor.forEach(eventName => {
-        editor.canvas.on(eventName, logEvent(eventName));
-      });
-  
+      // Run encoding immediately when effect initializes
+      encodeWorkbenchImage();
+      
+      // Set up interval to encode every second
+      const encodingInterval = setInterval(() => {
+        encodeWorkbenchImage();
+        console.log("/////------Encoding workbench image------/////");
+      }, 2000);
+      
+      // Clean up function to clear the interval when component unmounts or dependencies change
       return () => {
-        // Remove the same listeners on cleanup
-        eventsToMonitor.forEach(eventName => {
-          editor.canvas.off(eventName, logEvent(eventName));
-        });
-        debouncedEncodeRef.current.cancel();
+        console.log("Cleaning up encoding interval");
+        clearInterval(encodingInterval);
       };
     }
-  }, [editor?.canvas, encodeWorkbenchImage, activeTool, activeWorkbenchTool]);
-
-  // When models or other sidebar data changes, sync with the editor state
-
-  // TODO: This is not working, need to fix it
-  // useEffect(() => {
-  //   if (editor && selectedModel) {
-  //     editor.setSelectedModelId(selectedModel.id);
-  //   }
-  // }, [editor, selectedModel]);
+  }, [editor?.canvas, activeWorkbenchTool, samWorkerInitialized, isActive]);
 
   // When this workbench becomes active, set its editor as the active editor in context
   useEffect(() => {
@@ -637,9 +559,6 @@ export const Workbench = ({
         >
           <canvas 
             ref={canvasRef} 
-            className={cn(
-              activeTool === "segment" ? "cursor-crosshair" : "cursor-default"
-            )}
           />
           {/* workbench number indicator */}
           <div className="absolute top-2 left-2 flex items-center space-x-2">

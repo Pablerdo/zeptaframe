@@ -34,9 +34,6 @@ import { SegmentationSidebar } from "@/features/editor/components/segmentation-s
 import { cn } from "@/lib/utils";
 import CollapsibleVideoViewer from "@/features/editor/components/collapsible-video-viewer";
 import { ScrollableWorkbenchViewer } from "@/features/editor/components/scrollable-workbench-viewer";
-import { float32ArrayToBinaryMask, float32ArrayToCanvas, resizeCanvas, sliceTensor } from "@/app/sam/lib/imageutils";
-import { canvasToFloat32Array } from "@/app/sam/lib/imageutils";
-import { resizeAndPadBox } from "@/app/sam/lib/imageutils";
 import { GenerateSidebar } from "./generate-sidebar";
 import { LastFrameProvider } from '@/features/editor/contexts/last-frame-context';
 import { WorkbenchNavigator } from "@/features/editor/components/workbench-navigator";
@@ -128,8 +125,9 @@ export const CompositionStudio = ({ initialData }: CompositionStudioProps) => {
   
   // SAM worker and mask state
   const samWorker = useRef<Worker | null>(null);
-  const [samWorkerLoading, setSamWorkerLoading] = useState(false);
+  const [samWorkerLoading, setSamWorkerLoading] = useState(true);
   const [samWorkerStatus, setSamWorkerStatus] = useState("");
+  const [samWorkerInitialized, setSamWorkerInitialized] = useState(false);
   const [samWorkerImageEncoded, setSamWorkerImageEncoded] = useState(false);
   const [samWorkerDevice, setSamWorkerDevice] = useState<string | null>(null);
   const [imageSize, setImageSize] = useState({ w: 1024, h: 1024 });
@@ -475,69 +473,69 @@ export const CompositionStudio = ({ initialData }: CompositionStudioProps) => {
   
   // Start encoding image
   
-  const encodeWorkbenchImage = async () => {
-    if (!samWorker.current || !activeEditor?.canvas) return;
+  // const encodeWorkbenchImage = async () => {
+  //   if (!samWorker.current || !activeEditor?.canvas) return;
     
-    const workspace = activeEditor?.getWorkspace();
-    if (!workspace) return;
+  //   const workspace = activeEditor?.getWorkspace();
+  //   if (!workspace) return;
 
-    // Get the workspace dimensions and position
-    const workspaceWidth = workspace.width || 720;
-    const workspaceHeight = workspace.height || 480;
-    const workspaceLeft = workspace.left || 0;
-    const workspaceTop = workspace.top || 0;
+  //   // Get the workspace dimensions and position
+  //   const workspaceWidth = workspace.width || 720;
+  //   const workspaceHeight = workspace.height || 480;
+  //   const workspaceLeft = workspace.left || 0;
+  //   const workspaceTop = workspace.top || 0;
     
-    // Create a temporary canvas with the workspace content
-    const tempCanvas = document.createElement('canvas');
-    tempCanvas.width = workspaceWidth;
-    tempCanvas.height = workspaceHeight;
-    const tempCtx = tempCanvas.getContext('2d');
+  //   // Create a temporary canvas with the workspace content
+  //   const tempCanvas = document.createElement('canvas');
+  //   tempCanvas.width = workspaceWidth;
+  //   tempCanvas.height = workspaceHeight;
+  //   const tempCtx = tempCanvas.getContext('2d');
     
-    // Save current viewport transform and ensure it's not undefined
-    const currentViewportTransform = activeEditor.canvas.viewportTransform || [1, 0, 0, 1, 0, 0];
+  //   // Save current viewport transform and ensure it's not undefined
+  //   const currentViewportTransform = activeEditor.canvas.viewportTransform || [1, 0, 0, 1, 0, 0];
     
-    // Reset viewport transform temporarily to get accurate image
-    activeEditor.canvas.setViewportTransform([1, 0, 0, 1, 0, 0]);
+  //   // Reset viewport transform temporarily to get accurate image
+  //   activeEditor.canvas.setViewportTransform([1, 0, 0, 1, 0, 0]);
     
-    // Draw the workspace content onto the temp canvas
-    const workspaceImage = activeEditor.canvas.toDataURL({
-      format: 'png',  
-      quality: 1,
-      left: workspaceLeft,
-      top: workspaceTop,
-      width: workspaceWidth,
-      height: workspaceHeight
-    });
+  //   // Draw the workspace content onto the temp canvas
+  //   const workspaceImage = activeEditor.canvas.toDataURL({
+  //     format: 'png',  
+  //     quality: 1,
+  //     left: workspaceLeft,
+  //     top: workspaceTop,
+  //     width: workspaceWidth,
+  //     height: workspaceHeight
+  //   });
 
-    activeEditor.setWorkspaceURL(workspaceImage);
+  //   activeEditor.setWorkspaceURL(workspaceImage);
 
-    // Restore viewport transform
-    activeEditor.canvas.setViewportTransform(currentViewportTransform);
+  //   // Restore viewport transform
+  //   activeEditor.canvas.setViewportTransform(currentViewportTransform);
 
-    const img = new Image();
-    img.onload = () => {
-        const largestDim = Math.max(workspaceWidth, workspaceHeight);
+  //   const img = new Image();
+  //   img.onload = () => {
+  //       const largestDim = Math.max(workspaceWidth, workspaceHeight);
 
-        const box = resizeAndPadBox(
-          { h: workspaceHeight, w: workspaceWidth },
-          { h: largestDim, w: largestDim }
-        );
+  //       const box = resizeAndPadBox(
+  //         { h: workspaceHeight, w: workspaceWidth },
+  //         { h: largestDim, w: largestDim }
+  //       );
         
-        tempCtx?.drawImage(img, 0, 0, 720, 480, box?.x || 0, 0, box?.w, box?.h);
+  //       tempCtx?.drawImage(img, 0, 0, 720, 480, box?.x || 0, 0, box?.w, box?.h);
 
-        // tempCtx?.drawImage(img, 0, 0, workspaceWidth, workspaceHeight, box?.x || 0, box?.y || 0, box?.w, box?.h);
+  //       // tempCtx?.drawImage(img, 0, 0, workspaceWidth, workspaceHeight, box?.x || 0, box?.y || 0, box?.w, box?.h);
       
-        samWorker.current?.postMessage({
-          type: "encodeImage",
-          data: canvasToFloat32Array(resizeCanvas(tempCanvas, imageSize)),
-        });
+  //       samWorker.current?.postMessage({
+  //         type: "encodeImage",
+  //         data: canvasToFloat32Array(resizeCanvas(tempCanvas, imageSize)),
+  //       });
 
-        setSamWorkerLoading(true);
-        setSamWorkerStatus("Encoding");
-    };
+  //       setSamWorkerLoading(true);
+  //       setSamWorkerStatus("Encoding");
+  //   };
 
-    img.src = workspaceImage;
-  };
+  //   img.src = workspaceImage;
+  // };
 
   // useEffect(() => {
   //   if (activeEditor?.canvas && activeTool !== "segment" && allowEncodeWorkbenchImage) {
@@ -583,6 +581,7 @@ export const CompositionStudio = ({ initialData }: CompositionStudioProps) => {
         setSamWorkerLoading(false);
         setSamWorkerDevice(device);
         setSamWorkerStatus("Encode image");
+        setSamWorkerInitialized(true);
       } else {
         setSamWorkerStatus("Error (check JS console)");
       }
@@ -708,6 +707,7 @@ export const CompositionStudio = ({ initialData }: CompositionStudioProps) => {
     return () => clearInterval(intervalId);
   }, [initialData.id]);
 
+  // Add polling for video exports
   useEffect(() => {
     const fetchAllVideoExports = async () => {
       try {
@@ -869,6 +869,7 @@ export const CompositionStudio = ({ initialData }: CompositionStudioProps) => {
                   onChangeActiveTool={onChangeActiveTool}
                   samWorker={samWorker}
                   samWorkerLoading={samWorkerLoading}
+                  setSamWorkerLoading={setSamWorkerLoading}
                   prevMaskArray={prevMaskArray}
                   setPrevMaskArray={setPrevMaskArray}
                   mask={mask}
@@ -879,6 +880,7 @@ export const CompositionStudio = ({ initialData }: CompositionStudioProps) => {
                   isDeletingIndex={isDeletingIndex}
                   transitionDirection={transitionDirection}
                   setAllowEncodeWorkbenchImage={setAllowEncodeWorkbenchImage}
+                  samWorkerInitialized={samWorkerInitialized}
                 />
                 
                 {/* Add workbench button */}

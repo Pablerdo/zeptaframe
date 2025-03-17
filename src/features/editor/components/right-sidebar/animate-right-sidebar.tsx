@@ -63,44 +63,6 @@ export const AnimateRightSidebar = ({
     onChangeActiveWorkbenchTool("select");
   };
 
-  // Add this effect to handle canvas interactivity
-  useEffect(() => {
-    if (!editor?.canvas) return;
-    
-    if (activeWorkbenchTool !== "animate") {
-      // Reset to default cursors when sidebar is closed
-      editor.canvas.hoverCursor = 'default';
-      editor.canvas.defaultCursor = 'default';
-      editor.canvas.selection = true;
-      editor.canvas.forEachObject((obj) => {
-        if (!obj.data?.isMask) {
-          obj.selectable = true;
-          obj.evented = true;
-        }
-      });
-    } else if (samWorkerLoading) {
-      // Disable all canvas interactions while loading
-      editor.canvas.selection = false;
-      editor.canvas.forEachObject((obj) => {
-        obj.selectable = false;
-        obj.evented = false;
-      });
-      editor.canvas.hoverCursor = 'progress';
-      editor.canvas.defaultCursor = 'progress';
-    } else {
-      // Disable all interactions when sidebar is open but not actively segmenting
-      editor.canvas.selection = false;
-      editor.canvas.forEachObject((obj) => {
-        obj.selectable = false;
-        obj.evented = false;
-      });
-      editor.canvas.hoverCursor = 'crosshair';
-      editor.canvas.defaultCursor = 'crosshair';
-    }
-    
-    editor.canvas.renderAll();
-  }, [samWorkerLoading, editor?.canvas, activeWorkbenchTool]);
-
   const handleNewMask = () => {
     // Stop all active animations first
     Object.values(activeAnimations).forEach(animation => animation.stop());
@@ -463,20 +425,10 @@ export const AnimateRightSidebar = ({
         setSegmentedMasks(updatedMasks);
       }
       // Re-enable all interactions
-      // editor.canvas.selection = true;
-      // editor.canvas.skipTargetFind = false;
-      // editor.canvas.forEachObject(obj => {
-      //   obj.selectable = true;
-      //   obj.evented = true;
-      // });
+      editor.canvas.skipTargetFind = false;
     } else if (activeWorkbenchTool === "animate" && editor?.canvas) {
-      console.log("animat right bar open");
-      // editor.canvas.selection = false;
-      // editor.canvas.skipTargetFind = true; // This prevents objects from being targets for mouse events
-      // editor.canvas.forEachObject(obj => {
-      //   obj.selectable = false;
-      //   obj.evented = false;
-      // });
+      console.log("animate right bar open");
+      editor.canvas.skipTargetFind = true; // This prevents objects from being targets for mouse events
     }
 
   }, [activeWorkbenchTool, editor?.canvas]);
@@ -488,6 +440,8 @@ export const AnimateRightSidebar = ({
     }
 
     setRecordingMotion(maskUrl);
+
+    editor.canvas.skipTargetFind = false; // This prevents objects from being targets for mouse events
 
     // First disable all objects and reset cursor
     editor.canvas.selection = false;
@@ -586,6 +540,7 @@ export const AnimateRightSidebar = ({
   const handleSaveMotion = () => {
     if (!recordingMotion || !editor?.canvas) return;
 
+    editor.canvas.skipTargetFind = true;
     const maskObject = editor.canvas.getObjects().find(obj => obj.data?.isMask && obj.data.url === recordingMotion);
     if (!maskObject) return;
 

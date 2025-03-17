@@ -24,6 +24,7 @@ interface ScrollableWorkbenchViewerProps {
   onChangeActiveTool: (tool: ActiveTool) => void;
   samWorker: React.RefObject<Worker | null>;
   samWorkerLoading: boolean;
+  setSamWorkerLoading: (samWorkerLoading: boolean) => void;
   prevMaskArray: Float32Array | null;
   setPrevMaskArray: (prevMaskArray: Float32Array | null) => void;
   mask: HTMLCanvasElement | null;
@@ -34,6 +35,7 @@ interface ScrollableWorkbenchViewerProps {
   isDeletingIndex: number | null;
   transitionDirection: 'left' | 'right' | null;
   setAllowEncodeWorkbenchImage: (allowEncodeWorkbenchImage: boolean) => void;
+  samWorkerInitialized: boolean;
 }
 
 export const ScrollableWorkbenchViewer = ({
@@ -49,6 +51,7 @@ export const ScrollableWorkbenchViewer = ({
   onChangeActiveTool,
   samWorker,
   samWorkerLoading,
+  setSamWorkerLoading,
   prevMaskArray,
   setPrevMaskArray,
   mask,
@@ -59,6 +62,7 @@ export const ScrollableWorkbenchViewer = ({
   isDeletingIndex,
   transitionDirection,
   setAllowEncodeWorkbenchImage,
+  samWorkerInitialized,
 }: ScrollableWorkbenchViewerProps) => {
 
   return (
@@ -115,6 +119,7 @@ export const ScrollableWorkbenchViewer = ({
               onChangeActiveTool={onChangeActiveTool}
               samWorker={samWorker}
               samWorkerLoading={samWorkerLoading}
+              setSamWorkerLoading={setSamWorkerLoading}
               prevMaskArray={prevMaskArray}
               setPrevMaskArray={setPrevMaskArray}
               mask={mask}
@@ -122,6 +127,7 @@ export const ScrollableWorkbenchViewer = ({
               maskBinary={maskBinary}
               setMaskBinary={setMaskBinary}
               setAllowEncodeWorkbenchImage={setAllowEncodeWorkbenchImage}
+              samWorkerInitialized={samWorkerInitialized}
             />
           </div>
         );
