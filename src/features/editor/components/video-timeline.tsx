@@ -142,7 +142,7 @@ const VideoTimeline = ({
               <button 
                 className={cn(
                   "inline-flex items-center justify-center gap-2 text-white rounded-lg px-6 py-3 font-semibold transition-all duration-300 shadow-xl",
-                  "bg-blue-600",
+                  "bg-blue-700",
                   "hover:scale-103 hover:shadow-blue-500/20 hover:from-blue-800 hover:to-blue-950", 
                   "active:scale-95 active:shadow-inner",
                   "border border-blue-600/20",

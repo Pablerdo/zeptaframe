@@ -752,7 +752,7 @@ export const CompositionStudio = ({ initialData }: CompositionStudioProps) => {
   }, [initialData.id]);
 
   return (
-    <ThemeProvider attribute="class" defaultTheme="light" enableSystem>
+    <ThemeProvider attribute="class" defaultTheme="dark">
       <LastFrameProvider videoGenerations={videoGenerations}>
         <div className="w-full h-full flex flex-col overflow-hidden bg-editor-bg dark:bg-editor-bg-dark">
           <Navbar
