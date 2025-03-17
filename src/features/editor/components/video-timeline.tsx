@@ -7,6 +7,7 @@ import { cn } from '@/lib/utils';
 import WorkbenchGenerations from './workbench-generations';
 import { exportVideoTimeline } from '@/features/editor/services/video-timeline-service';
 import VideoExportsList from './video-exports-list';
+import { toast } from 'sonner';
 
 interface VideoTimelineProps {
   videoGenerations: VideoGeneration[];
@@ -150,7 +151,10 @@ const VideoTimeline = ({
                   "w-fit",
                   isExporting ? "opacity-80 cursor-not-allowed grayscale" : "animate-pulse-subtle"
                 )}
-                onClick={() => handleExportTimeline()}
+                onClick={() => 
+                  //handleExportTimeline()
+                  toast.info("Timeline export coming soon!")
+                }
                 disabled={isExporting}
               >
                 {isExporting ? (
