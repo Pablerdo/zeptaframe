@@ -111,7 +111,7 @@ export const Workbench = ({
       try {
         const parsed = JSON.parse(defaultPromptData);
         if (parsed) {
-          console.log("parsed", parsed);
+          // console.log("parsed", parsed);
           // Look for either textPrompt or generalTextPrompt in the parsed data
           setGeneralTextPrompt(parsed.generalTextPrompt || "");
 
@@ -494,28 +494,97 @@ export const Workbench = ({
     }
   }, [isActive, editor, index, onActive, encodeWorkbenchImage, samWorker]);
   
-  // Add this effect to handle canvas changes
+  // // Add this effect to handle canvas changes
+  // useEffect(() => {
+  //   if (editor?.canvas) {
+  //     // console.log(`Setting up comprehensive canvas listeners for workbench ${index}`);
+
+  //     // Use a single debounced handler for all events
+  //     const debouncedEncodeWorkbench = debounce(() => {
+  //       console.log("Canvas changed - encoding workbench image");
+  //       encodeWorkbenchImage();
+  //     }, 1500);
+
+  //     // List of all events that should trigger an encode
+  //     const eventsToMonitor = [
+  //       // Object lifecycle events
+  //       'object:added',
+  //       'object:removed',
+  //       'object:modified',
+        
+  //       // Text-specific events
+  //       // 'text:changed',
+  //       // 'text:editing:exited',
+        
+  //       // // Drawing events
+  //       // 'path:created',
+        
+  //       // // Rendering events
+  //       'after:render',
+        
+  //       // // Selection events (optional - might cause too many updates)
+  //       // // 'selection:created',
+  //       // // 'selection:updated',
+  //       // // 'selection:cleared',
+        
+  //       // // Canvas-wide events
+  //       //'canvas:cleared',
+        
+  //       // // Property changes
+  //       // 'object:properties:changed'
+  //     ];
+
+  //     // Register all event listeners
+  //     eventsToMonitor.forEach(eventName => {
+  //       editor.canvas.on(eventName, debouncedEncodeWorkbench);
+  //     });
+
+  //     // Cleanup function to remove all listeners
+  //     return () => {
+  //       eventsToMonitor.forEach(eventName => {
+  //         editor.canvas.off(eventName, debouncedEncodeWorkbench);
+  //       });
+  //       debouncedEncodeWorkbench.cancel();
+  //     };
+  //   }
+  // }, [editor?.canvas.on(), isActive, encodeWorkbenchImage, index]);
+
+  const debouncedEncodeRef = useRef(
+    debounce(() => {
+      console.log("Canvas changed - encoding workbench image");
+      encodeWorkbenchImage();
+    }, 1500, { maxWait: 3000 })
+  );
+  
   useEffect(() => {
-    if (editor?.canvas && activeTool !== "segment" && isActive) {
-      // Create a debounced version of the canvas change handler
-      const debouncedHandleCanvasChange = debounce(() => {
-        encodeWorkbenchImage();
-      }, 500);
+    if (editor?.canvas) {
+      const eventsToMonitor = [
+        'object:added',
+        'object:removed',
+        'object:modified',
+        // 'after:render'
+      ];
       
-      // Add event listeners for all object changes
-      editor.canvas.on('object:added', debouncedHandleCanvasChange);
-      editor.canvas.on('object:modified', debouncedHandleCanvasChange);
-      editor.canvas.on('object:removed', debouncedHandleCanvasChange);
-      
-      // Cleanup all listeners and cancel any pending debounced calls
+      // Optionally, add logging to verify events fire as expected:
+      const logEvent = (eventName: string) => () => {
+        console.log(`Event fired: ${eventName}`);
+        debouncedEncodeRef.current();
+      };
+  
+      // Attach listeners
+      eventsToMonitor.forEach(eventName => {
+        editor.canvas.on(eventName, logEvent(eventName));
+      });
+  
       return () => {
-        editor.canvas.off('object:added', debouncedHandleCanvasChange);
-        editor.canvas.off('object:modified', debouncedHandleCanvasChange);
-        editor.canvas.off('object:removed', debouncedHandleCanvasChange);
-        debouncedHandleCanvasChange.cancel(); // Important: cancel any pending executions
+        // Remove the same listeners on cleanup
+        eventsToMonitor.forEach(eventName => {
+          editor.canvas.off(eventName, logEvent(eventName));
+        });
+        debouncedEncodeRef.current.cancel();
       };
     }
-  }, [editor?.canvas, activeTool, isActive, encodeWorkbenchImage]);
+  }, [editor?.canvas, encodeWorkbenchImage, activeTool, activeWorkbenchTool]);
 
   // When models or other sidebar data changes, sync with the editor state
 
@@ -532,20 +601,6 @@ export const Workbench = ({
       setActiveEditor(editor);
     }
   }, [isActive, editor, setActiveEditor]);
-
-  // Function to handle clicking outside the dropdown to close it
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
-        setDropdownOpen(false);
-      }
-    };
-    
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-    };
-  }, []);
 
   // Group last frames by workbench for display in dropdown
   const groupedLastFrames = useMemo(() => {

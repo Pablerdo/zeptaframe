@@ -447,6 +447,8 @@ export const AnimateRightSidebar = ({
   // Update effect for sidebar open/close
   useEffect(() => {
     if (activeWorkbenchTool !== "animate" && editor?.canvas) {
+      console.log("animate right bar closed");
+
       // Clear masks from canvas
       const existingMasks = editor.canvas.getObjects().filter(obj => obj.data?.isMask);
       existingMasks.forEach(mask => editor.canvas.remove(mask));
@@ -460,7 +462,23 @@ export const AnimateRightSidebar = ({
         }));
         setSegmentedMasks(updatedMasks);
       }
+      // Re-enable all interactions
+      // editor.canvas.selection = true;
+      // editor.canvas.skipTargetFind = false;
+      // editor.canvas.forEachObject(obj => {
+      //   obj.selectable = true;
+      //   obj.evented = true;
+      // });
+    } else if (activeWorkbenchTool === "animate" && editor?.canvas) {
+      console.log("animat right bar open");
+      // editor.canvas.selection = false;
+      // editor.canvas.skipTargetFind = true; // This prevents objects from being targets for mouse events
+      // editor.canvas.forEachObject(obj => {
+      //   obj.selectable = false;
+      //   obj.evented = false;
+      // });
     }
+
   }, [activeWorkbenchTool, editor?.canvas]);
 
   const handleControlMotion = (maskId: string, maskUrl: string) => {

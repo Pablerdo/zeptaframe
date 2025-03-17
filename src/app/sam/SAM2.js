@@ -124,13 +124,17 @@ export class SAM2 {
      *  => loop through each ep, catch e if not available and move on
      */
     let session = null;
-    for (let ep of ["webgpu", "cpu"]) {
+    // Wait a bit before trying the next execution provider
+    for (let ep of ["webgpu","cpu"]) { // ["webgpu", "cpu"]) {
       try {
         session = await ort.InferenceSession.create(model, {
           executionProviders: [ep],
         });
       } catch (e) {
+        console.error("Error creating session with execution provider: " + ep);
         console.error(e);
+        console.log("Retrying with next execution provider...");
+
         continue;
       }
 
@@ -138,10 +142,46 @@ export class SAM2 {
     }
   }
 
-  async getEncoderSession() {
-    if (!this.sessionEncoder)
-      this.sessionEncoder = await this.getORTSession(this.bufferEncoder);
+  async createEncoderSession() {
+    // Wait for buffer to be available with retry mechanism
+    let retries = 0;
+    const maxRetries = 5;
+    
+    while (!this.bufferEncoder && retries < maxRetries) {
+      console.log(`Encoder buffer not ready yet, waiting... (attempt ${retries + 1}/${maxRetries})`);
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      retries++;
+    }
+    
+    // Check if buffer is now available
+    if (!this.bufferEncoder) {
+      console.error("Failed to get encoder buffer after multiple attempts");
+      return null;
+    }
+    console.log("Creating new session");
+    this.sessionEncoder = await this.getORTSession(this.bufferEncoder);
+    return this.sessionEncoder;
+  }
 
+  async getEncoderSession() {
+    while (!this.sessionEncoder) {
+      let retries = 0;
+      const maxRetries = 5;
+      
+      while (!this.bufferEncoder && retries < maxRetries) {
+        console.log(`Encoder buffer not ready yet, waiting... (attempt ${retries + 1}/${maxRetries})`);
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        retries++;
+      }
+      
+      // Check if buffer is now available
+      if (!this.bufferEncoder) {
+        console.error("Failed to get encoder buffer after multiple attempts");
+        return null;
+      }
+      console.log("Creating new session");
+      this.sessionEncoder = await this.getORTSession(this.bufferEncoder);
+    }
     return this.sessionEncoder;
   }
 
@@ -153,7 +193,10 @@ export class SAM2 {
   }
 
   async encodeImage(inputTensor) {
-    const [session, device] = await this.getEncoderSession();
+    // Wait for encoder session to be available with retry mechanism
+    if (!this.sessionEncoder) return;
+
+    const [session, device] = await this.sessionEncoder;
     const results = await session.run({ image: inputTensor });
 
     this.image_encoded = {
@@ -164,7 +207,11 @@ export class SAM2 {
   }
 
   async decode(points, masks) {
-    const [session, device] = await this.getDecoderSession();
+    // const [session, device] = await this.getDecoderSession();
+
+    if (!this.sessionDecoder) return;
+
+    const [session, device] = await this.sessionDecoder;
 
     const flatPoints = points.map((point) => {
       return [point.x, point.y];

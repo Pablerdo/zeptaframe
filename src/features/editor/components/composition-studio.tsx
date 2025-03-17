@@ -539,30 +539,38 @@ export const CompositionStudio = ({ initialData }: CompositionStudioProps) => {
     img.src = workspaceImage;
   };
 
-  useEffect(() => {
-    if (activeEditor?.canvas && activeTool !== "segment" && allowEncodeWorkbenchImage) {
-      // Create a debounced version of the canvas change handler
-      // This will wait 800ms after the last change before executing
-      const debouncedHandleCanvasChange = debounce(() => {
-        if (samWorker.current && samWorkerDevice) {
-          encodeWorkbenchImage();
-        }
-      }, 500);
+  // useEffect(() => {
+  //   if (activeEditor?.canvas && activeTool !== "segment" && allowEncodeWorkbenchImage) {
+  //     // Create a debounced version of the canvas change handler
+  //     // This will wait 800ms after the last change before executing
+  //     const debouncedHandleCanvasChange = debounce(() => {
+  //       if (samWorker.current && samWorkerDevice) {
+  //         console.log("encoding canvas from composition studio");
+  //         encodeWorkbenchImage();
+  //       }
+  //     }, 500);
       
-      // Add event listeners for all object changes
-      activeEditor.canvas.on('object:added', debouncedHandleCanvasChange);
-      activeEditor.canvas.on('object:modified', debouncedHandleCanvasChange);
-      activeEditor.canvas.on('object:removed', debouncedHandleCanvasChange);
+  //     // Add event listeners for all object changes
+  //     activeEditor.canvas.on('object:added', debouncedHandleCanvasChange);
+  //     activeEditor.canvas.on('object:modified', debouncedHandleCanvasChange);
+  //     activeEditor.canvas.on('object:removed', debouncedHandleCanvasChange);
+
+  //     // // Add text-specific event listeners
+  //     // activeEditor.canvas.on('text:changed', debouncedHandleCanvasChange);
+  //     // activeEditor.canvas.on('text:editing:exited', debouncedHandleCanvasChange);
+    
+  //     // Cleanup all listeners and cancel any pending debounced calls
+  //     return () => {
+  //       activeEditor.canvas.off('object:added', debouncedHandleCanvasChange);
+  //       activeEditor.canvas.off('object:modified', debouncedHandleCanvasChange);
+  //       activeEditor.canvas.off('object:removed', debouncedHandleCanvasChange);
+  //       // activeEditor.canvas.off('text:changed', debouncedHandleCanvasChange);
+  //       // activeEditor.canvas.off('text:editing:exited', debouncedHandleCanvasChange);
       
-      // Cleanup all listeners and cancel any pending debounced calls
-      return () => {
-        activeEditor.canvas.off('object:added', debouncedHandleCanvasChange);
-        activeEditor.canvas.off('object:modified', debouncedHandleCanvasChange);
-        activeEditor.canvas.off('object:removed', debouncedHandleCanvasChange);
-        debouncedHandleCanvasChange.cancel(); // Important: cancel any pending executions
-      };
-    }
-  }, [activeEditor?.canvas, samWorker.current, samWorkerDevice, encodeWorkbenchImage, activeTool, allowEncodeWorkbenchImage]);
+  //       debouncedHandleCanvasChange.cancel(); // Important: cancel any pending executions
+  //     };
+  //   }
+  // }, [activeEditor?.canvas, samWorker.current, samWorkerDevice, encodeWorkbenchImage, activeTool, allowEncodeWorkbenchImage]);
 
   
   const onWorkerMessage = (event: MessageEvent) => {
