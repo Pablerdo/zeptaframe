@@ -239,7 +239,7 @@ export const Navbar = ({
                 <p className="font-semibold">What the hell is this?</p>
                 <br/>
                 <p>
-                  This is Pablo Salamanca's thesis project, which 
+                  This is Pablo Salamanca&apos;s thesis project, which 
                   aims to build the first fully visual based AI video editor. 
                   I hope you enjoy it. Shoot me a message on Discord or at 
                   pablosalamanca88@gmail.com if you have any questions or feedback.
