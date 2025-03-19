@@ -7,7 +7,7 @@ import { defaultImages } from "../src/db/schema";
 import { eq } from "drizzle-orm";
 
 // Replace with your actual connection string (NEVER commit this to git)
-const DATABASE_URL ="";
+const DATABASE_URL ="postgresql://neondb_owner:npg_KFAPcwt5rL2f@ep-tight-scene-a4hak8uh-pooler.us-east-1.aws.neon.tech/neondb?sslmode=require";
 const sql = neon(DATABASE_URL);
 const db = drizzle(sql);
 
@@ -67,6 +67,14 @@ const images = [
       "url": "https://f1itk9dd7g.ufs.sh/f/CAqhXLbXudM0D4apxRzZvfhb3pLnMi8XtH4OSg2FVsCBNla6",
       "size": 4711345,
       "uploadedAt": "2025-03-19T22:29:15.000Z"
+    },
+    {
+      "name": "bear_double.jpg",
+      "key": "CAqhXLbXudM0HcACy3E7elECV0KFfyBdNhJTQZ28tcALW3uo",
+      "customId": null,
+      "url": "https://f1itk9dd7g.ufs.sh/f/CAqhXLbXudM0HcACy3E7elECV0KFfyBdNhJTQZ28tcALW3uo",
+      "size": 1402371,
+      "uploadedAt": "2025-03-19T23:32:32.000Z"
     }
 ]
 

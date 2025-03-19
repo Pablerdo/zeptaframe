@@ -56,7 +56,7 @@ export const VideoBox = ({
         <div className="w-full h-full bg-gray-800/30 flex flex-col items-center justify-center">
           <AlertCircle className="h-10 w-10 text-red-500 mb-4" />
           <span className="text-red-400 text-sm font-medium tracking-wide">
-            Selected generation failed
+            Selected generation failed, please try again.
           </span>
         </div>
       )}

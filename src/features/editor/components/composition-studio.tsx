@@ -1038,7 +1038,7 @@ export const CompositionStudio = ({ initialData, isTrial }: CompositionStudioPro
                     onClick={dismissSignUpModal}
                     className="bg-zinc-700 hover:bg-zinc-600 px-4 py-2 rounded-lg font-medium"
                   >
-                    Continue in without signing up
+                    Keep editing without signing up
                   </button>
                 </div>
               </div>
