@@ -2,15 +2,24 @@
 
 import { useEffect, useState } from "react";
 import { v4 as uuidv4 } from "uuid";
-import { Loader } from "lucide-react";
+import { Loader, X } from "lucide-react";
 import { CompositionStudio } from "@/features/editor/components/composition-studio";
 
 export default function TryPage() {
   const [trialData, setTrialData] = useState<any>(null);
+  const [showWelcomeModal, setShowWelcomeModal] = useState(false);
   
   useEffect(() => {
     // Create or retrieve trial project
     const storedTrial = localStorage.getItem("trial_project");
+    
+    // Check if it's the first visit
+    const hasVisitedBefore = localStorage.getItem("has_visited_before");
+    
+    if (!hasVisitedBefore) {
+      setShowWelcomeModal(true);
+      localStorage.setItem("has_visited_before", "true");
+    }
     
     if (storedTrial) {
       setTrialData(JSON.parse(storedTrial));
@@ -28,6 +37,10 @@ export default function TryPage() {
     }
   }, []);
   
+  const dismissWelcomeModal = () => {
+    setShowWelcomeModal(false);
+  };
+  
   if (!trialData) {
     return (
       <div className="h-full flex items-center justify-center">
@@ -36,5 +49,35 @@ export default function TryPage() {
     );
   }
   
-  return <CompositionStudio initialData={trialData} isTrial={true} />;
+  return (
+    <div className="relative h-full">
+      <CompositionStudio initialData={trialData} isTrial={true} />
+      
+      {/* Welcome Modal */}
+      {showWelcomeModal && (
+        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50">
+          <div className="bg-zinc-900 p-6 rounded-xl max-w-md w-full shadow-lg">
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-xl font-bold">Welcome to Zeptaframe</h2>
+              <button 
+                onClick={dismissWelcomeModal}
+                className="text-zinc-400 hover:text-white transition-colors"
+              >
+                <X className="size-5" />
+              </button>
+            </div>
+            <p className="mb-6 text-zinc-200">
+              This is one of the first native AI video editors that do not require text input (you can still use text if you want). Simply head into the image left sidebar, choose an image, and animate any object you want over the canvas. Happy Editing!
+            </p>
+            <button 
+              onClick={dismissWelcomeModal}
+              className="bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded-lg font-medium w-full"
+            >
+              Get Started
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
 }
