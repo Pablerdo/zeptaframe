@@ -1,0 +1,1 @@
+ALTER TABLE "video_generation" ALTER COLUMN "userId" SET NOT NULL;

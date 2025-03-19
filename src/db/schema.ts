@@ -171,6 +171,9 @@ export const videoGenerations = pgTable("video_generation", {
   projectId: text("projectId")
     .notNull()
     .references(() => projects.id, { onDelete: "cascade" }),
+  userId: text("userId")
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }),
   workbenchId: text("workbenchId").notNull(),
   runId: text("runId").notNull().unique(),
   status: text("status").$type<"pending" | "success" | "error">().notNull(),
@@ -186,6 +189,38 @@ export const videoGenerationsRelations = relations(videoGenerations, ({ one }) =
   project: one(projects, {
     fields: [videoGenerations.projectId],
     references: [projects.id],
+  }),
+  user: one(users, {
+    fields: [videoGenerations.userId],
+    references: [users.id],
+  }),
+}));
+
+export const imageGenerations = pgTable("image_generation", {
+  id: text("id")
+    .primaryKey()
+    .$defaultFn(() => crypto.randomUUID()),
+  projectId: text("projectId")
+    .notNull()
+    .references(() => projects.id, { onDelete: "cascade" }),
+  userId: text("userId")
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }),
+  runId: text("runId").notNull().unique(),
+  status: text("status").$type<"pending" | "success" | "error">().notNull(),
+  imageUrl: text("imageUrl"),
+  createdAt: timestamp("createdAt", { mode: "date" }).notNull().defaultNow(),
+  updatedAt: timestamp("updatedAt", { mode: "date" }).notNull().defaultNow(),
+});
+
+export const imageGenerationsRelations = relations(imageGenerations, ({ one }) => ({
+  project: one(projects, {
+    fields: [imageGenerations.projectId],
+    references: [projects.id],
+  }),
+  user: one(users, {
+    fields: [imageGenerations.userId],
+    references: [users.id],
   }),
 }));
 

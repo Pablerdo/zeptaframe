@@ -83,6 +83,7 @@ const app = new Hono()
         // Simply save to database
         const inserted = await db.insert(videoGenerations).values({
           projectId: data.projectId,
+          userId: auth.token.id,
           workbenchId: data.workbenchId,
           runId: data.runId,
           status: data.status,

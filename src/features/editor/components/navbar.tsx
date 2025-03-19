@@ -13,18 +13,25 @@ import {
   Redo2, 
   Undo2,
   Pencil,
-  Check
+  Check,
+  HelpCircle
 } from "lucide-react";
 import { FaDiscord } from "react-icons/fa";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 import { UserButton } from "@/features/auth/components/user-button";
 import { DarkModeToggle } from "@/features/editor/components/dark-mode-toggle";
+import { Hint } from "@/components/hint";
 
 import { ActiveTool, Editor } from "@/features/editor/types";
 import { Logo } from "@/features/editor/components/logo";
 
 import { cn } from "@/lib/utils";
-import { Hint } from "@/components/hint";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { Input } from "@/components/ui/input";
@@ -221,6 +228,25 @@ export const Navbar = ({
         )}
 
         <div className="ml-auto flex items-center gap-x-4">
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button size="sm" variant="ghost">
+                  <HelpCircle className="size-4" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent className="max-w-[300px] text-white bg-slate-800 border-slate-800">
+                <p className="font-semibold">What the hell is this?</p>
+                <br/>
+                <p>
+                  This is Pablo Salamanca's thesis project, which 
+                  aims to build the first fully visual based AI video editor. 
+                  I hope you enjoy it. Shoot me a message on Discord or at 
+                  pablosalamanca88@gmail.com if you have any questions or feedback.
+                </p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
           <DropdownMenu modal={false}>
             <DropdownMenuTrigger asChild>
               <Button size="sm" variant="ghost">
