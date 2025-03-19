@@ -67,7 +67,11 @@ export default function TryPage() {
               </button>
             </div>
             <p className="mb-6 text-zinc-200">
-              This is one of the first native AI video editors that do not require text input (you can still use text if you want). Simply head into the image left sidebar, choose an image, and animate any object you want over the canvas. Happy Editing!
+              This is a AI-native video editor that does not require text input (you can still use text if you want). <br />
+              <br />
+              Simply head into the image left sidebar, choose an image, and animate any object you want over the canvas. <br />
+              <br />
+              Happy Editing!
             </p>
             <button 
               onClick={dismissWelcomeModal}
