@@ -124,6 +124,11 @@ const buildEditor = ({
     });
   };
 
+  const getJson = () => {
+    const dataUrl = canvas.toJSON(JSON_KEYS);
+    return JSON.stringify(dataUrl, precisionReplacer);
+  };
+
   const getWorkspace = () => {
     return canvas
     .getObjects()
@@ -152,6 +157,7 @@ const buildEditor = ({
     saveSvg,
     saveJson,
     loadJson,
+    getJson,
     canUndo,
     canRedo,
     autoZoom,

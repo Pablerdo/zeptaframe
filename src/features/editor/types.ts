@@ -311,6 +311,7 @@ export interface Editor {
   saveSvg: () => void;
   saveJson: () => void;
   loadJson: (json: string) => void;
+  getJson: () => string;
   onUndo: () => void;
   onRedo: () => void;
   canUndo: () => boolean;

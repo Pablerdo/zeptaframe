@@ -78,6 +78,13 @@
       "when": 1742394974938,
       "tag": "0010_glorious_agent_zero",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1742423261289,
+      "tag": "0011_thin_havok",
+      "breakpoints": true
     }
   ]
 }

@@ -40,9 +40,11 @@ import { WorkbenchNavigator } from "@/features/editor/components/workbench-navig
 
 interface CompositionStudioProps {
   initialData: ResponseType["data"];
+  isTrial: boolean;
 }
 
-export const CompositionStudio = ({ initialData }: CompositionStudioProps) => {
+export const CompositionStudio = ({ initialData, isTrial }: CompositionStudioProps) => {
+  
   const { mutate } = useUpdateProject(initialData.id);
   const [videoGenerations, setVideoGenerations] = useState<VideoGeneration[]>([]);
   const [videoExports, setVideoExports] = useState<VideoExport[]>([]);
@@ -50,6 +52,11 @@ export const CompositionStudio = ({ initialData }: CompositionStudioProps) => {
   const [activeTool, setActiveTool] = useState<ActiveTool>("select");
   const [allowEncodeWorkbenchImage, setAllowEncodeWorkbenchImage] = useState(true);
   const [projectName, setProjectName] = useState(initialData.name);
+  
+  // Add state for trial-related UI
+  const [showSignUpModal, setShowSignUpModal] = useState(false);
+  const trialInteractionTimer = useRef<NodeJS.Timeout | null>(null);
+  const userInteractionCount = useRef(0);
 
   // Add a new function to parse the project JSON
   const parseProjectData = (jsonString: string): ProjectJSON => {
@@ -143,11 +150,20 @@ export const CompositionStudio = ({ initialData }: CompositionStudioProps) => {
   // Video timeline collapsed state
   const [timelineCollapsed, setTimelineCollapsed] = useState(true);
 
+  // Modify sign-up modal to have contextual messages
+  const [signUpReason, setSignUpReason] = useState<string>("Save your work and access more features!");
+  
+  // Function to show sign-up modal with custom reason
+  const showSignUpWithReason = useCallback((reason: string) => {
+    setSignUpReason(reason);
+    setShowSignUpModal(true);
+  }, []);
+
   // Save callback with debounce - updated to standardize workbenchId
   const debouncedSave = useCallback(
     debounce(
       (values: { 
-        workbenchId: string,  // Make this mandatory
+        workbenchId: string,
         json: string,
         height: number,
         width: number,
@@ -180,17 +196,25 @@ export const CompositionStudio = ({ initialData }: CompositionStudioProps) => {
           // Serialize the entire structure to JSON
           const serialized = JSON.stringify(updated);
           
-          // Save to database - uses the existing json field
-          mutate({ 
-            json: serialized
-          });
+          // For trial mode, only save to localStorage
+          if (isTrial) {
+            localStorage.setItem("trial_project", JSON.stringify({
+              ...initialData,
+              json: serialized
+            }));
+          } else {
+            // Save to database - uses the existing json field
+            mutate({ 
+              json: serialized
+            });
+          }
           
           return updated;
         });
       },
       500
     ), 
-    [mutate]
+    [mutate, isTrial, initialData, showSignUpModal]
   );
   
   const onClearSelection = useCallback(() => {
@@ -272,6 +296,12 @@ export const CompositionStudio = ({ initialData }: CompositionStudioProps) => {
   
   // Handle adding a new workbench
   const handleAddWorkbench = useCallback(() => {
+    // In trial mode, limit to 2 workbenches and show signup for more
+    if (isTrial && workbenchIds.length >= 2) {
+      setShowSignUpModal(true);
+      return;
+    }
+    
     // Generate a unique ID for the new workbench
     const newId = `workbench-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
     
@@ -309,7 +339,7 @@ export const CompositionStudio = ({ initialData }: CompositionStudioProps) => {
     
     // Set as active
     setActiveWorkbenchIndex(workbenchIds.length);
-  }, [workbenchIds, activeWorkbenchIndex, mutate]);
+  }, [workbenchIds, activeWorkbenchIndex, mutate, isTrial]);
   
   // Handle deleting a workbench
   const handleDeleteWorkbench = useCallback((indexToDelete: number) => {
@@ -630,7 +660,7 @@ export const CompositionStudio = ({ initialData }: CompositionStudioProps) => {
     };
   }, []);
 
-  // Add polling for video generations - both initial and pending updates
+  // Add polling for video generations - only for signed-in users
   useEffect(() => {
     // First, fetch all video generations for this project
     const fetchAllVideoGenerations = async () => {
@@ -698,16 +728,23 @@ export const CompositionStudio = ({ initialData }: CompositionStudioProps) => {
       }
     };
     
-    // Initial fetch of all video generations
+    // Initial fetch regardless of trial status
     fetchAllVideoGenerations();
     
-    // Set up polling for pending updates
-    const intervalId = setInterval(fetchPendingVideoGenerations, 10000);
+    // Only set up polling for authenticated users
+    let intervalId: NodeJS.Timeout | null = null;
     
-    return () => clearInterval(intervalId);
-  }, [initialData.id]);
+    if (!isTrial) {
+      // Set up polling for pending updates - only for signed-in users
+      intervalId = setInterval(fetchPendingVideoGenerations, 10000);
+    }
+    
+    return () => {
+      if (intervalId) clearInterval(intervalId);
+    };
+  }, [initialData.id, isTrial]);
 
-  // Add polling for video exports
+  // Add polling for video exports - only for signed-in users
   useEffect(() => {
     const fetchAllVideoExports = async () => {
       try {
@@ -727,12 +764,20 @@ export const CompositionStudio = ({ initialData }: CompositionStudioProps) => {
       }
     };
     
+    // Initial fetch regardless of trial status
     fetchAllVideoExports();
 
-    const intervalId = setInterval(fetchAllVideoExports, 5000);
+    // Only set up polling for authenticated users
+    let intervalId: NodeJS.Timeout | null = null;
+    
+    if (!isTrial) {
+      intervalId = setInterval(fetchAllVideoExports, 5000);
+    }
 
-    return () => clearInterval(intervalId);
-  }, [initialData.id]);
+    return () => {
+      if (intervalId) clearInterval(intervalId);
+    };
+  }, [initialData.id, isTrial]);
   
   // Function to update project name (locally and on server)
   const updateProjectName = useCallback(async (name: string) => {
@@ -759,6 +804,41 @@ export const CompositionStudio = ({ initialData }: CompositionStudioProps) => {
     }
   }, [initialData.id]);
 
+  // Function to handle sign up button click or modal action
+  const handleSignUp = useCallback(() => {
+    // Save the current state before redirecting
+    if (isTrial && activeEditor) {
+      const workbenchId = workbenchIds[activeWorkbenchIndex];
+      const currentJson = activeEditor.getJson();
+      
+      // Update localStorage
+      localStorage.setItem("trial_project", JSON.stringify({
+        ...initialData,
+        json: JSON.stringify({
+          ...projectData,
+          workbenches: {
+            ...projectData.workbenches,
+            [workbenchId]: {
+              ...projectData.workbenches[workbenchId],
+              json: currentJson
+            }
+          }
+        })
+      }));
+      
+      // Store a flag to indicate we're coming from trial
+      localStorage.setItem("from_trial", "true");
+    }
+    
+    // Redirect to sign up page
+    window.location.href = "/sign-up";
+  }, [isTrial, activeEditor, initialData, projectData, workbenchIds, activeWorkbenchIndex]);
+
+  // Function to dismiss modal but keep in trial
+  const dismissSignUpModal = useCallback(() => {
+    setShowSignUpModal(false);
+  }, []);
+
   return (
     <ThemeProvider attribute="class" defaultTheme="dark">
       <LastFrameProvider videoGenerations={videoGenerations}>
@@ -770,6 +850,8 @@ export const CompositionStudio = ({ initialData }: CompositionStudioProps) => {
             editor={activeEditor}
             activeTool={activeTool}
             onChangeActiveTool={onChangeActiveTool}
+            isTrial={isTrial}
+            onSignUp={handleSignUp}
           />
           <div className="absolute h-[calc(100%-68px)] w-full top-[68px] flex p-2">
             <Sidebar
@@ -938,6 +1020,30 @@ export const CompositionStudio = ({ initialData }: CompositionStudioProps) => {
               {/* <Footer editor={activeEditor} /> */}
             </main>
           </div>
+          
+          {/* Sign up modal */}
+          {showSignUpModal && (
+            <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50">
+              <div className="bg-zinc-900 p-6 rounded-xl max-w-md w-full">
+                <h2 className="text-xl font-bold mb-4">Sign Up to Use the Platform</h2>
+                <p className="mb-6">{signUpReason}</p>
+                <div className="flex gap-4">
+                  <button 
+                    onClick={handleSignUp}
+                    className="bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded-lg font-medium flex-1"
+                  >
+                    Sign Up
+                  </button>
+                  <button 
+                    onClick={dismissSignUpModal}
+                    className="bg-zinc-700 hover:bg-zinc-600 px-4 py-2 rounded-lg font-medium"
+                  >
+                    Continue in without signing up
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       </LastFrameProvider>
     </ThemeProvider>

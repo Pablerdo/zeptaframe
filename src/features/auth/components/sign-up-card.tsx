@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { signIn } from "next-auth/react";
 import { FaGithub } from "react-icons/fa";
 import { FcGoogle } from "react-icons/fc";
@@ -18,6 +18,18 @@ export const SignUpCard = () => {
   const [loading, setLoading] = useState(false);
   const [loadingGithub, setLoadingGithub] = useState(false);
   const [loadingGoogle, setLoadingGoogle] = useState(false);
+  const [fromTrial, setFromTrial] = useState(false);
+
+  // Check if user is coming from trial
+  useEffect(() => {
+    const isFromTrial = localStorage.getItem("from_trial") === "true";
+    setFromTrial(isFromTrial);
+    
+    // Clear the flag
+    if (isFromTrial) {
+      localStorage.removeItem("from_trial");
+    }
+  }, []);
 
   const mutation = useSignUp();
 
@@ -42,9 +54,19 @@ export const SignUpCard = () => {
         name,
         email,
         password,
+        fromTrial: fromTrial, // Pass this to the API
       },
       {
         onSuccess: () => {
+          // If coming from trial, we want to convert the trial project to a real one
+          if (fromTrial) {
+            const trialProject = localStorage.getItem("trial_project");
+            if (trialProject) {
+              // We'll handle this after sign-in in the home page route
+              localStorage.setItem("convert_trial", "true");
+            }
+          }
+          
           signIn("credentials", {
             email,
             password,
@@ -59,7 +81,11 @@ export const SignUpCard = () => {
     <Card className="w-full h-full p-8">
       <CardHeader className="px-0 pt-0">
         <CardTitle>Create an account</CardTitle>
-        <CardDescription>Use your email or another service to continue</CardDescription>
+        <CardDescription>
+          {fromTrial 
+            ? "Sign up to save your project and access all features" 
+            : "Use your email or another service to continue"}
+        </CardDescription>
       </CardHeader>
       {!!mutation.error && (
         <div className="bg-destructive/15 p-3 rounded-md flex items-center gap-x-2 text-sm text-destructive mb-6">

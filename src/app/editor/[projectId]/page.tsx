@@ -47,7 +47,7 @@ const EditorProjectIdPage = ({
     );
   }
 
-  return <CompositionStudio initialData={data} />
+  return <CompositionStudio initialData={data} isTrial={false} />
 };
  
 export default EditorProjectIdPage;

@@ -164,6 +164,14 @@ export const uploadsRelations = relations(uploads, ({ one }) => ({
   }),
 }));
 
+export const defaultImages = pgTable("default_image", {
+  id: text("id")
+    .primaryKey()
+    .$defaultFn(() => crypto.randomUUID()),
+  url: text("url").notNull(),
+  photographerName: text("photographerName"),
+});
+
 export const videoGenerations = pgTable("video_generation", {
   id: text("id")
     .primaryKey()

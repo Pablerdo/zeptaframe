@@ -12,7 +12,8 @@
     "db:generate": "bunx drizzle-kit generate",
     "db:migrate": "bunx drizzle-kit migrate",
     "db:studio": "bunx drizzle-kit studio",
-    "backfill:video-generations": "tsx scripts/backfill-video-generation-userid.ts"
+    "backfill:video-generations": "tsx scripts/backfill-video-generation-userid.ts",
+    "backfill:default-images": "tsx scripts/backfill-default-images.ts"
   },
   "dependencies": {
     "@auth/core": "^0.34.1",

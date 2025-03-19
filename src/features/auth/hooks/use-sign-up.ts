@@ -5,7 +5,13 @@ import { InferRequestType, InferResponseType } from "hono";
 import { client } from "@/lib/hono";
 
 type ResponseType = InferResponseType<typeof client.api.users["$post"]>;
-type RequestType = InferRequestType<typeof client.api.users["$post"]>["json"];
+
+interface RequestType {
+  name: string;
+  email: string;
+  password: string;
+  fromTrial?: boolean;
+}
 
 export const useSignUp = () => {
   const mutation = useMutation<

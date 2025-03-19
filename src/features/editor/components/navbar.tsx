@@ -49,6 +49,8 @@ interface NavbarProps {
   editor: Editor | undefined;
   activeTool: ActiveTool;
   onChangeActiveTool: (tool: ActiveTool) => void;
+  isTrial?: boolean;
+  onSignUp?: () => void;
 };
 
 export const Navbar = ({
@@ -58,6 +60,8 @@ export const Navbar = ({
   editor,
   activeTool,
   onChangeActiveTool,
+  isTrial,
+  onSignUp,
 }: NavbarProps) => {
   const [isEditingName, setIsEditingName] = useState(false);
   const [editedName, setEditedName] = useState(projectName);
@@ -228,6 +232,14 @@ export const Navbar = ({
         )}
 
         <div className="ml-auto flex items-center gap-x-4">
+          {isTrial && onSignUp && (
+            <Button 
+              className="bg-blue-600 hover:bg-blue-700 text-white"
+              onClick={onSignUp}
+            >
+              Sign Up
+            </Button>
+          )}
           <TooltipProvider>
             <Tooltip>
               <TooltipTrigger asChild>
@@ -318,7 +330,7 @@ export const Navbar = ({
               </a>
             </Button>
           </Hint>
-          <UserButton />
+          {!isTrial && <UserButton />}
         </div>
       </div>
     </nav>
