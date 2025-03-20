@@ -119,7 +119,7 @@ export const GenerateImageSidebar = ({
           <div className="bg-gray-900 border border-gray-700 rounded-lg shadow-lg w-full max-w-md p-6 animate-in fade-in duration-200">
             <h3 className="text-xl font-bold text-white mb-2">Daily Limit Reached</h3>
             <p className="text-gray-300 mb-4">
-              You've used all {userStatus.dailyImageGenerations.limit} of your daily image generations on the free plan.
+              You&apos;ve used all {userStatus.dailyImageGenerations.limit} of your daily image generations on the free plan.
             </p>
             <div className="bg-gray-800 rounded-md p-4 mb-4">
               <h4 className="text-blue-300 font-medium mb-2">Upgrade to Pro for:</h4>

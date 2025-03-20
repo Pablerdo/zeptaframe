@@ -826,7 +826,7 @@ export const Workbench = ({
               <>
                 <h3 className="text-xl font-bold text-white mb-2">Daily Limit Reached</h3>
                 <p className="text-gray-300 mb-4">
-                  You've used all {userStatus.dailyVideoGenerations.limit} of your daily video generations on the free plan.
+                  You&apos;ve used all {userStatus.dailyVideoGenerations.limit} of your daily video generations on the free plan.
                 </p>
                 <div className="bg-gray-800 rounded-md p-4 mb-4">
                   <h4 className="text-blue-300 font-medium mb-2">Upgrade to Pro for:</h4>
