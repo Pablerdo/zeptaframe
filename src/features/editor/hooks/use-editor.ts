@@ -677,7 +677,9 @@ export const useEditor = ({
   const [strokeWidth, setStrokeWidth] = useState(STROKE_WIDTH);
   const [strokeDashArray, setStrokeDashArray] = useState<number[]>(STROKE_DASH_ARRAY);
 
-  useWindowEvents();
+  // Check if we're navigating for authentication
+  const isAuthNavigating = typeof window !== 'undefined' && localStorage.getItem('isAuthNavigating') === 'true';
+  useWindowEvents(isAuthNavigating);
 
   const { 
     save, 

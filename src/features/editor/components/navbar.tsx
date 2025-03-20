@@ -50,7 +50,7 @@ interface NavbarProps {
   activeTool: ActiveTool;
   onChangeActiveTool: (tool: ActiveTool) => void;
   isTrial?: boolean;
-  onSignUp?: () => void;
+  setShowAuthModal: (showAuthModal: boolean) => void;
 };
 
 export const Navbar = ({
@@ -61,10 +61,14 @@ export const Navbar = ({
   activeTool,
   onChangeActiveTool,
   isTrial,
-  onSignUp,
+  setShowAuthModal,
 }: NavbarProps) => {
   const [isEditingName, setIsEditingName] = useState(false);
   const [editedName, setEditedName] = useState(projectName);
+
+  const handleClickSignUp = () => {
+    setShowAuthModal(true);
+  };
 
   const handleStartRename = () => {
     setEditedName(projectName);
@@ -232,10 +236,10 @@ export const Navbar = ({
         )}
 
         <div className="ml-auto flex items-center gap-x-4">
-          {isTrial && onSignUp && (
+          {isTrial && (
             <Button 
               className="bg-blue-600 hover:bg-blue-700 text-white"
-              onClick={onSignUp}
+              onClick={handleClickSignUp}
             >
               Sign Up
             </Button>

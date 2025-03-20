@@ -37,6 +37,7 @@ interface ScrollableWorkbenchViewerProps {
   setAllowEncodeWorkbenchImage: (allowEncodeWorkbenchImage: boolean) => void;
   samWorkerInitialized: boolean;
   isTrial: boolean;
+  setShowAuthModal: (showAuthModal: boolean) => void;
 }
 
 export const ScrollableWorkbenchViewer = ({
@@ -65,6 +66,7 @@ export const ScrollableWorkbenchViewer = ({
   setAllowEncodeWorkbenchImage,
   samWorkerInitialized,
   isTrial,
+  setShowAuthModal,
 }: ScrollableWorkbenchViewerProps) => {
 
   return (
@@ -131,6 +133,7 @@ export const ScrollableWorkbenchViewer = ({
               setAllowEncodeWorkbenchImage={setAllowEncodeWorkbenchImage}
               samWorkerInitialized={samWorkerInitialized}
               isTrial={isTrial}
+              setShowAuthModal={setShowAuthModal}
             />
           </div>
         );

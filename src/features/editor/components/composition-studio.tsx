@@ -28,7 +28,7 @@ import { FontSidebar } from "@/features/editor/components/font-sidebar";
 import { ImageSidebar } from "@/features/editor/components/image-sidebar";
 import { FilterSidebar } from "@/features/editor/components/filter-sidebar";
 import { DrawSidebar } from "@/features/editor/components/draw-sidebar";
-import { TemplateSidebar } from "@/features/editor/components/template-sidebar";
+// import { TemplateSidebar } from "@/features/editor/components/template-sidebar";
 import { SettingsSidebar } from "@/features/editor/components/settings-sidebar";
 import { SegmentationSidebar } from "@/features/editor/components/segmentation-sidebar";
 import { cn } from "@/lib/utils";
@@ -37,6 +37,8 @@ import { ScrollableWorkbenchViewer } from "@/features/editor/components/scrollab
 import { GenerateImageSidebar } from "./generate-image-sidebar";
 import { LastFrameProvider } from '@/features/editor/contexts/last-frame-context';
 import { WorkbenchNavigator } from "@/features/editor/components/workbench-navigator";
+import { UserStatusProvider } from "@/features/auth/contexts/user-status-context";
+import { AuthModal } from "./auth-modal";
 
 interface CompositionStudioProps {
   initialData: ResponseType["data"];
@@ -55,6 +57,7 @@ export const CompositionStudio = ({ initialData, isTrial }: CompositionStudioPro
   
   // Add state for trial-related UI
   const [showSignUpModal, setShowSignUpModal] = useState(false);
+  const [showAuthModal, setShowAuthModal] = useState(false);
   const trialInteractionTimer = useRef<NodeJS.Timeout | null>(null);
   const userInteractionCount = useRef(0);
 
@@ -648,6 +651,11 @@ export const CompositionStudio = ({ initialData, isTrial }: CompositionStudioPro
 
   useEffect(() => {
     initializeSamWorker();
+    
+    // Clean up isAuthNavigating flag if it exists
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem('isAuthNavigating');
+    }
   }, [initializeSamWorker]);
 
   useEffect(() => {
@@ -804,249 +812,205 @@ export const CompositionStudio = ({ initialData, isTrial }: CompositionStudioPro
     }
   }, [initialData.id]);
 
-  // Function to handle sign up button click or modal action
-  const handleSignUp = useCallback(() => {
-    // Save the current state before redirecting
-    if (isTrial && activeEditor) {
-      const workbenchId = workbenchIds[activeWorkbenchIndex];
-      const currentJson = activeEditor.getJson();
-      
-      // Update localStorage
-      localStorage.setItem("trial_project", JSON.stringify({
-        ...initialData,
-        json: JSON.stringify({
-          ...projectData,
-          workbenches: {
-            ...projectData.workbenches,
-            [workbenchId]: {
-              ...projectData.workbenches[workbenchId],
-              json: currentJson
-            }
-          }
-        })
-      }));
-      
-      // Store a flag to indicate we're coming from trial
-      localStorage.setItem("from_trial", "true");
-    }
-    
-    // Redirect to sign up page
-    window.location.href = "/sign-up";
-  }, [isTrial, activeEditor, initialData, projectData, workbenchIds, activeWorkbenchIndex]);
-
-  // Function to dismiss modal but keep in trial
-  const dismissSignUpModal = useCallback(() => {
-    setShowSignUpModal(false);
-  }, []);
-
   return (
     <ThemeProvider attribute="class" defaultTheme="dark">
-      <LastFrameProvider videoGenerations={videoGenerations}>
-        <div className="w-full h-full flex flex-col overflow-hidden bg-editor-bg dark:bg-editor-bg-dark">
-          <Navbar
-            projectName={projectName}
-            setProjectName={updateProjectName}
-            id={initialData.id}
-            editor={activeEditor}
-            activeTool={activeTool}
-            onChangeActiveTool={onChangeActiveTool}
-            isTrial={isTrial}
-            onSignUp={handleSignUp}
-          />
-          <div className="absolute h-[calc(100%-68px)] w-full top-[68px] flex p-2">
-            <Sidebar
-              activeTool={activeTool}
-              onChangeActiveTool={onChangeActiveTool}
-            />
-            <SegmentationSidebar
+      <UserStatusProvider 
+        initialUserStatus={{
+          isAuthenticated: !isTrial,
+          userPlan: isTrial ? "trial" : "free", // Add pro plan to this logic as well
+        }}
+      >
+        <LastFrameProvider videoGenerations={videoGenerations}>
+          <div className="w-full h-full flex flex-col overflow-hidden bg-editor-bg dark:bg-editor-bg-dark">
+            <Navbar
+              projectName={projectName}
+              setProjectName={updateProjectName}
+              id={initialData.id}
               editor={activeEditor}
               activeTool={activeTool}
               onChangeActiveTool={onChangeActiveTool}
-              samWorker={samWorker}
+              isTrial={isTrial}
+              setShowAuthModal={setShowAuthModal}
             />
-            <GenerateImageSidebar
-              editor={activeEditor}
-              activeTool={activeTool}
-              onChangeActiveTool={onChangeActiveTool}
-            />
-            <ShapeSidebar
-              editor={activeEditor}
-              activeTool={activeTool}
-              onChangeActiveTool={onChangeActiveTool}
-            />
-            <FillColorSidebar
-              editor={activeEditor}
-              activeTool={activeTool}
-              onChangeActiveTool={onChangeActiveTool}
-            />
-            <StrokeColorSidebar
-              editor={activeEditor}
-              activeTool={activeTool}
-              onChangeActiveTool={onChangeActiveTool}
-            />
-            <StrokeWidthSidebar
-              editor={activeEditor}
-              activeTool={activeTool}
-              onChangeActiveTool={onChangeActiveTool}
-            />
-            <OpacitySidebar
-              editor={activeEditor}
-              activeTool={activeTool}
-              onChangeActiveTool={onChangeActiveTool}
-            />
-            <TextSidebar
-              editor={activeEditor}
-              activeTool={activeTool}
-              onChangeActiveTool={onChangeActiveTool}
-            />
-            <FontSidebar
-              editor={activeEditor}
-              activeTool={activeTool}
-              onChangeActiveTool={onChangeActiveTool}
-            />
-            <ImageSidebar
-              editor={activeEditor}
-              activeTool={activeTool}
-              onChangeActiveTool={onChangeActiveTool}
-            />
-            <TemplateSidebar
-              editor={activeEditor}
-              activeTool={activeTool}
-              onChangeActiveTool={onChangeActiveTool}
-            />
-            <FilterSidebar
-              editor={activeEditor}
-              activeTool={activeTool}
-              onChangeActiveTool={onChangeActiveTool}
-            />
-            <DrawSidebar
-              editor={activeEditor}
-              activeTool={activeTool}
-              onChangeActiveTool={onChangeActiveTool}
-            />
-            <SettingsSidebar
-              editor={activeEditor}
-              activeTool={activeTool}
-              onChangeActiveTool={onChangeActiveTool}
-            />
-            <main className="bg-transparent flex-1 overflow-hidden relative flex flex-col rounded-xl mx-2">
-              <Toolbar
+            <div className="absolute h-[calc(100%-68px)] w-full top-[68px] flex p-2">
+              <Sidebar
+                activeTool={activeTool}
+                onChangeActiveTool={onChangeActiveTool}
+              />
+              <SegmentationSidebar
+                editor={activeEditor}
+                activeTool={activeTool}
+                onChangeActiveTool={onChangeActiveTool}
+                samWorker={samWorker}
+              />
+              <GenerateImageSidebar
+                editor={activeEditor}
+                activeTool={activeTool}
+                onChangeActiveTool={onChangeActiveTool}
+                isTrial={isTrial}
+                setShowAuthModal={setShowAuthModal}
+              />
+              <ShapeSidebar
                 editor={activeEditor}
                 activeTool={activeTool}
                 onChangeActiveTool={onChangeActiveTool}
               />
-
-
-              <div className="flex flex-row h-full w-full mb-4 relative overflow-hidden">
-                <ScrollableWorkbenchViewer
-                  editorsContainerRef={editorsContainerRef}
-                  workbenchIds={workbenchIds}
-                  activeWorkbenchIndex={activeWorkbenchIndex}
-                  handleSetActiveEditor={handleSetActiveEditor}
-                  handleDeleteWorkbench={handleDeleteWorkbench}
-                  initialData={initialData}
-                  debouncedSave={debouncedSave}
-                  onClearSelection={onClearSelection}
+              <FillColorSidebar
+                editor={activeEditor}
+                activeTool={activeTool}
+                onChangeActiveTool={onChangeActiveTool}
+              />
+              <StrokeColorSidebar
+                editor={activeEditor}
+                activeTool={activeTool}
+                onChangeActiveTool={onChangeActiveTool}
+              />
+              <StrokeWidthSidebar
+                editor={activeEditor}
+                activeTool={activeTool}
+                onChangeActiveTool={onChangeActiveTool}
+              />
+              <OpacitySidebar
+                editor={activeEditor}
+                activeTool={activeTool}
+                onChangeActiveTool={onChangeActiveTool}
+              />
+              <TextSidebar
+                editor={activeEditor}
+                activeTool={activeTool}
+                onChangeActiveTool={onChangeActiveTool}
+              />
+              <FontSidebar
+                editor={activeEditor}
+                activeTool={activeTool}
+                onChangeActiveTool={onChangeActiveTool}
+              />
+              <ImageSidebar
+                editor={activeEditor}
+                activeTool={activeTool}
+                onChangeActiveTool={onChangeActiveTool}
+              />
+              <FilterSidebar
+                editor={activeEditor}
+                activeTool={activeTool}
+                onChangeActiveTool={onChangeActiveTool}
+              />
+              <DrawSidebar
+                editor={activeEditor}
+                activeTool={activeTool}
+                onChangeActiveTool={onChangeActiveTool}
+              />
+              <SettingsSidebar
+                editor={activeEditor}
+                activeTool={activeTool}
+                onChangeActiveTool={onChangeActiveTool}
+              />
+              <main className="bg-transparent flex-1 overflow-hidden relative flex flex-col rounded-xl mx-2">
+                <Toolbar
+                  editor={activeEditor}
                   activeTool={activeTool}
                   onChangeActiveTool={onChangeActiveTool}
-                  samWorker={samWorker}
-                  samWorkerLoading={samWorkerLoading}
-                  setSamWorkerLoading={setSamWorkerLoading}
-                  prevMaskArray={prevMaskArray}
-                  setPrevMaskArray={setPrevMaskArray}
-                  mask={mask}
-                  setMask={setMask}
-                  maskBinary={maskBinary}
-                  setMaskBinary={setMaskBinary}
-                  projectData={projectData}
-                  isDeletingIndex={isDeletingIndex}
-                  transitionDirection={transitionDirection}
-                  setAllowEncodeWorkbenchImage={setAllowEncodeWorkbenchImage}
-                  samWorkerInitialized={samWorkerInitialized}
-                  isTrial={isTrial}
                 />
-                
-                {/* Add workbench button */}
-                <div className="w-10 flex items-center justify-center">
-                  <button
-                    onClick={handleAddWorkbench}
-                    className={cn("bg-editor-sidebar rounded-xl p-2")}
-                  >
-                    <Plus className="h-6 w-6" strokeWidth={3} />
-                  </button>
-                </div>
 
-              </div>
-              <div className="flex w-full">
-                <div 
-                  className="w-[41%] bg-editor-sidebar flex items-center px-4 ml-2 pb-1 border-gray-700 cursor-pointer hover:bg-zinc-750 transition-colors duration-200 pt-1 rounded-t-lg"
-                  onClick={(e) => {
-                    if (e.target === e.currentTarget) {
-                      setTimelineCollapsed(!timelineCollapsed);
-                    }
-                  }}
-                > 
-                  <div className="flex items-center">
-                    <span className="font-bold">Timeline</span>
-                    <div 
-                        className="flex items-center justify-between gap-2 px-3 py-1 rounded-full hover:bg-zinc-700/50 transition-colors duration-200"
-                        onClick={() => setTimelineCollapsed(!timelineCollapsed)}
-                      >
-                        <ChevronDown 
-                          className={cn(
-                            "h-5 w-5 text-zinc-300 transition-transform duration-200",
-                            timelineCollapsed && "rotate-180"
-                          )}
-                        />
+
+                <div className="flex flex-row h-full w-full mb-4 relative overflow-hidden">
+                  <ScrollableWorkbenchViewer
+                    editorsContainerRef={editorsContainerRef}
+                    workbenchIds={workbenchIds}
+                    activeWorkbenchIndex={activeWorkbenchIndex}
+                    handleSetActiveEditor={handleSetActiveEditor}
+                    handleDeleteWorkbench={handleDeleteWorkbench}
+                    initialData={initialData}
+                    debouncedSave={debouncedSave}
+                    onClearSelection={onClearSelection}
+                    activeTool={activeTool}
+                    onChangeActiveTool={onChangeActiveTool}
+                    samWorker={samWorker}
+                    samWorkerLoading={samWorkerLoading}
+                    setSamWorkerLoading={setSamWorkerLoading}
+                    prevMaskArray={prevMaskArray}
+                    setPrevMaskArray={setPrevMaskArray}
+                    mask={mask}
+                    setMask={setMask}
+                    maskBinary={maskBinary}
+                    setMaskBinary={setMaskBinary}
+                    projectData={projectData}
+                    isDeletingIndex={isDeletingIndex}
+                    transitionDirection={transitionDirection}
+                    setAllowEncodeWorkbenchImage={setAllowEncodeWorkbenchImage}
+                    samWorkerInitialized={samWorkerInitialized}
+                    isTrial={isTrial}
+                    setShowAuthModal={setShowAuthModal}
+                  />
+                  
+                  {/* Add workbench button */}
+                  <div className="w-10 flex items-center justify-center">
+                    <button
+                      onClick={handleAddWorkbench}
+                      className={cn("bg-editor-sidebar rounded-xl p-2")}
+                    >
+                      <Plus className="h-6 w-6" strokeWidth={3} />
+                    </button>
+                  </div>
+
+                </div>
+                <div className="flex w-full">
+                  <div 
+                    className="w-[41%] bg-editor-sidebar flex items-center px-4 ml-2 pb-1 border-gray-700 cursor-pointer hover:bg-zinc-750 transition-colors duration-200 pt-1 rounded-t-lg"
+                    onClick={(e) => {
+                      if (e.target === e.currentTarget) {
+                        setTimelineCollapsed(!timelineCollapsed);
+                      }
+                    }}
+                  > 
+                    <div className="flex items-center">
+                      <span className="font-bold">Timeline</span>
+                      <div 
+                          className="flex items-center justify-between gap-2 px-3 py-1 rounded-full hover:bg-zinc-700/50 transition-colors duration-200"
+                          onClick={() => setTimelineCollapsed(!timelineCollapsed)}
+                        >
+                          <ChevronDown 
+                            className={cn(
+                              "h-5 w-5 text-zinc-300 transition-transform duration-200",
+                              timelineCollapsed && "rotate-180"
+                            )}
+                          />
+                      </div>
                     </div>
                   </div>
+                  <WorkbenchNavigator 
+                    workbenchIds={workbenchIds}
+                    activeWorkbenchIndex={activeWorkbenchIndex}
+                    setActiveWorkbenchIndex={setActiveWorkbenchIndex}
+                  />
                 </div>
-                <WorkbenchNavigator 
+                <CollapsibleVideoViewer
+                  timelineCollapsed={timelineCollapsed}
                   workbenchIds={workbenchIds}
+                  videoGenerations={videoGenerations}
+                  isGenerating={isGenerating}
+                  workbenchCount={workbenchIds.length}
                   activeWorkbenchIndex={activeWorkbenchIndex}
-                  setActiveWorkbenchIndex={setActiveWorkbenchIndex}
+                  projectId={initialData.id}
+                  videoExports={videoExports}
                 />
-              </div>
-              <CollapsibleVideoViewer
-                timelineCollapsed={timelineCollapsed}
-                workbenchIds={workbenchIds}
-                videoGenerations={videoGenerations}
-                isGenerating={isGenerating}
-                workbenchCount={workbenchIds.length}
-                activeWorkbenchIndex={activeWorkbenchIndex}
-                projectId={initialData.id}
-                videoExports={videoExports}
-              />
-              
-              {/* <Footer editor={activeEditor} /> */}
-            </main>
-          </div>
-          
-          {/* Sign up modal */}
-          {showSignUpModal && (
-            <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50">
-              <div className="bg-zinc-900 p-6 rounded-xl max-w-md w-full">
-                <h2 className="text-xl font-bold mb-4">Sign Up to Use the Platform</h2>
-                <p className="mb-6">{signUpReason}</p>
-                <div className="flex gap-4">
-                  <button 
-                    onClick={handleSignUp}
-                    className="bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded-lg font-medium flex-1"
-                  >
-                    Sign Up
-                  </button>
-                  <button 
-                    onClick={dismissSignUpModal}
-                    className="bg-zinc-700 hover:bg-zinc-600 px-4 py-2 rounded-lg font-medium"
-                  >
-                    Keep editing without signing up
-                  </button>
-                </div>
-              </div>
+                
+                {/* <Footer editor={activeEditor} /> */}
+              </main>
             </div>
-          )}
-        </div>
-      </LastFrameProvider>
+            
+          </div>
+        </LastFrameProvider>
+      </UserStatusProvider>
+      
+      {/* Auth Modal */}
+      <AuthModal
+        isOpen={showAuthModal}
+        onClose={() => setShowAuthModal(false)}
+        defaultMode="signup"
+        projectId={initialData.id}
+        isTrial={isTrial}
+      />
     </ThemeProvider>
   );
 }

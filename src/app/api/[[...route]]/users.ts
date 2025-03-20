@@ -38,8 +38,57 @@ const app = new Hono()
         password: hashedPassword,
       });
       
-      return c.json(null, 200);
+      // Fetch the newly created user to get their ID
+      const newUser = await db
+        .select({
+          id: users.id,
+          email: users.email,
+          name: users.name
+        })
+        .from(users)
+        .where(eq(users.email, email));
+      
+      if (!newUser[0]) {
+        return c.json({ error: "Failed to create user" }, 500);
+      }
+      
+      // Return the user data with ID
+      return c.json({ 
+        id: newUser[0].id,
+        email: newUser[0].email,
+        name: newUser[0].name 
+      }, 200);
     },
+  )
+  .get(
+    "/",
+    zValidator(
+      "query",
+      z.object({
+        email: z.string().email(),
+      })
+    ),
+    async (c) => {
+      const { email } = c.req.valid("query");
+      const user = await db
+      .select({
+        id: users.id,
+        email: users.email,
+        name: users.name
+      })
+      .from(users)
+      .where(eq(users.email, email));
+
+      if (!user[0]) {
+        return c.json({ error: "User not found" }, 404);
+      }
+    
+      return c.json({ 
+        id: user[0].id,
+        email: user[0].email,
+        name: user[0].name 
+      }, 200);
+    }
   );
 
 export default app;

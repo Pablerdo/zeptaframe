@@ -256,6 +256,45 @@ const app = new Hono()
 
       return c.json({ data: data[0] });
     },
+  )
+  .post(
+    "/for-user",
+    zValidator(
+      "json",
+      projectsInsertSchema.pick({
+        name: true,
+        json: true,
+        width: true,
+        height: true,
+      }).extend({
+        userId: z.string(),
+      }),
+    ),
+    async (c) => {
+      const { name, json, height, width, userId } = c.req.valid("json");
+
+      // This is a special route for creating projects for new users during signup
+      // It doesn't require auth verification because it's used during the auth flow
+      
+      const data = await db
+        .insert(projects)
+        .values({
+          name,
+          json,
+          width,
+          height,
+          userId,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        })
+        .returning();
+
+      if (!data[0]) {
+        return c.json({ error: "Something went wrong" }, 400);
+      }
+
+      return c.json({ data: data[0] });
+    },
   );
 
 export default app;
