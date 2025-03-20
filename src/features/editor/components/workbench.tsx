@@ -62,6 +62,7 @@ interface WorkbenchProps {
   setMaskBinary: (maskBinary: HTMLCanvasElement | null) => void;
   setAllowEncodeWorkbenchImage: (allowEncodeWorkbenchImage: boolean) => void;
   samWorkerInitialized: boolean;
+  isTrial: boolean;
 }
 
 export const Workbench = ({
@@ -90,6 +91,7 @@ export const Workbench = ({
   setMaskBinary,
   setAllowEncodeWorkbenchImage,
   samWorkerInitialized,
+  isTrial,
 }: WorkbenchProps) => {
   // Create refs for canvas and container
   const canvasRef = useRef<HTMLCanvasElement>(null);

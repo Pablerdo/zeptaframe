@@ -34,7 +34,7 @@ import { SegmentationSidebar } from "@/features/editor/components/segmentation-s
 import { cn } from "@/lib/utils";
 import CollapsibleVideoViewer from "@/features/editor/components/collapsible-video-viewer";
 import { ScrollableWorkbenchViewer } from "@/features/editor/components/scrollable-workbench-viewer";
-import { GenerateSidebar } from "./generate-sidebar";
+import { GenerateImageSidebar } from "./generate-image-sidebar";
 import { LastFrameProvider } from '@/features/editor/contexts/last-frame-context';
 import { WorkbenchNavigator } from "@/features/editor/components/workbench-navigator";
 
@@ -864,7 +864,7 @@ export const CompositionStudio = ({ initialData, isTrial }: CompositionStudioPro
               onChangeActiveTool={onChangeActiveTool}
               samWorker={samWorker}
             />
-            <GenerateSidebar
+            <GenerateImageSidebar
               editor={activeEditor}
               activeTool={activeTool}
               onChangeActiveTool={onChangeActiveTool}
@@ -963,6 +963,7 @@ export const CompositionStudio = ({ initialData, isTrial }: CompositionStudioPro
                   transitionDirection={transitionDirection}
                   setAllowEncodeWorkbenchImage={setAllowEncodeWorkbenchImage}
                   samWorkerInitialized={samWorkerInitialized}
+                  isTrial={isTrial}
                 />
                 
                 {/* Add workbench button */}

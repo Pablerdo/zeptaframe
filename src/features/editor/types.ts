@@ -107,7 +107,7 @@ export type ActiveTool =
   | "opacity"
   | "filter"
   | "settings"
-  | "generate"
+  | "generate-image"
   | "remove-bg"
   | "templates"
   | "control-motion"

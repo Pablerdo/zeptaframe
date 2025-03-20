@@ -6,26 +6,26 @@ import { ActiveTool, Editor } from "@/features/editor/types";
 import { ToolSidebarClose } from "@/features/editor/components/tool-sidebar-close";
 import { ToolSidebarHeader } from "@/features/editor/components/tool-sidebar-header";
 
-import { useGenerateImage } from "@/features/ai/api/use-generate-image";
+// import { useGenerateImage } from "@/features/ai/api/use-generate-image";
 
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { ScrollArea } from "@/components/ui/scroll-area";
 
-interface GenerateSidebarProps {
+interface GenerateImageSidebarProps {
   editor: Editor | undefined;
   activeTool: ActiveTool;
   onChangeActiveTool: (tool: ActiveTool) => void;
 };
 
-export const GenerateSidebar = ({
+export const GenerateImageSidebar = ({
   editor,
   activeTool,
   onChangeActiveTool,
-}: GenerateSidebarProps) => {
+}: GenerateImageSidebarProps) => {
   const { shouldBlock, triggerPaywall } = usePaywall();
-  const mutation = useGenerateImage();
+  // const mutation = useGenerateImage();
 
   const [value, setValue] = useState("");
 
@@ -39,11 +39,11 @@ export const GenerateSidebar = ({
       return;
     }
 
-    mutation.mutate({ prompt: value }, {
-      onSuccess: ({ data }) => {
-        editor?.addImage(data);
-      }
-    });
+    // mutation.mutate({ prompt: value }, {
+    //   onSuccess: ({ data }) => {
+    //     editor?.addImage(data);
+    //   }
+    // });
   };
 
   const onClose = () => {
@@ -54,7 +54,7 @@ export const GenerateSidebar = ({
     <aside
       className={cn(
         "bg-editor-sidebar relative border-r z-[40] rounded-xl w-[360px] flex flex-col my-2",
-        activeTool === "generate" ? "visible" : "hidden",
+        activeTool === "generate-image" ? "visible" : "hidden",
       )}
     >
       <ToolSidebarHeader
@@ -64,7 +64,7 @@ export const GenerateSidebar = ({
       <ScrollArea>
         <form onSubmit={onSubmit} className="p-4 space-y-6">
           <Textarea
-            disabled={mutation.isPending}
+            // disabled={mutation.isPending}
             placeholder="An astronaut riding a horse on mars, hd, dramatic lighting"
             cols={30}
             rows={10}

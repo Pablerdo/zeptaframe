@@ -69,8 +69,8 @@ export const Sidebar = ({
         <SidebarItem
           icon={Sparkles}
           label="Generate"
-          isActive={activeTool === "generate"}
-          onClick={() => onChangeActiveTool("generate")}
+          isActive={activeTool === "generate-image"}
+          onClick={() => onChangeActiveTool("generate-image")}
         />
         <SidebarItem
           icon={Settings}

@@ -36,6 +36,7 @@ interface ScrollableWorkbenchViewerProps {
   transitionDirection: 'left' | 'right' | null;
   setAllowEncodeWorkbenchImage: (allowEncodeWorkbenchImage: boolean) => void;
   samWorkerInitialized: boolean;
+  isTrial: boolean;
 }
 
 export const ScrollableWorkbenchViewer = ({
@@ -63,6 +64,7 @@ export const ScrollableWorkbenchViewer = ({
   transitionDirection,
   setAllowEncodeWorkbenchImage,
   samWorkerInitialized,
+  isTrial,
 }: ScrollableWorkbenchViewerProps) => {
 
   return (
@@ -128,6 +130,7 @@ export const ScrollableWorkbenchViewer = ({
               setMaskBinary={setMaskBinary}
               setAllowEncodeWorkbenchImage={setAllowEncodeWorkbenchImage}
               samWorkerInitialized={samWorkerInitialized}
+              isTrial={isTrial}
             />
           </div>
         );
