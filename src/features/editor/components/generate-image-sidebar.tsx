@@ -37,38 +37,8 @@ export const GenerateImageSidebar = ({
   const [value, setValue] = useState("");
   const [showUsageLimitModal, setShowUsageLimitModal] = useState(false);
 
-  const onSubmit = (
-    e: React.FormEvent<HTMLFormElement>
-  ) => {
-    e.preventDefault();
-
-    // Check permissions based on user status
-    if (!userStatus.isAuthenticated) {
-      // Show authentication modal instead of redirecting
-      setShowAuthModal(true);
-      return;
-    }
-    
-    // Check usage limits for free users
-    if (!canGenerateImage()) {
-      // Show usage limit modal
-      setShowUsageLimitModal(true);
-      return;
-    }
-
-    // If user is authenticated and has generations remaining
-    // mutation.mutate({ prompt: value }, {
-    //   onSuccess: ({ data }) => {
-    //     editor?.addImage(data);
-    //     incrementImageUsage(); // Increment usage counter on success
-    //   }
-    // });
-  };
-
-  // Handle successful authentication
-  const handleAuthSuccess = () => {
-    // After successful authentication, try to generate image again
-    onSubmit(new Event('submit') as unknown as React.FormEvent<HTMLFormElement>);
+  const onSubmit = () => {
+    console.log("onSubmit");
   };
 
   const onClose = () => {
@@ -104,7 +74,8 @@ export const GenerateImageSidebar = ({
               // disabled={true} // Currently disabled as feature is coming soon
               type="submit"
               className="w-full"
-              onClick={() => setShowAuthModal(true)}
+              onClick={() => onSubmit()}
+              disabled={true}
             > 
               Generate
             </Button>

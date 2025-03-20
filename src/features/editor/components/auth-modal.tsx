@@ -275,7 +275,7 @@ export function AuthModal({
           <DialogDescription>
             {mode === "signin"
               ? "Enter your credentials to access your account"
-              : "Sign up to create a new account"}
+              : "Sign up to generate videos, images, and save your projects"}
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit} key={mode}>
