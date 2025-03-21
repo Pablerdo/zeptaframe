@@ -28,6 +28,7 @@ import { useLastFrames } from '@/features/editor/contexts/last-frame-context';
 import { toast } from "sonner";
 import { useUserStatus } from "@/features/auth/contexts/user-status-context";
 import { AuthModal } from "./auth-modal";
+import { comfyDeployWorkflows } from "../utils/comfyDeployWorkflows";
 
 interface WorkbenchProps {
   projectId: string;
@@ -257,94 +258,105 @@ export const Workbench = ({
       return;
     }
 
-    if (modelId === "cogvideox") {
-      try {
-        setIsGenerating(true);
-        
-        const validMasks = segmentedMasks.filter(mask => mask.id && mask.id.trim() !== '');
-          
-        const trajectories = validMasks.map(mask => mask.trajectory?.points || []);
-        const rotations = validMasks.map(mask => mask.rotation || 0);
-        
-        // Upload the workbench image to UploadThing
-        let workbenchImageUrl = "";
-        if (editor.workspaceURL) {
-          const workbenchFile = await dataUrlToFile(editor.workspaceURL, "workspace.png");
-          workbenchImageUrl = await uploadToUploadThingResidual(workbenchFile);
-        } else {
-          throw new Error("No workbench image available");
-        }
-        
-        // Upload all mask images to UploadThing
-        const maskUploadPromises = validMasks.map(async (mask, index) => {
-          if (!mask.binaryUrl) return "";
-          
-          const maskFile = await dataUrlToFile(mask.binaryUrl, `mask-${index}.png`);
-          return uploadToUploadThingResidual(maskFile);
-        });
-        
-        const uploadedMaskUrls = await Promise.all(maskUploadPromises);
-        
-        // Now construct the videoGenData with the uploaded URLs
-        const videoGenData = {
-          "input_image": JSON.stringify([workbenchImageUrl]),
-          "input_masks": JSON.stringify(uploadedMaskUrls),
-          "input_prompt": generalTextPrompt,
-          "input_trajectories": JSON.stringify(trajectories),
-          "input_rotations": JSON.stringify(rotations)
-        };
-        
-        console.log("videoGenData", videoGenData);
 
-        // STEP 1: Call ComfyDeploy to start the generation
-        const response = await fetch("/api/comfydeploy/generate-video", {
+    try {
+      setIsGenerating(true);
+      
+      const validMasks = segmentedMasks.filter(mask => mask.id && mask.id.trim() !== '');
+        
+      const trajectories = validMasks.map(mask => mask.trajectory?.points || []);
+      const rotations = validMasks.map(mask => mask.rotation || 0);
+      
+      // Upload the workbench image to UploadThing
+      let workbenchImageUrl = "";
+      if (editor.workspaceURL) {
+        const workbenchFile = await dataUrlToFile(editor.workspaceURL, "workspace.png");
+        workbenchImageUrl = await uploadToUploadThingResidual(workbenchFile);
+      } else {
+        throw new Error("No workbench image available");
+      }
+      
+      // Upload all mask images to UploadThing
+      const maskUploadPromises = validMasks.map(async (mask, index) => {
+        if (!mask.binaryUrl) return "";
+        
+        const maskFile = await dataUrlToFile(mask.binaryUrl, `mask-${index}.png`);
+        return uploadToUploadThingResidual(maskFile);
+      });
+      
+      const uploadedMaskUrls = await Promise.all(maskUploadPromises);
+      
+      const workflowData = {
+        "workflow_id": "",
+      }
+
+      if (selectedModel.id === "cogvideox") {
+        workflowData.workflow_id = comfyDeployWorkflows["ZEPTA-3-CogVideoX"];
+      } else if (selectedModel.id === "hunyuanvideo") {
+        workflowData.workflow_id = comfyDeployWorkflows["ZEPTA-3-HunyuanVideo"] || "";
+      } else if (selectedModel.id === "skyreels") {
+        workflowData.workflow_id = comfyDeployWorkflows["ZEPTA-3-SkyReels"] || "";
+      }
+
+      const videoGenData = {
+        "input_image": JSON.stringify([workbenchImageUrl]),
+        "input_masks": JSON.stringify(uploadedMaskUrls),
+        "input_prompt": generalTextPrompt,
+        "input_trajectories": JSON.stringify(trajectories),
+        "input_rotations": JSON.stringify(rotations)
+      };
+      
+      console.log("videoGenData", videoGenData);
+      
+      const comfyDeployData = {
+        workflowData,
+        videoGenData
+      }
+
+      // STEP 1: Call ComfyDeploy to start the generation
+      const response = await fetch("/api/comfydeploy/generate-video", {
+        method: "POST",
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(comfyDeployData),
+      });
+      
+      const data = await response.json();
+      
+      if (data.runId) {
+        // STEP 2: Store the generation information in our database
+        const dbResponse = await fetch("/api/video-generations", {
           method: "POST",
           headers: {
             'Content-Type': 'application/json',
           },
-          body: JSON.stringify(videoGenData),
+          body: JSON.stringify({
+            projectId: projectId,
+            workbenchId: workbenchId,
+            runId: data.runId,
+            status: "pending",
+            modelId: modelId,
+          }),
         });
         
-        const data = await response.json();
+        const dbData = await dbResponse.json();
         
-        if (data.runId) {
-          // STEP 2: Store the generation information in our database
-          const dbResponse = await fetch("/api/video-generations", {
-            method: "POST",
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-              projectId: projectId,
-              workbenchId: workbenchId,
-              runId: data.runId,
-              status: "pending",
-              modelId: modelId,
-            }),
-          });
-          
-          const dbData = await dbResponse.json();
-          
-          // Increment usage counter
-          incrementVideoUsage();
-          
-          toast.success("Video generation started successfully. Check timeline for progress.");
-          console.log("Video generation started. Please wait...");
-        } else {
-          throw new Error("No video runId received");
-        }
-      } catch (error) {
-        console.error("Error:", error);
-        console.log("Error generating video");
-        toast.error("Error generating video. Please try again.");
-      } finally {
-        setIsGenerating(false);
+        // Increment usage counter
+        incrementVideoUsage();
+        
+        toast.success("Video generation started successfully. Check timeline for progress.");
+        console.log("Video generation started. Please wait...");
+      } else {
+        throw new Error("No video runId received");
       }
-    } else if (modelId === "hunyuanvideo") {
-      console.log("HunyuanVideo model selected, but not implemented yet");
-    } else {
-      console.log("Model not yet implemented");
-    } 
+    } catch (error) {
+      console.error("Error:", error);
+      console.log("Error generating video");
+      toast.error("Error generating video. Please try again.");
+    } finally {
+      setIsGenerating(false);
+    }
   }
 
   function handleDecodingResults(decodingResults: { 

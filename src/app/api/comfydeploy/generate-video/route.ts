@@ -17,14 +17,14 @@ export async function POST(req: NextRequest) {
 
   try {
     const result = await cd.run.deployment.queue({
-      deploymentId: "8b87168f-3dba-4af0-8aaa-c1e1c8658719", // hooked up to ZEPTA 3 (AutoPrompt)
+      deploymentId: data.workflowData.workflow_id,
       webhook: webhookUrl,
       inputs: {
-        input_image: data.input_image,
-        input_masks: data.input_masks,
-        input_prompt: data.input_prompt,
-        input_trajectories: data.input_trajectories,
-        input_rotations: data.input_rotations,
+        input_image: data.videoGenData.input_image,
+        input_masks: data.videoGenData.input_masks,
+        input_prompt: data.videoGenData.input_prompt,
+        input_trajectories: data.videoGenData.input_trajectories,
+        input_rotations: data.videoGenData.input_rotations,
       },
     })
 
