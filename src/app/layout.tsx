@@ -15,9 +15,9 @@ const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
   title: "Zeptaframe",
-  description: "AI-native controllable video editor",
+  description: "The ultimate AI-native controllable video editor. Start creating videos now!",
   icons: {
-    icon: '/zeptaframe-logo-bin.svg',
+    icon: '/zeptaframe-logo.jpg',
   },  
 };
 
