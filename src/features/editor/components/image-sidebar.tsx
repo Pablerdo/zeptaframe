@@ -11,6 +11,7 @@ import { useGetImages } from "@/features/images/api/use-get-images";
 import { cn } from "@/lib/utils";
 import { UploadButton } from "@/lib/uploadthing";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { toast } from "sonner";
 
 interface ImageSidebarProps {
   editor: Editor | undefined;
@@ -19,11 +20,15 @@ interface ImageSidebarProps {
 }
 
 export const ImageSidebar = ({ editor, activeTool, onChangeActiveTool }: ImageSidebarProps) => {
-  const { data, isLoading, isError } = useGetImages();
+  const { data, isLoading, isError, refetch } = useGetImages();
 
   const onClose = () => {
     onChangeActiveTool("select");
   };
+
+  const refetchImages = () => {
+    refetch();
+  }
 
   return (
     <aside
@@ -45,6 +50,8 @@ export const ImageSidebar = ({ editor, activeTool, onChangeActiveTool }: ImageSi
           endpoint="imageUploader"
           onClientUploadComplete={(res) => {
             editor?.addImage(res[0].url);
+            toast.success("Image uploaded successfully");
+            refetchImages();
           }}
         />
       </div>

@@ -72,7 +72,7 @@ export const ScrollableWorkbenchViewer = ({
   return (
       <div 
       ref={editorsContainerRef}
-      className="flex-1 overflow-x-auto mt-2 mx-2 scroll-smooth relative" 
+      className="flex-1 overflow-x-auto mt-2 mx-2 scroll-smooth relative hide-scrollbar" 
       style={{
         scrollSnapType: "x mandatory",
         display: "flex",
@@ -80,6 +80,17 @@ export const ScrollableWorkbenchViewer = ({
         gap: "20px",
       }}
       >
+      {/* Hide scrollbar for webkit browsers */}
+      <style jsx global>{`
+        .hide-scrollbar::-webkit-scrollbar {
+          display: none;
+        }
+        .hide-scrollbar {
+          -ms-overflow-style: none;
+          scrollbar-width: none;
+        }
+      `}</style>
+      
       {/* Render workbenches based on workbench IDs array */}
       {workbenchIds.map((id, index) => {
         const workbenchData = projectData.workbenches[id];
