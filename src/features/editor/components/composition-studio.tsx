@@ -39,6 +39,7 @@ import { LastFrameProvider } from '@/features/editor/contexts/last-frame-context
 import { WorkbenchNavigator } from "@/features/editor/components/workbench-navigator";
 import { UserStatusProvider } from "@/features/auth/contexts/user-status-context";
 import { AuthModal } from "./auth-modal";
+import { toast } from "sonner";
 
 interface CompositionStudioProps {
   initialData: ResponseType["data"];
@@ -299,6 +300,12 @@ export const CompositionStudio = ({ initialData, isTrial }: CompositionStudioPro
   
   // Handle adding a new workbench
   const handleAddWorkbench = useCallback(() => {
+
+    if (workbenchIds.length >= 10) {
+      toast.error("Ten workbenches is the maximum limit");
+      return;
+    }
+
     // In trial mode, limit to 2 workbenches and show signup for more
     if (isTrial && workbenchIds.length >= 2) {
       setShowSignUpModal(true);

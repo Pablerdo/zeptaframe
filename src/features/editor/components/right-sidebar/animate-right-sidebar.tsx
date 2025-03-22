@@ -896,30 +896,39 @@ export const AnimateRightSidebar = ({
           {/* Segmented masks list */}
           <div className="space-y-2">
             {/* Always show the "New Object" stub at the top */}
-            <div className="flex items-center justify-between p-2 border-2 border-gray-300 dark:border-gray-700 rounded-md">
-              <div className="flex items-center space-x-2">
-                <span className="text-sm">New Object</span>
-              </div>
+            <div className="flex items-center bg-gray-100 dark:bg-editor-bg-dark justify-between p-2 border-2 border-gray-300 dark:border-gray-400 rounded-md">
+              {!isSegmentationActive && (
+                <div className="flex items-center space-x-2">
+                  <span className="text-sm">New Object</span>
+                </div>
+              )}
               <div className="flex items-center space-x-2">
                 {isSegmentationActive ? (
                   <>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={handleSaveInProgressMask}
-                      disabled={!mask}
-                    >
-                      <Check className="w-4 h-4 mr-1" />
-                      Save Mask as Object
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={handleCancelInProgressMask}
-                    >
-                      <X className="w-4 h-4 mr-1" />
-                      Cancel
-                    </Button>
+                    <div className="flex flex-col gap-2">
+                      <div className="text-md pl-1 text-muted-foreground">Click an object to animate</div>
+                      <div className="flex gap-2">
+                        <Button
+                          variant="default"
+                          size="sm"
+                          onClick={handleSaveInProgressMask}
+                          disabled={!mask}
+                          className="bg-green-500 hover:bg-green-600 text-white"
+                        >
+                          <Check className="w-4 h-4 mr-1" />
+                          Save Mask as Object
+                        </Button>
+                        <Button
+                          variant="default"
+                          size="sm"
+                          onClick={handleCancelInProgressMask}
+                          className="bg-red-500 hover:bg-red-600 text-white"
+                        >
+                          <X className="w-4 h-4 mr-1" />
+                          Cancel
+                        </Button>
+                      </div>
+                    </div>
                   </>
                 ) : (
                   <Button
@@ -966,7 +975,7 @@ export const AnimateRightSidebar = ({
                 const isEditingMaskName = editingMaskId === mask.url;
                 
                 return (
-                  <div key={mask.url} className="flex flex-col p-2 border-2 border-gray-300 dark:border-gray-700 rounded-md space-y-2">
+                  <div key={mask.url} className={`flex flex-col p-2 border-2 border-gray-300 dark:border-gray-500 rounded-md space-y-2 dark:bg-editor-bg-dark ${isSegmentationActive ? 'opacity-50' : ''}`}>
                     <div className="flex items-center justify-between">
                       <div className="flex items-center space-x-2">
                         <img 
@@ -982,12 +991,14 @@ export const AnimateRightSidebar = ({
                               onKeyPress={(e) => handleKeyPress(e, actualIndex)}
                               className="h-8 w-40 text-sm"
                               autoFocus
+                              disabled={isSegmentationActive}
                             />
                             <Button
                               variant="ghost"
                               size="icon"
                               onClick={() => handleFinishRename(actualIndex, tempMaskName)}
                               className="h-8 w-8"
+                              disabled={isSegmentationActive}
                             >
                               <Check className="w-4 h-4" />
                             </Button> 
@@ -1000,6 +1011,7 @@ export const AnimateRightSidebar = ({
                               size="icon"
                               onClick={() => handleStartRename(actualIndex)}
                               className="h-8 w-8"
+                              disabled={isSegmentationActive}
                             >
                               <Pencil className="w-4 h-4" />
                             </Button>
@@ -1009,9 +1021,11 @@ export const AnimateRightSidebar = ({
                       {!isEditingMaskName && (
                         <div className="flex items-center space-x-2">
                           <Button
-                            variant="ghost"
+                            variant={mask.isApplied ? "default" : "ghost"}
                             size="sm"
                             onClick={() => handleApplyMask(mask.url, actualIndex)}
+                            className={mask.isApplied ? "bg-green-600 hover:bg-green-700 text-white" : ""}
+                            disabled={isSegmentationActive}
                           >
                             {mask.isApplied ? 'Applied' : 'Apply'}
                           </Button>
@@ -1020,6 +1034,7 @@ export const AnimateRightSidebar = ({
                             size="icon"
                             onClick={() => handleDeleteMask(actualIndex)}
                             className="h-8 w-8"
+                            disabled={isSegmentationActive}
                           >
                             <Trash2 className="w-4 h-4" />
                           </Button>
@@ -1029,7 +1044,7 @@ export const AnimateRightSidebar = ({
                     <div className="rounded-md bg-gray-100 dark:bg-gray-800 p-2">
                       <div className="flex items-center space-x-2 cursor-pointer select-none" 
                           onClick={() => {
-                            if (editor) {
+                            if (editor && !isSegmentationActive) {
                               const updatedMasks = segmentedMasks.map((m, i) => 
                                 m.url === mask.url ? { ...m, isTextDetailsOpen: !m.isTextDetailsOpen } : m
                               );
@@ -1049,7 +1064,7 @@ export const AnimateRightSidebar = ({
                             placeholder="Add specific object motion details to help with generation"
                             value={mask.textDetails || ""}
                             onChange={(e) => {
-                              if (editor) {
+                              if (editor && !isSegmentationActive) {
                                 const updatedMasks = segmentedMasks.map((m, i) => 
                                   m.url === mask.url ? { ...m, textDetails: e.target.value } : m
                                 );
@@ -1057,6 +1072,7 @@ export const AnimateRightSidebar = ({
                               }
                             }}
                             rows={2}
+                            disabled={isSegmentationActive}
                           />
                         </div>
                       )}
@@ -1067,6 +1083,7 @@ export const AnimateRightSidebar = ({
                           className="flex-1 bg-blue-600 hover:bg-blue-700 text-white"
                           size="sm"
                           onClick={() => handleToggleTrajectory(mask.url)}
+                          disabled={isSegmentationActive}
                         >
                           {mask.trajectory.isVisible ? 'Hide' : 'Show'} Trajectory
                         </Button>
@@ -1074,7 +1091,7 @@ export const AnimateRightSidebar = ({
                           className="flex-1 bg-purple-600 hover:bg-purple-700 text-white"
                           size="sm"
                           onClick={() => handleRedoTrajectory(mask.url)}
-                          disabled
+                          disabled={true}
                         >
                           Redo
                         </Button>
@@ -1085,6 +1102,7 @@ export const AnimateRightSidebar = ({
                           className="flex-1 bg-green-600 hover:bg-green-700 text-white"
                           size="sm"
                           onClick={handleSaveMotion}
+                          disabled={isSegmentationActive}
                         >
                           <Check className="w-4 h-4 mr-1" />
                           Save Motion
@@ -1093,6 +1111,7 @@ export const AnimateRightSidebar = ({
                           className="flex-1 bg-red-600 hover:bg-red-700 text-white"
                           size="sm"
                           onClick={handleCancelMotion}
+                          disabled={isSegmentationActive}
                         >
                           <X className="w-4 h-4 mr-1" />
                           Cancel
@@ -1102,7 +1121,7 @@ export const AnimateRightSidebar = ({
                       <Button
                         className="w-full bg-purple-600 hover:bg-purple-700 text-white"
                         size="sm"
-                        disabled={!mask.isApplied}
+                        disabled={!mask.isApplied || isSegmentationActive}
                         onClick={() => handleControlMotion(mask.id, mask.url)}
                       >
                         Control Motion
