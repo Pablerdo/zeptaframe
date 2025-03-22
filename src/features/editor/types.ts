@@ -282,7 +282,7 @@ export interface SegmentedMask {
   url: string;
   binaryUrl: string;
   name: string;
-  isEditing?: boolean;
+  isEditingName?: boolean;
   inProgress?: boolean;
   isApplied?: boolean;
   trajectory?: {

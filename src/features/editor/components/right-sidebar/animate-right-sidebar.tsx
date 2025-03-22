@@ -58,6 +58,10 @@ export const AnimateRightSidebar = ({
     isPlaying: boolean;
   }}>({});
   
+  // New state variables for mask editing
+  const [editingMaskId, setEditingMaskId] = useState<string | null>(null);
+  const [tempMaskName, setTempMaskName] = useState<string>("");
+  
   const onClose = () => {
     setIsSegmentationActive(false);
     onChangeActiveWorkbenchTool("select");
@@ -384,25 +388,25 @@ export const AnimateRightSidebar = ({
 
   const handleStartRename = (index: number) => {
     if (editor) {
-      const updatedMasks = segmentedMasks.map((mask, i) => 
-        i === index ? { ...mask, isEditing: true } : mask
-      );
-      setSegmentedMasks(updatedMasks);
+      const maskToEdit = segmentedMasks[index];
+      setEditingMaskId(maskToEdit.url);
+      setTempMaskName(maskToEdit.name);
     }
   };
 
   const handleFinishRename = (index: number, newName: string) => {
     if (editor) {
       const updatedMasks = segmentedMasks.map((mask, i) => 
-        i === index ? { ...mask, name: newName, isEditing: false } : mask
+        i === index ? { ...mask, name: newName } : mask
       );
       setSegmentedMasks(updatedMasks);
+      setEditingMaskId(null);
     }
   };
 
-  const handleKeyPress = (event: React.KeyboardEvent, index: number, newName: string) => {
+  const handleKeyPress = (event: React.KeyboardEvent, index: number) => {
     if (event.key === 'Enter') {
-      handleFinishRename(index, newName);
+      handleFinishRename(index, tempMaskName);
     }
   };
 
@@ -959,6 +963,7 @@ export const AnimateRightSidebar = ({
               .map((mask, index) => {
                 // Get the actual index in the full array
                 const actualIndex = segmentedMasks.findIndex(m => m.url === mask.url);
+                const isEditingMaskName = editingMaskId === mask.url;
                 
                 return (
                   <div key={mask.url} className="flex flex-col p-2 border-2 border-gray-300 dark:border-gray-700 rounded-md space-y-2">
@@ -969,23 +974,23 @@ export const AnimateRightSidebar = ({
                           alt={mask.name} 
                           className="w-12 h-12 object-contain"
                         />
-                        {mask.isEditing ? (
+                        {isEditingMaskName ? (
                           <div className="flex items-center space-x-2">
                             <Input
-                              value={mask.name}
-                              onChange={(e) => handleRenameMask(actualIndex, e.target.value)}
-                              onKeyPress={(e) => handleKeyPress(e, actualIndex, mask.name)}
+                              value={tempMaskName}
+                              onChange={(e) => setTempMaskName(e.target.value)}
+                              onKeyPress={(e) => handleKeyPress(e, actualIndex)}
                               className="h-8 w-40 text-sm"
                               autoFocus
                             />
                             <Button
                               variant="ghost"
                               size="icon"
-                              onClick={() => handleFinishRename(actualIndex, mask.name)}
+                              onClick={() => handleFinishRename(actualIndex, tempMaskName)}
                               className="h-8 w-8"
                             >
                               <Check className="w-4 h-4" />
-                            </Button>
+                            </Button> 
                           </div>
                         ) : (
                           <div className="flex items-center space-x-2">
@@ -1001,23 +1006,25 @@ export const AnimateRightSidebar = ({
                           </div>
                         )}
                       </div>
-                      <div className="flex items-center space-x-2">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleApplyMask(mask.url, actualIndex)}
-                        >
-                          {mask.isApplied ? 'Applied' : 'Apply'}
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => handleDeleteMask(actualIndex)}
-                          className="h-8 w-8"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </Button>
-                      </div>
+                      {!isEditingMaskName && (
+                        <div className="flex items-center space-x-2">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleApplyMask(mask.url, actualIndex)}
+                          >
+                            {mask.isApplied ? 'Applied' : 'Apply'}
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => handleDeleteMask(actualIndex)}
+                            className="h-8 w-8"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                        </div>
+                      )}
                     </div>
                     <div className="rounded-md bg-gray-100 dark:bg-gray-800 p-2">
                       <div className="flex items-center space-x-2 cursor-pointer select-none" 
