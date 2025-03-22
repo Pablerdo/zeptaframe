@@ -148,7 +148,7 @@ export const Workbench = ({
         console.error("Failed to parse promptData:", e);
       }
     }
-  }, [defaultPromptData]);
+  }, []);
 
   // Initialize the editor with useEditor hook (without promptData)
   const { init, editor } = useEditor({
