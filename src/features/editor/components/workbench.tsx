@@ -343,7 +343,9 @@ export const Workbench = ({
         const dbData = await dbResponse.json();
         
         // Increment usage counter
-        incrementVideoUsage();
+
+        // TODO: Uncomment this when we have a way to increment the usage counter
+        // incrementVideoUsage();
         
         toast.success("Video generation started successfully. Check timeline for progress.");
         console.log("Video generation started. Please wait...");
@@ -599,12 +601,6 @@ export const Workbench = ({
     }
   };
 
-  // Handle successful authentication
-  const handleAuthSuccess = () => {
-    // After successful authentication, try to generate video again
-    handleGenerateVideo(selectedModel.id);
-  };
-
   return (
     <>
       <div className="grid h-full" style={{
@@ -821,7 +817,7 @@ export const Workbench = ({
                   <div className="flex flex-col items-center">
                     <ArrowRightSquare className="h-6 w-6" />
                     <span className="text-xs font-medium mt-1">Submit</span>
-                    <span className="text-xs text-blue-200/80 mt-0.5">CogVideoX</span>
+                    <span className="text-[10px] text-blue-200/80 mt-0.5">{selectedModel.name}</span>
                   </div>
                 )}
               </button>

@@ -1,8 +1,9 @@
 import { useState, useMemo, useEffect } from "react";
 import { VideoBox } from './video-box';
-import { VideoGeneration } from "../types";
+import { SupportedVideoModelId, VideoGeneration } from "../types";
 import { cn } from "@/lib/utils";
 import { Calendar, Check, ChevronDown, Loader2, X } from "lucide-react";
+import { videoModels } from "../utils/videoModels";
 
 interface WorkbenchGenerationsProps {
   workbenchId: string;
@@ -140,7 +141,7 @@ const WorkbenchGenerations = ({
                     "font-medium",
                     gen.id === selectedGeneration ? "text-blue-200" : "text-gray-300"
                   )}>
-                    {gen.status === 'pending' ? 'Processing...' : 'Generation'}
+                    {gen.status === 'pending' ? 'Processing...' : videoModels[gen.modelId as SupportedVideoModelId].name}
                   </span>
                 </div>
                 <div className="text-gray-400">

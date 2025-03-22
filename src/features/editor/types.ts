@@ -254,12 +254,12 @@ export interface VideoGeneration {
 
 export type SupportedVideoModelId = 
   | "cogvideox"
-  | "hunyuanvideo";
+  | "hunyuanvideo"
+  | "skyreels";
 
 export type BaseVideoModel = {
   id: SupportedVideoModelId;
   name: string;
-  icon: React.ElementType;
 };
   
 export interface Coordinate {

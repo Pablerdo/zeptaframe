@@ -11,12 +11,22 @@ const cd = new ComfyDeploy({
 // In-memory storage for video URLs (replace with a database in production)
 const videoStore: { [key: string]: string } = {}
 
-function findGifUrl(outputs: any): string | undefined {
-  const outputWithGifs = outputs.find((output: any) => 
-    Array.isArray(output.data?.gifs) && output.data.gifs.length > 0
-  );
-
-  return outputWithGifs?.data.gifs[0]?.url;
+function findVideoUrl(outputs: any): string | undefined {
+  if (!outputs || !Array.isArray(outputs)) return undefined;
+  
+  for (const output of outputs) {
+    if (Array.isArray(output.data?.files) && output.data.files.length > 0) {
+      // Check if any of the files have .gif or .mp4 extension
+      const videoFile = output.data.files.find((file: any) => 
+        file.filename?.endsWith('.gif') || file.filename?.endsWith('.mp4')
+      );
+      
+      // Return the URL of the first matching file, or fall back to the first file if no match
+      return videoFile?.url || undefined;
+    }
+  }
+  
+  return undefined;
 }
 
 function findLastFrameUrl(outputs: any): string | undefined {
@@ -26,18 +36,6 @@ function findLastFrameUrl(outputs: any): string | undefined {
 
   return outputWithLastFrame?.data.images[0]?.url;
 }
-
-// Below was suggested by Cursor
-// function findGifUrl(outputs: any): string | null {
-//   if (!outputs || !Array.isArray(outputs)) return null;
-  
-//   for (const output of outputs) {
-//     if (output.url && (output.url.endsWith('.gif') || output.url.endsWith('.mp4'))) {
-//       return output.url;
-//     }
-//   }
-//   return null;
-// }
 
 export async function POST(request: Request) {
   try {
@@ -49,7 +47,7 @@ export async function POST(request: Request) {
 
     console.log(JSON.stringify(outputs, null, 2))
 
-    const videoUrl = findGifUrl(outputs)
+    const videoUrl = findVideoUrl(outputs)
 
     const lastFrameUrl = findLastFrameUrl(outputs)
 
