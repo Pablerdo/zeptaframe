@@ -54,11 +54,10 @@ export const ModelRightSidebar = ({
             key={model.id}
             onClick={() => onSelectModel(model)}
             className={cn(
-              "w-full p-3 rounded-lg flex items-center gap-3 transition-colors",
-              "hover:bg-gray-100 dark:hover:bg-gray-800",
+              "w-full flex p-3 border border-gray-300 dark:border-gray-700 rounded-lg mt-3 items-center gap-3 transition-colors hover:border-gray-600 dark:hover:border-gray-200",
               selectedModel.id === model.id 
-                ? "bg-blue-100 dark:bg-blue-900 border border-blue-200 dark:border-blue-800"
-                : "bg-transparent border border-transparent"
+                ? "bg-blue-600 dark:bg-blue-600 border border-blue-900 dark:border-blue-800 text-white"
+                : "bg-transparent"
             )}
           >
             <span className="font-medium">{model.name}</span>
