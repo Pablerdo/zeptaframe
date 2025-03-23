@@ -15,18 +15,32 @@ export async function POST(req: NextRequest) {
   ? `${process.env.NEXT_PUBLIC_WEBHOOK_URL_PROD}/api/comfydeploy/webhook-video`
   : `${process.env.NEXT_PUBLIC_WEBHOOK_URL_NGROK}/api/comfydeploy/webhook-video`;
 
+  
   try {
-    const result = await cd.run.deployment.queue({
-      deploymentId: data.workflowData.workflow_id,
-      webhook: webhookUrl,
-      inputs: {
-        input_image: data.videoGenData.input_image,
-        input_masks: data.videoGenData.input_masks,
-        input_prompt: data.videoGenData.input_prompt,
-        input_trajectories: data.videoGenData.input_trajectories,
-        input_rotations: data.videoGenData.input_rotations,
-      },
-    })
+    let result;
+
+    if (data.workflowData.mode === "text-only") {
+      result = await cd.run.deployment.queue({
+        deploymentId: data.workflowData.workflow_id,
+        webhook: webhookUrl,
+        inputs: {
+          input_image: data.videoGenData.input_image,
+          input_prompt: data.videoGenData.input_prompt,
+        },
+      })
+    } else if (data.workflowData.mode === "animation") {
+      result= await cd.run.deployment.queue({
+        deploymentId: data.workflowData.workflow_id,
+        webhook: webhookUrl,
+        inputs: {
+          input_image: data.videoGenData.input_image,
+          input_masks: data.videoGenData.input_masks,
+          input_prompt: data.videoGenData.input_prompt,
+          input_trajectories: data.videoGenData.input_trajectories,
+          input_rotations: data.videoGenData.input_rotations,
+        },
+      })
+    }
 
     if (result) {
       const runId = result.runId

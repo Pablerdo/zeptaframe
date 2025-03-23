@@ -4,7 +4,7 @@ import { fabric } from "fabric";
 import { useEffect, useRef, useState, useCallback, useMemo } from "react";
 import { MessageSquare, Trash2, Video, Film, ArrowRightSquare, ArrowRightCircle, Loader2, CornerUpRight, ChevronDown, X } from "lucide-react";
 import { useEditor } from "@/features/editor/hooks/use-editor";
-import { ActiveTool, ActiveWorkbenchTool, BaseVideoModel, Editor as EditorType, JSON_KEYS, SegmentedMask, SupportedVideoModelId, VideoGeneration } from "@/features/editor/types";
+import { ActiveTool, ActiveWorkbenchTool, BaseVideoModel, Editor as EditorType, JSON_KEYS, SegmentedMask, SupportedVideoModelId, VideoGeneration, WorkflowMode } from "@/features/editor/types";
 import { cn } from "@/lib/utils";
 import { RightSidebarItem } from "./right-sidebar-item";
 import { AnimateRightSidebar } from "./right-sidebar/animate-right-sidebar";
@@ -248,7 +248,7 @@ export const Workbench = ({
     if (!editor) return;
 
     // Check if text prompt is required but missing
-    if (textOnlyMode && !generalTextPrompt.trim()) {
+    if (textOnlyMode && generalTextPrompt.trim() === "") {
       toast.error("Text prompt is required for Text-only generation");
       return;
     }
@@ -279,7 +279,9 @@ export const Workbench = ({
         throw new Error("No workbench image available");
       }
 
+
       const workflowData = {
+        "mode": "",
         "workflow_id": "",
       }
 
@@ -291,6 +293,7 @@ export const Workbench = ({
         } else if (selectedModel.id === "skyreels") {
           workflowData.workflow_id = comfyDeployWorkflows["NOGWF-ZEPTA-SkyReels"] || "";
         }
+        workflowData.mode = "text-only" as WorkflowMode;
 
         const videoGenData = {
           "input_image": JSON.stringify([workbenchImageUrl]),
@@ -366,7 +369,8 @@ export const Workbench = ({
         };
         
         console.log("videoGenData", videoGenData);
-        
+        workflowData.mode = "animation" as WorkflowMode;
+
         const comfyDeployData = {
           workflowData,
           videoGenData
@@ -878,10 +882,10 @@ export const Workbench = ({
                   </div>
                 </div>
               
-                <div className="relative bg-gray-700 w-full rounded-lg p-1 flex flex-col items-center overflow-hidden h-[100px]">
+                <div className="relative bg-gray-700 w-full rounded-lg p-1 flex flex-col items-center overflow-hidden h-[55px] pt-2">
                   {/* Animated highlight backdrop */}
                   <div 
-                    className={`absolute left-1 right-1 h-[42%] mt-2 bg-blue-600 rounded-md z-0 transform transition-all duration-500
+                    className={`absolute left-1 right-1 h-[24px] bg-blue-600 rounded-md z-0 transform transition-all duration-500
                       ${textOnlyMode 
                         ? 'translate-y-[100%] scale-y-110 ease-out' 
                         : 'translate-y-0 scale-y-110 ease-in-out'}`}
@@ -894,8 +898,8 @@ export const Workbench = ({
                   
                   {/* Gooey connector element */}
                   <div 
-                    className={`absolute w-[60%] h-[10%] bg-blue-600 rounded-md z-0 left-[20%]
-                      transition-all duration-700 ${textOnlyMode ? 'top-[49%]' : 'top-[29%]'}`}
+                    className={`absolute w-[60%] h-[4px] bg-blue-600 rounded-md z-0 left-[20%]
+                      transition-all duration-700 ${textOnlyMode ? 'top-[26px]' : 'top-[22px]'}`}
                     style={{
                       transform: `scaleX(${textOnlyMode ? 0.7 : 0.9})`,
                       transformOrigin: 'center',
@@ -904,7 +908,7 @@ export const Workbench = ({
                   />
                   
                   <button
-                    className={`relative z-10 text-sm font-medium rounded-md w-full py-2.5 mb-0.5 flex items-center justify-center
+                    className={`relative z-10 text-sm font-medium rounded-md w-full py-1 mb-1 flex items-center justify-center
                       transform transition-all duration-400 
                       ${!textOnlyMode ? 'text-white scale-105' : 'text-gray-300 scale-100'}`}
                     onClick={() => setTextOnlyMode(false)}
@@ -912,11 +916,11 @@ export const Workbench = ({
                       transitionTimingFunction: !textOnlyMode ? 'cubic-bezier(0.34, 1.56, 0.64, 1)' : 'ease'
                     }}
                   >
-                    <span>Animation + Text</span>
+                    <span>Animation</span>
                   </button>
                   
                   <button
-                    className={`relative z-10 text-sm font-medium rounded-md w-full py-2.5 flex items-center justify-center
+                    className={`relative z-10 text-sm font-medium rounded-md w-full py-1 flex items-center justify-center
                       transform transition-all duration-400
                       ${textOnlyMode ? 'text-white scale-105' : 'text-gray-300 scale-100'}`}
                     onClick={() => setTextOnlyMode(true)}
@@ -932,7 +936,7 @@ export const Workbench = ({
               <button 
                 className="w-full aspect-square bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors duration-200 flex flex-col items-center justify-center gap-1 px-2 py-1"
                 onClick={() => handleGenerateVideo(selectedModel.id)}
-                disabled={isGenerating || (textOnlyMode && !generalTextPrompt.trim())}
+                disabled={isGenerating}
               >
                 {isGenerating ? (
                   <>

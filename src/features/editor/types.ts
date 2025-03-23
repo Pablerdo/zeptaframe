@@ -261,6 +261,8 @@ export interface ImageGeneration {
   updatedAt?: string | Date;
 }
 
+export type WorkflowMode = "text-only" | "animation";
+
 export type SupportedVideoModelId = 
   | "cogvideox"
   | "hunyuanvideo"
