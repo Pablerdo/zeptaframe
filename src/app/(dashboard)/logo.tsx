@@ -12,7 +12,7 @@ const font = Space_Grotesk({
 export const Logo = () => {
   return (
     <Link href="/">
-      <div className="flex items-center gap-x-2 hover:opacity-75 transition h-[68px] px-4">
+      <div className="flex items-center gap-x-2 hover:opacity-75 transition h-[50px] px-4">
         <div className="size-8 relative">
           <Image src="/zeptaframe-logo.svg" alt="Zeptaframe" fill />
         </div> 

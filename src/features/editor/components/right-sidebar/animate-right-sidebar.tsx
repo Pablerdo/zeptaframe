@@ -936,7 +936,7 @@ export const AnimateRightSidebar = ({
           {/* Segmented masks list */}
           <div className="space-y-2">
             {/* Always show the "New Object" stub at the top */}
-            <div className="flex items-center bg-gray-100 dark:bg-editor-bg-dark justify-between p-2 border-2 border-gray-300 dark:border-gray-400 rounded-md">
+            <div className="flex items-center bg-gray-100 dark:bg-editor-bg-dark justify-between p-2 border border-gray-300 dark:border-gray-400 rounded-md">
               {!isSegmentationActive && (
                 <div className="flex items-center space-x-2">
                   <span className="text-sm">New Object</span>
@@ -1000,7 +1000,7 @@ export const AnimateRightSidebar = ({
 
             {/* Add a manual animation button */}
 
-            <div className="flex items-center bg-gray-100 dark:bg-editor-bg-dark justify-between p-2 border-2 border-gray-300 dark:border-gray-400 rounded-md">
+            <div className="flex items-center bg-gray-100 dark:bg-editor-bg-dark justify-between p-2 border border-gray-300 dark:border-gray-400 rounded-md">
               {!isManualSegmentationActive && (
                 <div className="flex items-center space-x-2">
                   <span className="text-sm">New Manual Object</span>
@@ -1039,6 +1039,8 @@ export const AnimateRightSidebar = ({
               </div>
             </div>
 
+            {/* add a separator */}
+            <div className="h-px bg-gray-300 dark:bg-gray-700 w-full my-2" />
 
             {/* Empty state message */}
             {segmentedMasks.length === 0 && (
@@ -1071,7 +1073,7 @@ export const AnimateRightSidebar = ({
                 const isEditingMaskName = editingMaskId === mask.url;
                 
                 return (
-                  <div key={mask.url} className={`flex flex-col p-2 border-2 border-gray-300 dark:border-gray-500 rounded-md space-y-2 dark:bg-editor-bg-dark ${isSegmentationActive ? 'opacity-50' : ''}`}>
+                  <div key={mask.url} className={`flex flex-col p-2 border border-gray-300 dark:border-gray-500 rounded-md space-y-2 dark:bg-editor-bg-dark ${isSegmentationActive ? 'opacity-50' : ''}`}>
                     <div className="flex items-center justify-between">
                       <div className="flex items-center space-x-2">
                         <img 

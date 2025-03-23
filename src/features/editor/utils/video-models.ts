@@ -1,5 +1,3 @@
-import { Film } from "lucide-react";
-import { Video } from "lucide-react";
 import { SupportedVideoModelId } from "../types";
 import { BaseVideoModel } from "../types";
 
@@ -9,4 +7,4 @@ export const videoModels: Record<SupportedVideoModelId, BaseVideoModel> = {
   "skyreels": { id: "skyreels" as SupportedVideoModelId, name: "SkyReels" },
 };
 
-export const defaultVideoModelId: SupportedVideoModelId = "cogvideox";
+export const defaultVideoModelId: SupportedVideoModelId = "skyreels";

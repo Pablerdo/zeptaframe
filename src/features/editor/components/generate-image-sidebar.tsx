@@ -12,7 +12,6 @@ import { Textarea } from "@/components/ui/textarea";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Loader2, X } from "lucide-react";
 import { toast } from "sonner";
-import { ITextToImage } from "@runware/sdk-js";
 
 interface GenerateImageSidebarProps {
   editor: Editor | undefined;
@@ -147,7 +146,6 @@ export const GenerateImageSidebar = ({
     };
 
     return (
-      <div>
         <aside
           className={cn(
             "bg-editor-sidebar relative border-r z-[40] rounded-xl w-[320px] flex flex-col my-2",
@@ -184,7 +182,7 @@ export const GenerateImageSidebar = ({
               <Button
                 disabled={isCurrentlyGenerating}
                 type="submit"
-                className="w-full"
+                className="w-full bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded-md"
               >
                 {isCurrentlyGenerating ? (
                   <>
@@ -220,9 +218,7 @@ export const GenerateImageSidebar = ({
               </div>
             </div>
           </ScrollArea>
-        </aside>
-
-        {/* Usage Limit Modal */}
+          {/* Usage Limit Modal */}
         {showUsageLimitModal && (
           <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
             <div className="bg-gray-900 border border-gray-700 rounded-lg shadow-lg w-full max-w-md p-6 animate-in fade-in duration-200">
@@ -258,6 +254,6 @@ export const GenerateImageSidebar = ({
             </div>
           </div>
         )}
-      </div>
+      </aside>
     );
 };
