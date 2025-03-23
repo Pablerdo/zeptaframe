@@ -252,6 +252,15 @@ export interface VideoGeneration {
   updatedAt?: string | Date;
 }
 
+export interface ImageGeneration {
+  id: string;
+  projectId: string;
+  status: 'pending' | 'success' | 'error';
+  imageUrl?: string | null;
+  createdAt?: string | Date;
+  updatedAt?: string | Date;
+}
+
 export type SupportedVideoModelId = 
   | "cogvideox"
   | "hunyuanvideo"
@@ -326,6 +335,8 @@ export interface Editor {
   disableDrawingMode: () => void;
   enableSegmentationMode: () => void;
   disableSegmentationMode: () => void;
+  enableManualSegmentationMode: () => void;
+  disableManualSegmentationMode: () => void;
   onCopy: () => void;
   onPaste: () => void;
   changeImageFilter: (value: string) => void;

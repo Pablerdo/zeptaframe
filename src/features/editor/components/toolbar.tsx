@@ -157,12 +157,12 @@ export const Toolbar = ({
 
   if (editor?.selectedObjects.length === 0) {
     return (
-      <div className={cn("shrink-0 h-[56px] modern-toolbar border-b flex items-center overflow-x-auto z-[49] px-4 gap-x-2 rounded-xl")}/>
+      <div className={cn("shrink-0 h-[40px] modern-toolbar border-b flex items-center overflow-x-auto z-[49] px-4 gap-x-2 rounded-xl")}/>
     );
   }
 
   return (
-    <div className={cn("shrink-0 h-[56px] modern-toolbar border-b flex items-center overflow-x-auto z-[49] px-4 gap-x-2 rounded-xl")}>
+    <div className={cn("shrink-0 h-[40px] modern-toolbar border-b flex items-center overflow-x-auto z-[49] px-4 gap-x-2 rounded-xl")}>
       {!isImage && (
         <div className="flex items-center h-full justify-center">
           <Hint label="Color" side="bottom" sideOffset={5}>

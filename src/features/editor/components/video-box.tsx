@@ -1,6 +1,6 @@
 import { useRef, useEffect } from "react";
 import { Loader2, AlertCircle } from "lucide-react";
-import { videoModels } from "../utils/videoModels";
+import { videoModels } from "../utils/video-models";
 import { SupportedVideoModelId } from "../types";
 
 interface VideoBoxProps {

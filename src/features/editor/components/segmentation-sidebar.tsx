@@ -1,6 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
-import { AlertTriangle, Loader, Upload } from "lucide-react";
+import { AlertTriangle, Loader, Upload, X } from "lucide-react";
 
 import { ActiveTool, Editor, SegmentedObject } from "@/features/editor/types";
 import { ToolSidebarClose } from "@/features/editor/components/tool-sidebar-close";
@@ -35,11 +35,20 @@ export const SegmentationSidebar = ({
   return (
     <aside
       className={cn(
-        "bg-editor-sidebar relative border-r z-[40] rounded-xl w-[360px] flex flex-col my-2",
+        "bg-editor-sidebar relative border-r z-[40] rounded-xl w-[320px] flex flex-col my-2",
         activeTool === "segment" ? "visible" : "hidden"
       )}
     >
-      <ToolSidebarHeader title="Segmented Objects" description="Crop objects from your canvas and save them. Coming soon..." />
+      <div className="relative">
+        <ToolSidebarHeader title="Segmented Objects" description="Crop objects from your canvas and save them. Coming soon..." />
+        <button
+          onClick={onClose}
+          className="absolute top-3 right-3 p-1.5 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+          title="Close sidebar"
+        >
+          <X className="h-6 w-6 text-gray-600 dark:text-gray-100" />
+        </button>
+      </div>
       <div className="p-4 border-b">
         <Button
           onClick={() => void 0}
@@ -81,7 +90,6 @@ export const SegmentationSidebar = ({
           </div>
         </div>
       </ScrollArea>
-      <ToolSidebarClose onClick={onClose} />
     </aside>
   );
 };

@@ -85,6 +85,13 @@
       "when": 1742423261289,
       "tag": "0011_thin_havok",
       "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1742708812585,
+      "tag": "0012_flashy_colossus",
+      "breakpoints": true
     }
   ]
 }

@@ -1,4 +1,4 @@
-import { useRef, useEffect, useState, useCallback, Dispatch, SetStateAction } from "react";
+import { useRef, useEffect, useState } from "react";
 import { fabric } from "fabric";
 
 import { 
@@ -61,10 +61,65 @@ export const AnimateRightSidebar = ({
   // New state variables for mask editing
   const [editingMaskId, setEditingMaskId] = useState<string | null>(null);
   const [tempMaskName, setTempMaskName] = useState<string>("");
-  
+
+  const [isManualSegmentationActive, setIsManualSegmentationActive] = useState(false);
+  const [manualMaskPoints, setManualMaskPoints] = useState<Array<{x: number, y: number}>>([]);
+  const [temporaryPolygon, setTemporaryPolygon] = useState<fabric.Polygon | null>(null);
+
   const onClose = () => {
     setIsSegmentationActive(false);
     onChangeActiveWorkbenchTool("select");
+  };
+
+  const handleNewManualMask = () => {
+    // Stop all active animations first
+    Object.values(activeAnimations).forEach(animation => animation.stop());
+    setActiveAnimations({});
+    
+    // Deapply all masks from canvas
+    if (editor?.canvas) {
+      const existingMasks = editor.canvas.getObjects().filter(obj => obj.data?.isMask);
+      existingMasks.forEach(mask => editor.canvas.remove(mask));
+      editor.canvas.renderAll();
+    }
+    
+    setIsManualSegmentationActive(true);
+    setManualMaskPoints([]);
+    
+    if (editor) {
+      // Create a completely new array with a unique ID for the in-progress mask
+      const updatedMasks = [
+        { id: crypto.randomUUID(), url: '', binaryUrl: '', name: 'New Manual Object', inProgress: true },
+        ...segmentedMasks.map(mask => ({ ...mask, isApplied: false }))
+      ];
+
+      // Force update by creating a new array
+      setSegmentedMasks([...updatedMasks]);
+      
+      // Reset any current mask
+      setMask(null);
+      // setSamWorkerLoading(false);
+
+      // Need to implement this
+
+      // somehow need to enable the manual mask enclosure logic, which allows the user to click and draw a mask, 
+      // which when the user gets near the start point, it will trigger the saveInProgressManualMask function
+
+    }
+  };
+
+  const handleSaveInProgressManualMask = () => {
+    // TODO: Implement this
+
+    // This will run when the user reaches the start point of the manual mask enclosure
+
+
+  };
+
+  const handleCancelInProgressManualMask = () => {
+    // TODO: Implement this
+
+    // This will run if the user has a mouseUp event before reaching the start point of the manual mask enclosure
   };
 
   const handleNewMask = () => {
@@ -270,7 +325,7 @@ export const AnimateRightSidebar = ({
   useEffect(() => {
 
     // Add this isSegmentationActive check
-    if (!editor?.canvas || activeWorkbenchTool !== "animate") return;
+    if (!editor?.canvas || activeWorkbenchTool !== "animate" || isManualSegmentationActive) return;
 
     const imageClick = (e: fabric.IEvent) => {
 
@@ -350,14 +405,14 @@ export const AnimateRightSidebar = ({
     }
   }, [activeWorkbenchTool, editor?.canvas]);
 
-  const handleRenameMask = (index: number, newName: string) => {
-    if (editor) {
-      const updatedMasks = segmentedMasks.map((mask, i) => 
-        i === index ? { ...mask, name: newName } : mask
-      );
-      setSegmentedMasks(updatedMasks);
-    }
-  };
+  // const handleRenameMask = (index: number, newName: string) => {
+  //   if (editor) {
+  //     const updatedMasks = segmentedMasks.map((mask, i) => 
+  //       i === index ? { ...mask, name: newName } : mask
+  //     );
+  //     setSegmentedMasks(updatedMasks);
+  //   }
+  // };
 
   const handleDeleteMask = (index: number) => {
     if (!editor) return;
@@ -868,7 +923,7 @@ export const AnimateRightSidebar = ({
           className="absolute top-3 right-3 p-1.5 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
           title="Close sidebar"
         >
-          <X className="h-5 w-5 text-gray-600 dark:text-gray-400" />
+          <X className="h-5 w-5 text-gray-600 dark:text-gray-100" />
         </button>
       </div>
 
@@ -877,22 +932,7 @@ export const AnimateRightSidebar = ({
           <Label className="text-sm">
             Animated Objects 
           </Label>
-          
-          {/* Add loading and status indicator */}
-          <div className="mt-4 space-y-2">
-            {samWorkerLoading && (
-              <div className="flex items-center space-x-2 text-muted-foreground">
-                <Loader2 className="w-4 h-4 animate-spin" />
-                <span className="text-sm">{status}</span>
-              </div>
-            )}
-            {!samWorkerLoading && status && (
-              <div className="text-sm text-muted-foreground">
-                {status}
-              </div>
-            )}
-          </div>
-
+        
           {/* Segmented masks list */}
           <div className="space-y-2">
             {/* Always show the "New Object" stub at the top */}
@@ -900,6 +940,20 @@ export const AnimateRightSidebar = ({
               {!isSegmentationActive && (
                 <div className="flex items-center space-x-2">
                   <span className="text-sm">New Object</span>
+                  {/* Add loading and status indicator */}
+                  <div className="space-y-2">
+                    {samWorkerLoading && (
+                      <div className="flex items-center space-x-2 text-muted-foreground">
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                        <span className="text-sm">{status}</span>
+                      </div>
+                    )}
+                    {!samWorkerLoading && status && (
+                      <div className="text-sm text-muted-foreground">
+                        {status}
+                      </div>
+                    )}
+                  </div>
                 </div>
               )}
               <div className="flex items-center space-x-2">
@@ -943,6 +997,48 @@ export const AnimateRightSidebar = ({
                 )}
               </div>
             </div>
+
+            {/* Add a manual animation button */}
+
+            <div className="flex items-center bg-gray-100 dark:bg-editor-bg-dark justify-between p-2 border-2 border-gray-300 dark:border-gray-400 rounded-md">
+              {!isManualSegmentationActive && (
+                <div className="flex items-center space-x-2">
+                  <span className="text-sm">New Manual Object</span>
+                </div>
+              )}
+              <div className="flex items-center space-x-2">
+                {isManualSegmentationActive ? (
+                  <>
+                  
+                    <div className="flex flex-col gap-2">
+                      <div className="text-md pl-1 text-foreground/80 animate-[pulse_1s_ease-in-out_infinite]">
+                        Encircle the object to create a mask. 
+                      </div>
+                      <Button
+                        variant="default" 
+                        size="sm"
+                        onClick={handleCancelInProgressManualMask}
+                        className="w-full bg-red-500 hover:bg-red-600 text-white"
+                      >
+                        <X className="w-4 h-4" />
+                        Cancel
+                      </Button>
+                    </div>
+
+                  </>
+                ) : (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={handleNewManualMask}
+                  >
+                    <Plus className="w-4 h-4 mr-1" />
+                    New Manual Mask
+                  </Button>
+                )}
+              </div>
+            </div>
+
 
             {/* Empty state message */}
             {segmentedMasks.length === 0 && (

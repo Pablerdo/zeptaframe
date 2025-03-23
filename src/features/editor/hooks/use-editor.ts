@@ -35,7 +35,7 @@ import { useAutoResize } from "@/features/editor/hooks/use-auto-resize";
 import { useCanvasEvents } from "@/features/editor/hooks/use-canvas-events";
 import { useWindowEvents } from "@/features/editor/hooks/use-window-events";
 import { useLoadState } from "@/features/editor/hooks/use-load-state";
-import { defaultVideoModelId } from "../utils/videoModels";
+import { defaultVideoModelId } from "../utils/video-models";
 import { precisionReplacer } from "../utils/json-helpers";
 
 const buildEditor = ({
@@ -648,6 +648,16 @@ const buildEditor = ({
         obj.selectable = true;
         obj.evented = true;
       });
+    },
+    enableManualSegmentationMode: () => {
+      canvas.discardActiveObject();
+      canvas.renderAll();
+      canvas.isDrawingMode = true;
+      canvas.freeDrawingBrush.width = strokeWidth;
+      canvas.freeDrawingBrush.color = strokeColor;
+    },
+    disableManualSegmentationMode: () => {
+      canvas.isDrawingMode = false;
     },
     workspaceURL,
     setWorkspaceURL,

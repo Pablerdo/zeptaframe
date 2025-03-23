@@ -1,6 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
-import { AlertTriangle, Loader, Upload } from "lucide-react";
+import { AlertTriangle, Loader, Upload, X } from "lucide-react";
 
 import { ActiveTool, Editor } from "@/features/editor/types";
 import { ToolSidebarClose } from "@/features/editor/components/tool-sidebar-close";
@@ -33,11 +33,22 @@ export const ImageSidebar = ({ editor, activeTool, onChangeActiveTool }: ImageSi
   return (
     <aside
       className={cn(
-        "bg-editor-sidebar relative border-r z-[40] rounded-xl w-[360px] flex flex-col my-2",
+        "bg-editor-sidebar relative border-r z-[40] rounded-xl w-[320px] flex flex-col my-2",
         activeTool === "images" ? "visible" : "hidden"
       )}
     >
-      <ToolSidebarHeader title="Images" description="Add images to your canvas" />
+
+      <div className="relative">
+        <ToolSidebarHeader title="Images" description="Add images to your canvas" />
+
+        <button
+          onClick={onClose}
+          className="absolute top-3 right-3 p-1.5 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+          title="Close sidebar"
+        >
+          <X className="h-6 w-6 text-gray-600 dark:text-gray-100" />
+        </button>
+      </div>
       <div className="p-4 border-b">
         <UploadButton
           appearance={{
@@ -96,7 +107,6 @@ export const ImageSidebar = ({ editor, activeTool, onChangeActiveTool }: ImageSi
           </div>
         </div>
       </ScrollArea>
-      <ToolSidebarClose onClick={onClose} />
     </aside>
   );
 };

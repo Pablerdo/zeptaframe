@@ -214,7 +214,7 @@ export const imageGenerations = pgTable("image_generation", {
   userId: text("userId")
     .notNull()
     .references(() => users.id, { onDelete: "cascade" }),
-  runId: text("runId").notNull().unique(),
+  runId: text("runId").unique(),
   status: text("status").$type<"pending" | "success" | "error">().notNull(),
   imageUrl: text("imageUrl"),
   createdAt: timestamp("createdAt", { mode: "date" }).notNull().defaultNow(),

@@ -839,7 +839,7 @@ export const CompositionStudio = ({ initialData, isTrial }: CompositionStudioPro
               isTrial={isTrial}
               setShowAuthModal={setShowAuthModal}
             />
-            <div className="absolute h-[calc(100%-68px)] w-full top-[68px] flex p-2">
+            <div className="absolute h-[calc(100%-50px)] w-full top-[50px] flex p-2">
               <Sidebar
                 activeTool={activeTool}
                 onChangeActiveTool={onChangeActiveTool}
@@ -856,6 +856,7 @@ export const CompositionStudio = ({ initialData, isTrial }: CompositionStudioPro
                 onChangeActiveTool={onChangeActiveTool}
                 isTrial={isTrial}
                 setShowAuthModal={setShowAuthModal}
+                projectId={initialData.id}
               />
               <ShapeSidebar
                 editor={activeEditor}

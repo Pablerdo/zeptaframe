@@ -1,0 +1,1 @@
+ALTER TABLE "image_generation" ALTER COLUMN "runId" DROP NOT NULL;

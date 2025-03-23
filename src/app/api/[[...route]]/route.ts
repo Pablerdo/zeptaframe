@@ -8,6 +8,7 @@ import images from "./images";
 import projects from "./projects";
 import subscriptions from "./subscriptions";
 import videoGenerations from "./video-generations";
+import imageGenerations from "./image-generations";
 
 import authConfig from "@/auth.config";
 import segmentedObjects from "./segmented-objects";
@@ -38,7 +39,8 @@ const routes = app
   .route("/subscriptions", subscriptions)
   .route("/video-generations", videoGenerations)
   .route("/segmented-objects", segmentedObjects)
-  .route("/video-exports", videoExports);
+  .route("/video-exports", videoExports)
+  .route("/image-generations", imageGenerations);
 
 export const GET = handle(app);
 export const POST = handle(app);

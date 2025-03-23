@@ -118,7 +118,7 @@ export const Navbar = ({
   });
 
   return (
-    <nav className="w-full flex items-center p-4 h-[68px] gap-x-8 border-b-2 border-gray-300 dark:border-gray-900 lg:pl-[34px] bg-background text-foreground dark:shadow-dark-raised">
+    <nav className="w-full flex items-center p-4 h-[50px] gap-x-8 border-b-2 border-gray-300 dark:border-gray-900 lg:pl-[34px] bg-background text-foreground dark:shadow-dark-raised">
       <Logo />
       <div className="flex items-center gap-x-2">
         {isEditingName ? (

@@ -42,7 +42,7 @@ export const CameraControlRightSidebar = ({
           description="Coming soon..."
         />
         <button onClick={onClose} className="absolute top-3 right-3 p-1.5 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
-          <X className="h-5 w-5 text-gray-600 dark:text-gray-400" />
+          <X className="h-5 w-5 text-gray-600 dark:text-gray-100" />
         </button>
       </div>
       {/* Future camera control UI goes here */}

@@ -2,7 +2,7 @@ import { fabric } from "fabric";
 import { useCallback, useRef, useState } from "react";
 import { SegmentedMask, SupportedVideoModelId } from "@/features/editor/types";
 import { JSON_KEYS } from "@/features/editor/types";
-import { defaultVideoModelId } from "../utils/videoModels";
+import { defaultVideoModelId } from "../utils/video-models";
 import { precisionReplacer } from "../utils/json-helpers";
 
 interface UseHistoryProps {

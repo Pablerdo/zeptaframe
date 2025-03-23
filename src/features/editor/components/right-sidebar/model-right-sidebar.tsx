@@ -7,7 +7,7 @@ import {
 import { ToolSidebarHeader } from "@/features/editor/components/tool-sidebar-header";
 import { cn } from "@/lib/utils";
 import { Film, Video, X } from "lucide-react";
-import { videoModels } from "@/features/editor/utils/videoModels";
+import { videoModels } from "@/features/editor/utils/video-models";
 
 interface ModelRightSidebarProps {
   editor: Editor | undefined;
@@ -65,7 +65,7 @@ export const ModelRightSidebar = ({
         ))}
         
         <div className="pt-4 mt-4 border-t border-gray-200 dark:border-gray-800">
-          <p className="text-sm text-gray-500 dark:text-gray-400">
+          <p className="text-sm text-gray-500 dark:text-gray-100">
             More models coming soon...
           </p>
         </div>

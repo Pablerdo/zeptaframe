@@ -10,6 +10,7 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { X } from "lucide-react";
 
 interface SettingsSidebarProps {
   editor: Editor | undefined;
@@ -59,14 +60,24 @@ export const SettingsSidebar = ({
   return (
     <aside
       className={cn(
-        "bg-editor-sidebar relative border-r z-[40] rounded-xl w-[360px] flex flex-col my-2",
+        "bg-editor-sidebar relative border-r z-[40] rounded-xl w-[320px] flex flex-col my-2",
         activeTool === "settings" ? "visible" : "hidden",
       )}
     >
-      <ToolSidebarHeader
-        title="Settings"
-        description="Change the look of your workspace"
-      />
+      <div className="relative">
+        <ToolSidebarHeader
+          title="Settings"
+          description="Change the look of your workspace"
+        />
+        <button
+          onClick={onClose}
+          className="absolute top-3 right-3 p-1.5 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+          title="Close sidebar"
+        >
+          <X className="h-6 w-6 text-gray-600 dark:text-gray-100" />
+        </button>
+      </div>
+
       <ScrollArea>
         <form className="space-y-4 p-4"> {/* //</ScrollArea>onSubmit={onSubmit}> */}
           <div className="space-y-2">
@@ -102,7 +113,6 @@ export const SettingsSidebar = ({
           />
         </div>
       </ScrollArea>
-      <ToolSidebarClose onClick={onClose} />
     </aside>
   );
 };

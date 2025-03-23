@@ -22,13 +22,13 @@ import {
   resizeAndPadBox
 } from "@/app/sam/lib/imageutils";
 import debounce from "lodash/debounce";
-import { defaultVideoModelId, videoModels } from "../utils/videoModels";
+import { defaultVideoModelId, videoModels } from "../utils/video-models";
 import { precisionReplacer } from "../utils/json-helpers";
 import { useLastFrames } from '@/features/editor/contexts/last-frame-context';
 import { toast } from "sonner";
 import { useUserStatus } from "@/features/auth/contexts/user-status-context";
 import { AuthModal } from "./auth-modal";
-import { comfyDeployWorkflows } from "../utils/comfyDeployWorkflows";
+import { comfyDeployWorkflows } from "../utils/comfy-deploy-workflows";
 
 interface WorkbenchProps {
   projectId: string;
@@ -78,6 +78,7 @@ export const Workbench = ({
   index,
   workbenchId,
   onActive,
+  onChangeActiveTool,
   activeTool,
   onDelete,
   canDelete,
@@ -605,8 +606,8 @@ export const Workbench = ({
     <>
       <div className="grid h-full" style={{
         gridTemplateColumns: activeWorkbenchTool !== "select" 
-          ? "minmax(0, 1fr) 350px 100px" 
-          : "minmax(0, 1fr) 0px 100px",
+          ? "minmax(0, 1fr) 300px 75px" 
+          : "minmax(0, 1fr) 0px 75px",
         transition: "grid-template-columns 0s ease-in-out" // TODO: Figure out how to not make canvas flicker when adding a non-zero transition.
       }}>
         <div className="flex flex-col h-full overflow-hidden">
@@ -732,7 +733,7 @@ export const Workbench = ({
 
         {/* Middle sidebar content column - with overflow hidden */}
         <div className="h-full overflow-hidden">
-          <div className="h-full w-[350px]"> {/* Fixed width container */}
+          <div className="h-full w-[300px]"> {/* Fixed width container */}
             <AnimateRightSidebar 
               editor={editor}
               activeWorkbenchTool={activeWorkbenchTool}
@@ -772,7 +773,7 @@ export const Workbench = ({
         </div>
 
         {/* Right buttons column - fixed width */}
-        <div className="flex flex-col w-[100px] h-full">
+        <div className="flex flex-col w-[75px] h-full">
           <aside className="modern-right-sidebar flex flex-col py-3 px-2 border-l h-full justify-between">
             <ul className="flex flex-col space-y-2">
               <RightSidebarItem

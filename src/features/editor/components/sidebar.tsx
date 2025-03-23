@@ -28,7 +28,7 @@ export const Sidebar = ({
   onChangeActiveTool,
 }: SidebarProps) => {
   return (
-    <aside className="modern-sidebar w-[100px] flex flex-col py-3 mx-2 mt-2 mb-2">
+    <aside className="modern-sidebar w-[75px] flex flex-col py-3 mx-2 mt-2 mb-2">
       <ul className="flex flex-col space-y-2 px-2">
         {/* <SidebarItem
           icon={LayoutTemplate}
@@ -41,6 +41,12 @@ export const Sidebar = ({
           label="Image"
           isActive={activeTool === "images"}
           onClick={() => onChangeActiveTool("images")}
+        />
+        <SidebarItem
+          icon={Sparkles}
+          label="Generate"
+          isActive={activeTool === "generate-image"}
+          onClick={() => onChangeActiveTool("generate-image")}
         />
         <SidebarItem
           icon={Type}
@@ -66,12 +72,7 @@ export const Sidebar = ({
           isActive={activeTool === "segment"}
           onClick={() => onChangeActiveTool("segment")}
         />
-        <SidebarItem
-          icon={Sparkles}
-          label="Generate"
-          isActive={activeTool === "generate-image"}
-          onClick={() => onChangeActiveTool("generate-image")}
-        />
+
         <SidebarItem
           icon={Settings}
           label="Settings"
