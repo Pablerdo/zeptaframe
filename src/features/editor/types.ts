@@ -264,7 +264,7 @@ export interface ImageGeneration {
 export type SupportedVideoModelId = 
   | "cogvideox"
   | "hunyuanvideo"
-  | "skyreels";
+  | "skyreels"
 
 export type BaseVideoModel = {
   id: SupportedVideoModelId;

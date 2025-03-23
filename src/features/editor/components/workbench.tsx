@@ -107,6 +107,7 @@ export const Workbench = ({
   const [upgradeStep, setUpgradeStep] = useState<"info" | "payment">("info");
   const [paymentOption, setPaymentOption] = useState<"monthly" | "yearly">("monthly");
   const [isUpgrading, setIsUpgrading] = useState(false);
+  const [textOnlyMode, setTextOnlyMode] = useState(false);
   
   // Use the user status context
   const { userStatus, canGenerateVideo, incrementVideoUsage } = useUserStatus();
@@ -117,6 +118,7 @@ export const Workbench = ({
   const [selectedModel, setSelectedModel] = useState<BaseVideoModel>(videoModels[defaultVideoModelId]);
   const [cameraControl, setCameraControl] = useState<Record<string, any>>({});
 
+  
   const { lastFrameGenerations, importLastFrame, setActiveEditor } = useLastFrames();
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -245,6 +247,12 @@ export const Workbench = ({
   const handleGenerateVideo = async (modelId?: SupportedVideoModelId) => {
     if (!editor) return;
 
+    // Check if text prompt is required but missing
+    if (textOnlyMode && !generalTextPrompt.trim()) {
+      toast.error("Text prompt is required for Text-only generation");
+      return;
+    }
+
     // Check permissions based on user status
     if (!userStatus.isAuthenticated) {
       // Show authentication modal instead of redirecting
@@ -259,14 +267,8 @@ export const Workbench = ({
       return;
     }
 
-
     try {
       setIsGenerating(true);
-      
-      const validMasks = segmentedMasks.filter(mask => mask.id && mask.id.trim() !== '');
-        
-      const trajectories = validMasks.map(mask => mask.trajectory?.points || []);
-      const rotations = validMasks.map(mask => mask.rotation || 0);
       
       // Upload the workbench image to UploadThing
       let workbenchImageUrl = "";
@@ -276,83 +278,142 @@ export const Workbench = ({
       } else {
         throw new Error("No workbench image available");
       }
-      
-      // Upload all mask images to UploadThing
-      const maskUploadPromises = validMasks.map(async (mask, index) => {
-        if (!mask.binaryUrl) return "";
-        
-        const maskFile = await dataUrlToFile(mask.binaryUrl, `mask-${index}.png`);
-        return uploadToUploadThingResidual(maskFile);
-      });
-      
-      const uploadedMaskUrls = await Promise.all(maskUploadPromises);
-      
+
       const workflowData = {
         "workflow_id": "",
       }
 
-      if (selectedModel.id === "cogvideox") {
-        workflowData.workflow_id = comfyDeployWorkflows["ZEPTA-3-CogVideoX"];
-      } else if (selectedModel.id === "hunyuanvideo") {
-        workflowData.workflow_id = comfyDeployWorkflows["ZEPTA-3-HunyuanVideo"] || "";
-      } else if (selectedModel.id === "skyreels") {
-        workflowData.workflow_id = comfyDeployWorkflows["ZEPTA-3-SkyReels"] || "";
-      }
+      if (textOnlyMode) {
+        if (selectedModel.id === "cogvideox") {
+          workflowData.workflow_id = "";
+        } else if (selectedModel.id === "hunyuanvideo") {
+          workflowData.workflow_id = "";
+        } else if (selectedModel.id === "skyreels") {
+          workflowData.workflow_id = comfyDeployWorkflows["NOGWF-ZEPTA-SkyReels"] || "";
+        }
 
-      const videoGenData = {
-        "input_image": JSON.stringify([workbenchImageUrl]),
-        "input_masks": JSON.stringify(uploadedMaskUrls),
-        "input_prompt": generalTextPrompt,
-        "input_trajectories": JSON.stringify(trajectories),
-        "input_rotations": JSON.stringify(rotations)
-      };
-      
-      console.log("videoGenData", videoGenData);
-      
-      const comfyDeployData = {
-        workflowData,
-        videoGenData
-      }
+        const videoGenData = {
+          "input_image": JSON.stringify([workbenchImageUrl]),
+          "input_prompt": generalTextPrompt,
+        };
+        
+        console.log("videoGenData", videoGenData);
+        
+        const comfyDeployData = {
+          workflowData,
+          videoGenData
+        }
 
-      // STEP 1: Call ComfyDeploy to start the generation
-      const response = await fetch("/api/comfydeploy/generate-video", {
-        method: "POST",
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(comfyDeployData),
-      });
-      
-      const data = await response.json();
-      
-      if (data.runId) {
-        // STEP 2: Store the generation information in our database
-        const dbResponse = await fetch("/api/video-generations", {
+        // STEP 1: Call ComfyDeploy to start the generation
+        const response = await fetch("/api/comfydeploy/generate-video", {
           method: "POST",
           headers: {
             'Content-Type': 'application/json',
           },
-          body: JSON.stringify({
-            projectId: projectId,
-            workbenchId: workbenchId,
-            runId: data.runId,
-            status: "pending",
-            modelId: modelId,
-          }),
+          body: JSON.stringify(comfyDeployData),
         });
         
-        const dbData = await dbResponse.json();
+        const data = await response.json();
         
-        // Increment usage counter
-
-        // TODO: Uncomment this when we have a way to increment the usage counter
-        // incrementVideoUsage();
-        
-        toast.success("Video generation started successfully. Check timeline for progress.");
-        console.log("Video generation started. Please wait...");
+        if (data.runId) {
+          // STEP 2: Store the generation information in our database
+          const dbResponse = await fetch("/api/video-generations", {
+            method: "POST",
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              projectId: projectId,
+              workbenchId: workbenchId,
+              runId: data.runId,
+              status: "pending",
+              modelId: modelId,
+            }),
+          });
+        } else {
+            throw new Error("No video runId received");
+        }
       } else {
-        throw new Error("No video runId received");
+        if (selectedModel.id === "cogvideox") {
+          workflowData.workflow_id = comfyDeployWorkflows["GWF-ZEPTA-CogVideoX"];
+        } else if (selectedModel.id === "hunyuanvideo") {
+          workflowData.workflow_id = comfyDeployWorkflows["GWF-ZEPTA-HunyuanVideo"] || "";
+        } else if (selectedModel.id === "skyreels") {
+          workflowData.workflow_id = comfyDeployWorkflows["GWF-ZEPTA-SkyReels"] || "";
+        } 
+
+        const validMasks = segmentedMasks.filter(mask => mask.id && mask.id.trim() !== '');
+        
+        const trajectories = validMasks.map(mask => mask.trajectory?.points || []);
+        const rotations = validMasks.map(mask => mask.rotation || 0);
+        
+        // Upload all mask images to UploadThing
+        const maskUploadPromises = validMasks.map(async (mask, index) => {
+          if (!mask.binaryUrl) return "";
+          
+          const maskFile = await dataUrlToFile(mask.binaryUrl, `mask-${index}.png`);
+          return uploadToUploadThingResidual(maskFile);
+        });
+        
+        const uploadedMaskUrls = await Promise.all(maskUploadPromises);
+        
+        const videoGenData = {
+          "input_image": JSON.stringify([workbenchImageUrl]),
+          "input_masks": JSON.stringify(uploadedMaskUrls),
+          "input_prompt": generalTextPrompt,
+          "input_trajectories": JSON.stringify(trajectories),
+          "input_rotations": JSON.stringify(rotations)
+        };
+        
+        console.log("videoGenData", videoGenData);
+        
+        const comfyDeployData = {
+          workflowData,
+          videoGenData
+        }
+  
+        // STEP 1: Call ComfyDeploy to start the generation
+        const response = await fetch("/api/comfydeploy/generate-video", {
+          method: "POST",
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(comfyDeployData),
+        });
+        
+        const data = await response.json();
+        
+        if (data.runId) {
+          // STEP 2: Store the generation information in our database
+          const dbResponse = await fetch("/api/video-generations", {
+            method: "POST",
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              projectId: projectId,
+              workbenchId: workbenchId,
+              runId: data.runId,
+              status: "pending",
+              modelId: modelId,
+            }),
+          });
+          
+          const dbData = await dbResponse.json();
+          console.log("dbData", dbData);
+        } else {
+          throw new Error("No video runId received");
+        }
       }
+
+      // Increment usage counter
+
+      // TODO: Uncomment this when we have a way to increment the usage counter
+      // incrementVideoUsage();
+      
+      toast.success("Video generation started successfully. Check timeline for progress.");
+      console.log("Video generation started. Please wait...");
+
     } catch (error) {
       console.error("Error:", error);
       console.log("Error generating video");
@@ -804,10 +865,74 @@ export const Workbench = ({
             
             {/* Generate Video Submit Button */}
             <div className="mt-auto">
+              {/* Generation Mode Selection - Vertical Toggle with Gooey Animation */}
+              <div className="mb-3 relative">
+                {/* Info tooltip */}
+                <div className="absolute -top-8 right-1 group z-50">
+                  <div className="w-5 h-5 bg-gray-600 rounded-full flex items-center justify-center cursor-help text-xs text-blue-200 font-semibold">
+                    i
+                  </div>
+                  <div className="absolute bottom-full mb-2 right-0 w-[60px] bg-gray-800 text-white text-xs p-2 rounded shadow-lg 
+                    opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none z-50">
+                    In Text-only mode, a text prompt is required
+                  </div>
+                </div>
+              
+                <div className="relative bg-gray-700 w-full rounded-lg p-1 flex flex-col items-center overflow-hidden h-[100px]">
+                  {/* Animated highlight backdrop */}
+                  <div 
+                    className={`absolute left-1 right-1 h-[42%] mt-2 bg-blue-600 rounded-md z-0 transform transition-all duration-500
+                      ${textOnlyMode 
+                        ? 'translate-y-[100%] scale-y-110 ease-out' 
+                        : 'translate-y-0 scale-y-110 ease-in-out'}`}
+                    style={{
+                      top: '1px',
+                      transformOrigin: textOnlyMode ? 'top' : 'bottom',
+                      boxShadow: '0 0 8px rgba(37, 99, 235, 0.4)'
+                    }}
+                  />
+                  
+                  {/* Gooey connector element */}
+                  <div 
+                    className={`absolute w-[60%] h-[10%] bg-blue-600 rounded-md z-0 left-[20%]
+                      transition-all duration-700 ${textOnlyMode ? 'top-[49%]' : 'top-[29%]'}`}
+                    style={{
+                      transform: `scaleX(${textOnlyMode ? 0.7 : 0.9})`,
+                      transformOrigin: 'center',
+                      opacity: '0.8'
+                    }}
+                  />
+                  
+                  <button
+                    className={`relative z-10 text-sm font-medium rounded-md w-full py-2.5 mb-0.5 flex items-center justify-center
+                      transform transition-all duration-400 
+                      ${!textOnlyMode ? 'text-white scale-105' : 'text-gray-300 scale-100'}`}
+                    onClick={() => setTextOnlyMode(false)}
+                    style={{
+                      transitionTimingFunction: !textOnlyMode ? 'cubic-bezier(0.34, 1.56, 0.64, 1)' : 'ease'
+                    }}
+                  >
+                    <span>Animation + Text</span>
+                  </button>
+                  
+                  <button
+                    className={`relative z-10 text-sm font-medium rounded-md w-full py-2.5 flex items-center justify-center
+                      transform transition-all duration-400
+                      ${textOnlyMode ? 'text-white scale-105' : 'text-gray-300 scale-100'}`}
+                    onClick={() => setTextOnlyMode(true)}
+                    style={{
+                      transitionTimingFunction: textOnlyMode ? 'cubic-bezier(0.34, 1.56, 0.64, 1)' : 'ease'
+                    }}
+                  >
+                    <span>Text Only</span>
+                  </button>
+                </div>
+              </div>
+              
               <button 
                 className="w-full aspect-square bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors duration-200 flex flex-col items-center justify-center gap-1 px-2 py-1"
                 onClick={() => handleGenerateVideo(selectedModel.id)}
-                disabled={isGenerating}
+                disabled={isGenerating || (textOnlyMode && !generalTextPrompt.trim())}
               >
                 {isGenerating ? (
                   <>
