@@ -103,6 +103,8 @@ export const GenerateImageSidebar = ({
         
         console.log("data", data);
         if (data.images && data.images.length > 0) {
+          editor?.addImage(data.images[0].imageURL);
+
           // Increment usage count
           // incrementImageUsage();
           // add image to imageGenerations array
@@ -128,7 +130,6 @@ export const GenerateImageSidebar = ({
             }),
           });
 
-          editor?.addImage(data.images[0].imageURL);
           toast.success("Image generation successful.");
           setTextPrompt("");
           setIsCurrentlyGenerating(false);
