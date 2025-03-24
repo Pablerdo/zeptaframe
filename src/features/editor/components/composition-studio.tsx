@@ -56,6 +56,8 @@ export const CompositionStudio = ({ initialData, isTrial }: CompositionStudioPro
   const [allowEncodeWorkbenchImage, setAllowEncodeWorkbenchImage] = useState(true);
   const [projectName, setProjectName] = useState(initialData.name);
   
+  const [currentPendingVideoRunIds, setCurrentPendingVideoRunIds] = useState<string[]>([]);
+
   // Add state for trial-related UI
   const [showSignUpModal, setShowSignUpModal] = useState(false);
   const [showAuthModal, setShowAuthModal] = useState(false);
@@ -699,44 +701,50 @@ export const CompositionStudio = ({ initialData, isTrial }: CompositionStudioPro
     // Function to only fetch pending generations (for polling)
     const fetchPendingVideoGenerations = async () => {
       try {
+        // Get a list of all current pending runIds
+        const pendingRunIds = videoGenerations
+          .filter(gen => gen.status === 'pending')
+          .map(gen => gen.runId);
+
+        // If we have no pending generations, just do a full refresh
+        if (pendingRunIds.length === 0) {
+          return fetchAllVideoGenerations();
+        }
+        
+        // Get the current status of all previously pending generations
         const response = await fetch(
-          `/api/video-generations?projectId=${initialData.id}&status=pending`
+          `/api/video-generations?projectId=${initialData.id}`
         );
-        if (!response.ok) throw new Error('Failed to fetch pending video generations');
+        if (!response.ok) throw new Error('Failed to fetch video generations');
         
         const data = await response.json();
         
-        if (data.videoGenerations && data.videoGenerations.length > 0) {
-          // Update only the pending ones in our state
+        if (data.videoGenerations) {
+          // Update our state by merging current with updated data
           setVideoGenerations(prev => {
             const updatedGenerations = [...prev];
             
-            // For each pending generation from the API
-            data.videoGenerations.forEach((pendingGen: any) => {
-              // Find if it exists in our current state
-              const index = updatedGenerations.findIndex(gen => gen.runId === pendingGen.runId);
+            // Map of runIds to updated generation objects
+            const generationsMap = new Map(
+              (data.videoGenerations as VideoGeneration[]).map((gen) => [gen.runId, gen])
+            );
+            
+            // Update each generation in our state
+            for (let i = 0; i < updatedGenerations.length; i++) {
+              const runId = updatedGenerations[i].runId;
+              const updated = generationsMap.get(runId);
               
-              if (index !== -1) {
-                // Update existing entry
-                updatedGenerations[index] = {
-                  ...updatedGenerations[index],
-                  ...pendingGen
-                };
-              } else {
-                // Add new entry
-                updatedGenerations.push(pendingGen);
+              if (updated) {
+                updatedGenerations[i] = updated;
               }
-            });
+            }
             
             return updatedGenerations;
           });
           
-          // We still have pending items
-          setIsGenerating(true);
-        } else if (data.videoGenerations && data.videoGenerations.length === 0) {
-          // No more pending items, do a full refresh to get latest completed items
-          fetchAllVideoGenerations();
-          setIsGenerating(false);
+          // Check if any are still pending
+          const stillPending = (data.videoGenerations as VideoGeneration[]).some((gen) => gen.status === 'pending');
+          setIsGenerating(stillPending);
         }
       } catch (error) {
         console.error('Error fetching pending video generations:', error);

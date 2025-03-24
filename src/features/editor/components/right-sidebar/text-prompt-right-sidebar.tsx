@@ -50,7 +50,7 @@ export const TextPromptRightSidebar = ({
       <ScrollArea className="flex-1">
         <div className="p-4 space-y-4">
           <div className="text-sm text-muted-foreground rounded-md bg-muted p-3 mb-2">
-            <p>When in <span className="font-bold">Animation + Text</span> mode, the system will automatically generate a prompt based on your scene. 
+            <p>When in <span className="font-bold">Animation</span> mode, the system will automatically generate a prompt based on your scene. 
             You can add additional details below to further customize the results.</p>
           </div>
           <Textarea
