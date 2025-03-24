@@ -152,8 +152,8 @@ const VideoTimeline = ({
                   isExporting ? "opacity-80 cursor-not-allowed grayscale" : "animate-pulse-subtle"
                 )}
                 onClick={() => 
-                  //handleExportTimeline()
-                  toast.info("Timeline export coming soon!")
+                  handleExportTimeline()
+                  //toast.info("Timeline export coming soon!")
                 }
                 disabled={isExporting}
               >

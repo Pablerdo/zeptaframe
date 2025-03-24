@@ -1,42 +1,63 @@
 import { NextRequest, NextResponse } from "next/server"
 import { ComfyDeploy } from "comfydeploy"
+import { db } from "@/db/drizzle";
+import { videoExports } from "@/db/schema";
 
 const cd = new ComfyDeploy({
   bearer: process.env.COMFY_DEPLOY_API_KEY!,
 })
 
 export async function POST(req: NextRequest) {
-  const data = await req.json()
- 
-  // Log the received data for debugging
-  console.log("Received data:", data)
-
-  const webhookUrl = process.env.DEPLOYMENT_MODE === 'production' 
-  ? `${process.env.NEXT_PUBLIC_WEBHOOK_URL_PROD}/api/comfydeploy/join-video/webhook`
-  : `${process.env.NEXT_PUBLIC_WEBHOOK_URL_NGROK}/api/comfydeploy/join-video/webhook`;
-
-  
   try {
+
+    const data = await req.json();
+
+    const videoUrls = data.videoGenData.videoUrls;
+    const projectId = data.videoGenData.projectId;
+
+    const workflowId = data.workflowData.workflow_id;
+
+    if (!videoUrls || !Array.isArray(videoUrls) || videoUrls.length === 0) {
+      return NextResponse.json(
+        { error: 'Invalid or empty video URLs array' }, 
+        { status: 400 }
+      );
+    }
+
+    // Log the received data for debugging
+    console.log("Video URLs:", videoUrls)
+
+    const webhookUrl = process.env.DEPLOYMENT_MODE === 'production' 
+    ? `${process.env.NEXT_PUBLIC_WEBHOOK_URL_PROD}/api/comfydeploy/join-video/webhook`
+    : `${process.env.NEXT_PUBLIC_WEBHOOK_URL_NGROK}/api/comfydeploy/join-video/webhook`;
+
+    // Calculate the total number of frames to join
+    const input_number = videoUrls.length * 49
+
     const result = await cd.run.deployment.queue({
-      deploymentId: data.workflowData.workflow_id,
+      deploymentId: workflowId,
       webhook: webhookUrl,
       inputs: {
-        input_video_1: data.videoGenData.input_video_1,
-        input_video_2: data.videoGenData.input_video_2,
-        input_video_3: data.videoGenData.input_video_3,
-        input_video_4: data.videoGenData.input_video_4,
-        input_video_5: data.videoGenData.input_video_5,
-        input_video_6: data.videoGenData.input_video_6,
-        input_video_7: data.videoGenData.input_video_7,
-        input_video_8: data.videoGenData.input_video_8,
-        input_video_9: data.videoGenData.input_video_9,
-        input_video_10: data.videoGenData.input_video_10,
+        ...videoUrls.reduce((acc, url, index) => ({
+          ...acc,
+          [`input_video_${index + 1}`]: url
+        }), {}),
+        input_number: input_number
       },
     })
 
     if (result) {
       const runId = result.runId
       console.log("Run ID:", runId)
+
+      // Create a record in our database to track this export
+      await db.insert(videoExports)
+        .values({
+          projectId: projectId || null, // Default if not provided
+          status: 'pending',
+          runId: runId
+        })
+        
 
       return NextResponse.json({
         message: "Video generation started",

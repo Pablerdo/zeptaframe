@@ -94,13 +94,11 @@ export const ImageSidebar = ({ editor, activeTool, onChangeActiveTool }: ImageSi
                       className="object-cover"
                       loading="lazy"
                     />
-                    <Link
-                      target="_blank"
-                      href={image.links.html}
+                    <div
                       className="opacity-0 group-hover:opacity-100 absolute left-0 bottom-0 w-full text-[10px] truncate text-white hover:underline p-1 bg-black/50 text-left"
                     >
                       {image.user.name}
-                    </Link>
+                    </div>
                   </button>
                 );
               })}

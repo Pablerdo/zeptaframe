@@ -261,13 +261,11 @@ export const videoExports = pgTable("video_exports", {
   projectId: text("projectId")
     .notNull()
     .references(() => projects.id, { onDelete: "cascade" }),
-  jobId: text("job_id"),
+  runId: text("runId").notNull(),
   status: text("status").$type<"pending" | "success" | "error">().notNull().default("pending"),
-  videoUrl: text("video_url"),
-  error: text("error"),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-  completedAt: timestamp("completed_at"),
-  metadata: text("metadata"),
+  videoUrl: text("videoUrl"),
+  createdAt: timestamp("createdAt", { mode: "date" }).notNull().defaultNow(),
+  updatedAt: timestamp("updatedAt", { mode: "date" }).notNull().defaultNow(),
 });
 
 export const videoExportsRelations = relations(videoExports, ({ one }) => ({

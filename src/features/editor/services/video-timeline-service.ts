@@ -1,4 +1,5 @@
 import { VideoGeneration } from '@/features/editor/types';
+import { comfyDeployWorkflows } from '../utils/comfy-deploy-workflows';
 
 /**
  * Exports a video timeline by combining multiple videos into a single video
@@ -21,26 +22,34 @@ export async function exportVideoTimeline(
 
   try {
     // Call our API route to create the combined video
-    const response = await fetch('/api/creatomate', {
+    const response = await fetch('/api/comfydeploy/join-video/generate', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        videoUrls: validVideos,
-        projectId
+        videoGenData: {
+          videoUrls: validVideos,
+          projectId
+        },
+        workflowData: {
+          workflow_id: comfyDeployWorkflows["MP4VideoJoiner"]
+        }
       }),
     });
 
-    if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(errorData.error || 'Failed to export video timeline');
-    }
-
     const data = await response.json();
+
+    // if (!response.ok) {
+    //   const errorData = await response.json();
+    //   throw new Error(errorData.error || 'Failed to export video timeline');
+    // }
     
+    console.log('data', data);
+
     // Return the export ID for status tracking
-    return data.exportId;
+    // return data.exportId;
+    return data.runId;
   } catch (error) {
     console.error('Error exporting video timeline:', error);
     throw error;
