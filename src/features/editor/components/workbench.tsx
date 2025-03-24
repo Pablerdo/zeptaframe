@@ -882,53 +882,23 @@ export const Workbench = ({
                   </div>
                 </div>
               
-                <div className="relative bg-gray-700 w-full rounded-lg p-1 flex flex-col items-center overflow-hidden h-[55px] pt-2">
-                  {/* Animated highlight backdrop */}
-                  <div 
-                    className={`absolute left-1 right-1 h-[24px] bg-blue-600 rounded-md z-0 transform transition-all duration-500
-                      ${textOnlyMode 
-                        ? 'translate-y-[100%] scale-y-110 ease-out' 
-                        : 'translate-y-0 scale-y-110 ease-in-out'}`}
-                    style={{
-                      top: '1px',
-                      transformOrigin: textOnlyMode ? 'top' : 'bottom',
-                      boxShadow: '0 0 8px rgba(37, 99, 235, 0.4)'
-                    }}
-                  />
-                  
-                  {/* Gooey connector element */}
-                  <div 
-                    className={`absolute w-[60%] h-[4px] bg-blue-600 rounded-md z-0 left-[20%]
-                      transition-all duration-700 ${textOnlyMode ? 'top-[26px]' : 'top-[22px]'}`}
-                    style={{
-                      transform: `scaleX(${textOnlyMode ? 0.7 : 0.9})`,
-                      transformOrigin: 'center',
-                      opacity: '0.8'
-                    }}
-                  />
-                  
+                <div className="flex flex-col w-full overflow-hidden">
                   <button
-                    className={`relative z-10 text-sm font-medium rounded-md w-full py-1 mb-1 flex items-center justify-center
-                      transform transition-all duration-400 
-                      ${!textOnlyMode ? 'text-white scale-105' : 'text-gray-300 scale-100'}`}
+                    className={`py-2 font-medium text-sm rounded-t-md w-full transition-colors duration-200 ${
+                      !textOnlyMode ? 'bg-blue-600 text-white' : 'bg-gray-700 text-gray-300'
+                    }`}
                     onClick={() => setTextOnlyMode(false)}
-                    style={{
-                      transitionTimingFunction: !textOnlyMode ? 'cubic-bezier(0.34, 1.56, 0.64, 1)' : 'ease'
-                    }}
                   >
-                    <span>Animation</span>
+                    Animation
                   </button>
                   
                   <button
-                    className={`relative z-10 text-sm font-medium rounded-md w-full py-1 flex items-center justify-center
-                      transform transition-all duration-400
-                      ${textOnlyMode ? 'text-white scale-105' : 'text-gray-300 scale-100'}`}
+                    className={`py-2 font-medium text-sm rounded-b-md w-full transition-colors duration-200 ${
+                      textOnlyMode ? 'bg-blue-600 text-white' : 'bg-gray-700 text-gray-300'
+                    }`}
                     onClick={() => setTextOnlyMode(true)}
-                    style={{
-                      transitionTimingFunction: textOnlyMode ? 'cubic-bezier(0.34, 1.56, 0.64, 1)' : 'ease'
-                    }}
                   >
-                    <span>Text Only</span>
+                    Text Only
                   </button>
                 </div>
               </div>
