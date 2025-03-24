@@ -300,6 +300,10 @@ export interface SegmentedMask {
     points: Array<{x: number, y: number}>;
     isVisible: boolean;
   };
+  originalTrajectory?: {
+    points: Array<{x: number, y: number}>;
+    isVisible: boolean;
+  };
   rotation?: number;
   isTextDetailsOpen?: boolean;
   textDetails?: string;

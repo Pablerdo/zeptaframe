@@ -885,7 +885,7 @@ export const Workbench = ({
                   </div>
                   <div className="absolute bottom-full mb-2 right-0 w-[60px] bg-gray-800 text-white text-xs p-2 rounded shadow-lg 
                     opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none z-50">
-                    In Text-only mode, a text prompt is required
+                    Text prompt is required when in <span className="font-bold">Text Only</span> mode
                   </div>
                 </div>
               

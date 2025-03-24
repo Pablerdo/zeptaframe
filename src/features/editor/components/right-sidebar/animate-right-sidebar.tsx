@@ -645,6 +645,107 @@ export const AnimateRightSidebar = ({
     editor.canvas.renderAll();
   };
 
+  const handleToggleTrajectory = (maskUrl: string) => {
+    // First ensure the mask is applied
+    if (editor) {
+      // Find the mask's index
+      const maskIndex = segmentedMasks.findIndex(mask => mask.url === maskUrl);
+      if (maskIndex >= 0 && !segmentedMasks[maskIndex].isApplied) {
+        // Apply the mask if not already applied
+        handleApplyMask(maskUrl, maskIndex);
+      }
+      
+      // Then toggle trajectory visibility
+      const updatedMasks = segmentedMasks.map(mask => 
+        mask.url === maskUrl && mask.trajectory ? {
+          ...mask,
+          trajectory: {
+            ...mask.trajectory,
+            isVisible: !mask.trajectory.isVisible
+          }
+        } : mask
+      );
+      
+      // Set the new array directly
+      setSegmentedMasks(updatedMasks);
+    }
+
+    if (editor?.canvas) {
+      const mask = segmentedMasks.find(m => m.url === maskUrl);
+      
+      if (mask?.trajectory?.points) {
+        if (activeAnimations[maskUrl]) {
+          activeAnimations[maskUrl].stop();
+          setActiveAnimations(prev => {
+            const newAnimations = { ...prev };
+            delete newAnimations[maskUrl];
+            return newAnimations;
+          });
+        } else {
+          const animation = createTrajectoryAnimation(editor, maskUrl, mask.trajectory.points);
+          if (animation) {
+            animation.start();
+            setActiveAnimations(prev => ({
+              ...prev,
+              [maskUrl]: {
+                stop: animation.stop,
+                isPlaying: true
+              }
+            }));
+          }
+        }
+      }
+    }
+  };
+
+  const handleRedoTrajectory = (maskUrl: string) => {
+    if (editor) {
+      // First ensure the mask is applied
+      const maskIndex = segmentedMasks.findIndex(mask => mask.url === maskUrl);
+      if (maskIndex >= 0 && !segmentedMasks[maskIndex].isApplied) {
+        // Apply the mask if not already applied
+        handleApplyMask(maskUrl, maskIndex);
+        
+        // After applying the mask, set a timeout to allow the state to update
+        setTimeout(() => {
+          startRetracingTrajectory(maskUrl);
+        }, 100);
+      } else {
+        // Mask is already applied, start retracing immediately
+        startRetracingTrajectory(maskUrl);
+      }
+    }
+  };
+
+  // Helper function to start the retracing process
+  const startRetracingTrajectory = (maskUrl: string) => {
+    // Find the mask with this URL
+    const mask = segmentedMasks.find(m => m.url === maskUrl);
+    if (mask) {
+      // Stop any active animation for this mask first
+      if (activeAnimations[maskUrl]) {
+        activeAnimations[maskUrl].stop();
+        setActiveAnimations(prev => {
+          const newAnimations = { ...prev };
+          delete newAnimations[maskUrl];
+          return newAnimations;
+        });
+      }
+
+      // Store the original trajectory in case user cancels
+      mask.originalTrajectory = mask.trajectory;
+      
+      // Set recordingMotion state to show Save/Cancel buttons FIRST
+      setRecordingMotion(maskUrl);
+      
+      // Use a small timeout to ensure the state update is processed before continuing
+      setTimeout(() => {
+        // Start the control motion process
+        handleControlMotion(mask.id, maskUrl);
+      }, 50);
+    }
+  };
+
   const handleSaveMotion = () => {
     if (!recordingMotion || !editor?.canvas) return;
 
@@ -678,13 +779,15 @@ export const AnimateRightSidebar = ({
     }
 
     // Update mask state with trajectory (visible by default when saving)
+    // When redoing, we also need to remove the originalTrajectory property
     const updatedMasks = segmentedMasks.map(mask => 
       mask.url === recordingMotion ? {
         ...mask,
         trajectory: {
           points,
           isVisible: true // Set to true by default when saving
-        }
+        },
+        originalTrajectory: undefined // Clear the original trajectory reference
       } : mask
     );
     setSegmentedMasks(updatedMasks);
@@ -734,6 +837,24 @@ export const AnimateRightSidebar = ({
         editor.canvas.remove(ghostMask);
       });
       maskObject.data.ghostMasks = [];
+    }
+
+    // If we were redoing a trajectory, restore the original
+    const updatedMasks = segmentedMasks.map(mask => {
+      if (mask.url === recordingMotion && mask.originalTrajectory) {
+        // Restore the original trajectory
+        return {
+          ...mask,
+          trajectory: mask.originalTrajectory,
+          originalTrajectory: undefined // Clear the temporary property
+        };
+      }
+      return mask;
+    });
+    
+    // Update the state with restored trajectories if needed
+    if (updatedMasks.some(mask => mask.url === recordingMotion && mask.originalTrajectory)) {
+      setSegmentedMasks(updatedMasks);
     }
 
     // Reset object state and cursor without saving trajectory
@@ -859,73 +980,6 @@ export const AnimateRightSidebar = ({
     };
 
     return { start, stop, isPlaying: true };
-  };
-
-  const handleToggleTrajectory = (maskUrl: string) => {
-    
-    if (editor) {
-      // Create a new array by mapping the existing masks
-      const updatedMasks = segmentedMasks.map(mask => 
-        mask.url === maskUrl && mask.trajectory ? {
-          ...mask,
-          trajectory: {
-            ...mask.trajectory,
-            isVisible: !mask.trajectory.isVisible
-          }
-        } : mask
-      );
-      
-      // Set the new array directly
-      setSegmentedMasks(updatedMasks);
-    }
-
-    if (editor?.canvas) {
-      const mask = segmentedMasks.find(m => m.url === maskUrl);
-      
-      if (mask?.trajectory?.points) {
-        if (activeAnimations[maskUrl]) {
-          activeAnimations[maskUrl].stop();
-          setActiveAnimations(prev => {
-            const newAnimations = { ...prev };
-            delete newAnimations[maskUrl];
-            return newAnimations;
-          });
-        } else {
-          const animation = createTrajectoryAnimation(editor, maskUrl, mask.trajectory.points);
-          if (animation) {
-            animation.start();
-            setActiveAnimations(prev => ({
-              ...prev,
-              [maskUrl]: {
-                stop: animation.stop,
-                isPlaying: true
-              }
-            }));
-          }
-        }
-      }
-    }
-  };
-
-  const handleRedoTrajectory = (maskUrl: string) => {
-    if (editor) {
-      const updatedMasks = segmentedMasks.map(mask => 
-        mask.url === maskUrl ? {
-          ...mask,
-          trajectory: undefined
-        } : mask
-      );
-      setSegmentedMasks(updatedMasks);
-    }
-
-    // Remove trajectory from canvas
-    if (editor?.canvas) {
-      const trajectoryObj = editor.canvas.getObjects().find(obj => obj.data?.trajectoryFor === maskUrl);
-      if (trajectoryObj) {
-        editor.canvas.remove(trajectoryObj);
-        editor.canvas.renderAll();
-      }
-    }
   };
 
   // Add effect to hide all trajectories when sidebar opens
@@ -1136,6 +1190,8 @@ export const AnimateRightSidebar = ({
                 // Get the actual index in the full array
                 const actualIndex = segmentedMasks.findIndex(m => m.url === mask.url);
                 const isEditingMaskName = editingMaskId === mask.url;
+                const isRetracing = recordingMotion === mask.url;
+                const hasTrajectory = !!mask.trajectory;
                 
                 return (
                   <div key={mask.url} className={`flex flex-col p-2 border border-gray-300 dark:border-gray-500 rounded-md space-y-2 dark:bg-editor-bg-dark ${isSegmentationActive ? 'opacity-50' : ''}`}>
@@ -1240,26 +1296,12 @@ export const AnimateRightSidebar = ({
                         </div>
                       )}
                     </div>
-                    {mask.trajectory ? (
-                      <div className="flex space-x-2">
-                        <Button
-                          className="flex-1 bg-blue-600 hover:bg-blue-700 text-white"
-                          size="sm"
-                          onClick={() => handleToggleTrajectory(mask.url)}
-                          disabled={isSegmentationActive}
-                        >
-                          {mask.trajectory.isVisible ? 'Hide' : 'Show'} Trajectory
-                        </Button>
-                        <Button
-                          className="flex-1 bg-purple-600 hover:bg-purple-700 text-white"
-                          size="sm"
-                          onClick={() => handleRedoTrajectory(mask.url)}
-                          disabled={true}
-                        >
-                          Redo
-                        </Button>
-                      </div>
-                    ) : recordingMotion === mask.url ? (
+                    
+                    {/* Trajectory interaction buttons - 3 states:
+                        1. Retracing (show Save/Cancel)
+                        2. Has trajectory (show Show/Hide + Retrace)
+                        3. No trajectory (show Trace Trajectory) */}
+                    {isRetracing ? (
                       <div className="flex space-x-2">
                         <Button
                           className="flex-1 bg-green-600 hover:bg-green-700 text-white"
@@ -1280,6 +1322,25 @@ export const AnimateRightSidebar = ({
                           Cancel
                         </Button>
                       </div>
+                    ) : hasTrajectory && mask.trajectory ? (
+                      <div className="flex space-x-2">
+                        <Button
+                          className="flex-1 bg-blue-600 hover:bg-blue-700 text-white"
+                          size="sm"
+                          onClick={() => handleToggleTrajectory(mask.url)}
+                          disabled={isSegmentationActive}
+                        >
+                          {mask.trajectory.isVisible ? 'Hide' : 'Show'} Trajectory
+                        </Button>
+                        <Button
+                          className="flex-1 bg-purple-600 hover:bg-purple-700 text-white"
+                          size="sm"
+                          onClick={() => handleRedoTrajectory(mask.url)}
+                          disabled={isSegmentationActive}
+                        >
+                          Retrace Trajectory
+                        </Button>
+                      </div>
                     ) : (
                       <Button
                         className="w-full bg-purple-600 hover:bg-purple-700 text-white"
@@ -1287,7 +1348,7 @@ export const AnimateRightSidebar = ({
                         disabled={!mask.isApplied || isSegmentationActive}
                         onClick={() => handleControlMotion(mask.id, mask.url)}
                       >
-                        Control Motion
+                        Trace Trajectory
                       </Button>
                     )}
                   </div>
