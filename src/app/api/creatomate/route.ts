@@ -1,3 +1,9 @@
+import { NextRequest } from "next/server";
+
+export async function POST(req: NextRequest) {
+  console.log("Hello")
+}
+
 // import { NextRequest, NextResponse } from 'next/server';
 // import { db } from "@/db/drizzle";
 // import { videoExports } from "@/db/schema";
