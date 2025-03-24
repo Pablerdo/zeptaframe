@@ -19,7 +19,8 @@ import {
   float32ArrayToBinaryMask, 
   resizeCanvas,
   canvasToFloat32Array,
-  resizeAndPadBox
+  resizeAndPadBox,
+  enhanceMaskEdges,
 } from "@/app/sam/lib/imageutils";
 import debounce from "lodash/debounce";
 import { defaultVideoModelId, videoModels } from "../utils/video-models";
@@ -438,11 +439,18 @@ export const Workbench = ({
     const maskScores = decodingResults.iou_predictions.cpuData;
     const bestMaskIdx = maskScores.indexOf(Math.max(...maskScores));
     const bestMaskArray = sliceTensor(maskTensors, bestMaskIdx)
+    
+    // Create initial mask canvases
     let bestMaskCanvas = float32ArrayToCanvas(bestMaskArray, width, height)
     let bestMaskBinary = float32ArrayToBinaryMask(bestMaskArray, width, height)
 
+    // Resize both canvases
     bestMaskCanvas = resizeCanvas(bestMaskCanvas, { w: 720, h: 480 });
     bestMaskBinary = resizeCanvas(bestMaskBinary, { w: 720, h: 480 });
+    
+    // Optional: apply morpohological closing and slight blur for better ui
+    bestMaskCanvas = enhanceMaskEdges(bestMaskCanvas, 3, 2); // Reduced blur radius
+    
     setMask(bestMaskCanvas);
     setMaskBinary(bestMaskBinary);
     setPrevMaskArray(bestMaskArray);

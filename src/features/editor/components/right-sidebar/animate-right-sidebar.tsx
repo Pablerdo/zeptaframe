@@ -930,7 +930,7 @@ export const AnimateRightSidebar = ({
       <ScrollArea>
         <div className="p-4 space-y-4 border-b">
           <Label className="text-sm">
-            Animated Objects 
+            Animation Type
           </Label>
         
           {/* Segmented masks list */}

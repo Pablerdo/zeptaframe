@@ -115,49 +115,48 @@ export function float32ArrayToCanvas(array, width, height) {
   const C = 4; // 4 output channels, RGBA
   const imageData = new Uint8ClampedArray(array.length * C);
   
-  // First pass: identify which pixels are part of the mask
-  const isMasked = new Array(array.length).fill(false);
-  for (let i = 0; i < array.length; i++) {
-    isMasked[i] = array[i] > 0;
-  }
-  
-  // Second pass: identify border pixels (pixels at the edge of the mask)
-  const isBorder = new Array(array.length).fill(false);
-  
-  for (let y = 0; y < height; y++) {
-    for (let x = 0; x < width; x++) {
-      const idx = y * width + x;
-      
-      // Skip if not part of the mask
-      if (!isMasked[idx]) continue;
-      
-      // Check if any neighboring pixel is not masked (8-connected neighbors)
-      const hasNonMaskedNeighbor = 
-        (x > 0 && !isMasked[idx - 1]) ||                     // left
-        (x < width - 1 && !isMasked[idx + 1]) ||             // right
-        (y > 0 && !isMasked[idx - width]) ||                 // top
-        (y < height - 1 && !isMasked[idx + width]) ||        // bottom
-        (x > 0 && y > 0 && !isMasked[idx - width - 1]) ||    // top-left
-        (x < width - 1 && y > 0 && !isMasked[idx - width + 1]) || // top-right
-        (x > 0 && y < height - 1 && !isMasked[idx + width - 1]) || // bottom-left
-        (x < width - 1 && y < height - 1 && !isMasked[idx + width + 1]); // bottom-right
-      
-      isBorder[idx] = hasNonMaskedNeighbor;
-    }
-  }
-  
-  // Third pass: set color values
+    // // First pass: identify which pixels are part of the mask
+    // const isMasked = new Array(array.length).fill(false);
+    // for (let i = 0; i < array.length; i++) {
+    //   isMasked[i] = array[i] > 0;
+    // }
+    
+    // // Second pass: identify border pixels (pixels at the edge of the mask)
+    // const isBorder = new Array(array.length).fill(false);
+    
+    // for (let y = 0; y < height; y++) {
+    //   for (let x = 0; x < width; x++) {
+    //     const idx = y * width + x;
+        
+    //     // Skip if not part of the mask
+    //     if (!isMasked[idx]) continue;
+        
+    //     // Check if any neighboring pixel is not masked (8-connected neighbors)
+    //     const hasNonMaskedNeighbor = 
+    //       (x > 0 && !isMasked[idx - 1]) ||                     // left
+    //       (x < width - 1 && !isMasked[idx + 1]) ||             // right
+    //       (y > 0 && !isMasked[idx - width]) ||                 // top
+    //       (y < height - 1 && !isMasked[idx + width]) ||        // bottom
+    //       (x > 0 && y > 0 && !isMasked[idx - width - 1]) ||    // top-left
+    //       (x < width - 1 && y > 0 && !isMasked[idx - width + 1]) || // top-right
+    //       (x > 0 && y < height - 1 && !isMasked[idx + width - 1]) || // bottom-left
+    //       (x < width - 1 && y < height - 1 && !isMasked[idx + width + 1]); // bottom-right
+        
+    //     isBorder[idx] = hasNonMaskedNeighbor;
+    //   }
+    // }
+    
+    // // Third pass: set color values
+  // Create a simple mask without the border detection
   for (let srcIdx = 0; srcIdx < array.length; srcIdx++) {
     const trgIdx = srcIdx * C;
     
-    if (isMasked[srcIdx]) {
+    if (array[srcIdx] > 0) {
       // All mask pixels get the same light gray color
       imageData[trgIdx] = 0xaa;     // Red: 170
       imageData[trgIdx + 1] = 0xaa; // Green: 170
       imageData[trgIdx + 2] = 0xaa; // Blue: 170
-      
-      // Border pixels get higher opacity than interior pixels
-      imageData[trgIdx + 3] = isBorder[srcIdx] ? 255 : 180;
+      imageData[trgIdx + 3] = 200;  // Consistent opacity
     } else {
       // Background: fully transparent
       imageData[trgIdx] = 0;
@@ -174,6 +173,138 @@ export function float32ArrayToCanvas(array, width, height) {
   ctx.putImageData(new ImageData(imageData, width, height), 0, 0);
 
   return canvas;
+}
+
+/**
+ * Applies morphological closing and blur to a mask canvas for improved results
+ * Uses pixelThreshold as the size of the closing operation and blurRadius for final smoothing
+ * 
+ * @param {HTMLCanvasElement} canvas - The mask canvas to enhance
+ * @param {number} pixelThreshold - Size of morphological closing operation (default: 5px)
+ * @param {number} blurRadius - Amount of final blur to apply (default: 1)
+ * @returns {HTMLCanvasElement} - A new canvas with the enhanced mask
+ */
+export function enhanceMaskEdges(canvas, pixelThreshold = 5, blurRadius = 1) {
+  const width = canvas.width;
+  const height = canvas.height;
+  
+  // Create new canvases for the process
+  const tempCanvas = document.createElement("canvas");
+  const tempCtx = tempCanvas.getContext("2d");
+  tempCanvas.width = width;
+  tempCanvas.height = height;
+  
+  // Get initial mask data
+  const sourceCtx = canvas.getContext("2d");
+  const originalData = sourceCtx.getImageData(0, 0, width, height);
+  const originalPixels = originalData.data;
+  
+  // Create binary representation of the mask (1 for mask, 0 for background)
+  const isMasked = new Array(width * height).fill(false);
+  for (let y = 0; y < height; y++) {
+    for (let x = 0; x < width; x++) {
+      const idx = (y * width + x) * 4;
+      isMasked[y * width + x] = originalPixels[idx + 3] > 128;
+    }
+  }
+  
+  // STEP 1: Dilation (expand the mask by pixelThreshold)
+  const dilatedMask = new Array(width * height).fill(false);
+  const radius = Math.max(1, Math.floor(pixelThreshold / 2));
+  
+  for (let y = 0; y < height; y++) {
+    for (let x = 0; x < width; x++) {
+      const pixelIdx = y * width + x;
+      
+      // Check neighborhood within radius
+      let hasNeighbor = false;
+      for (let dy = -radius; dy <= radius; dy++) {
+        for (let dx = -radius; dx <= radius; dx++) {
+          const ny = y + dy;
+          const nx = x + dx;
+          
+          if (nx >= 0 && nx < width && ny >= 0 && ny < height) {
+            if (isMasked[ny * width + nx]) {
+              hasNeighbor = true;
+              break;
+            }
+          }
+        }
+        if (hasNeighbor) break;
+      }
+      
+      dilatedMask[pixelIdx] = hasNeighbor;
+    }
+  }
+  
+  // STEP 2: Erosion (shrink the mask by pixelThreshold)
+  const resultMask = new Array(width * height).fill(false);
+  
+  for (let y = 0; y < height; y++) {
+    for (let x = 0; x < width; x++) {
+      const pixelIdx = y * width + x;
+      
+      // Only check pixels that were marked in dilation
+      if (!dilatedMask[pixelIdx]) continue;
+      
+      // Check if all pixels in neighborhood are masked in dilated mask
+      let allNeighborsMasked = true;
+      for (let dy = -radius; dy <= radius; dy++) {
+        for (let dx = -radius; dx <= radius; dx++) {
+          const ny = y + dy;
+          const nx = x + dx;
+          
+          // If outside image or not masked, this pixel doesn't pass erosion
+          if (nx < 0 || nx >= width || ny < 0 || ny >= height || !dilatedMask[ny * width + nx]) {
+            allNeighborsMasked = false;
+            break;
+          }
+        }
+        if (!allNeighborsMasked) break;
+      }
+      
+      resultMask[pixelIdx] = allNeighborsMasked;
+    }
+  }
+  
+  // Create image data from the result mask
+  const resultData = new ImageData(width, height);
+  for (let y = 0; y < height; y++) {
+    for (let x = 0; x < width; x++) {
+      const pixelIdx = y * width + x;
+      const dataIdx = pixelIdx * 4;
+      
+      if (resultMask[pixelIdx]) {
+        resultData.data[dataIdx] = 0xaa;     // Red
+        resultData.data[dataIdx + 1] = 0xaa; // Green
+        resultData.data[dataIdx + 2] = 0xaa; // Blue
+        resultData.data[dataIdx + 3] = 200;  // Alpha
+      } else {
+        resultData.data[dataIdx] = 0;
+        resultData.data[dataIdx + 1] = 0;
+        resultData.data[dataIdx + 2] = 0;
+        resultData.data[dataIdx + 3] = 0;    // Transparent
+      }
+    }
+  }
+  
+  // Put the morphologically closed mask on the temp canvas
+  tempCtx.putImageData(resultData, 0, 0);
+  
+  // Apply blur to the result
+  const finalCanvas = document.createElement("canvas");
+  const finalCtx = finalCanvas.getContext("2d");
+  finalCanvas.width = width;
+  finalCanvas.height = height;
+  
+  // Apply blur if radius > 0
+  if (blurRadius > 0) {
+    finalCtx.filter = `blur(${blurRadius}px)`;
+  }
+  finalCtx.drawImage(tempCanvas, 0, 0);
+  finalCtx.filter = 'none';
+  
+  return finalCanvas;
 }
 
 /** 
