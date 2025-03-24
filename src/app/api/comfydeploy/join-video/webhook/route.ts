@@ -1,7 +1,7 @@
+import { videoExports } from "@/db/schema";
 import { ComfyDeploy } from "comfydeploy"
 import { NextResponse } from "next/server"
 import { db } from "@/db/drizzle"
-import { videoGenerations } from "@/db/schema"
 import { eq } from "drizzle-orm"
 
 const cd = new ComfyDeploy({
@@ -46,22 +46,22 @@ export async function POST(request: Request) {
       videoStore[runId] = videoUrl || ""
       
       // Update database entry
-      await db.update(videoGenerations)
+      await db.update(videoExports)
         .set({ 
           status: "success", 
           videoUrl: videoUrl || "",
           updatedAt: new Date()
         })
-        .where(eq(videoGenerations.runId, runId))
+        .where(eq(videoExports.runId, runId))
       
       console.log(`Updated video generation ${runId} to success with URL ${videoUrl}`)
     } else if (status === "failed") {
-      await db.update(videoGenerations)
+      await db.update(videoExports)
         .set({ 
           status: "error",
           updatedAt: new Date()
         })
-        .where(eq(videoGenerations.runId, runId))
+        .where(eq(videoExports.runId, runId))
       
       console.log(`Updated video generation ${runId} to error status`)
     }

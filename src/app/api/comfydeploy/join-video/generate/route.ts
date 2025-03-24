@@ -17,13 +17,6 @@ export async function POST(req: NextRequest) {
 
     const workflowId = data.workflowData.workflow_id;
 
-    if (!videoUrls || !Array.isArray(videoUrls) || videoUrls.length === 0) {
-      return NextResponse.json(
-        { error: 'Invalid or empty video URLs array' }, 
-        { status: 400 }
-      );
-    }
-
     // Log the received data for debugging
     console.log("Video URLs:", videoUrls)
 
@@ -38,7 +31,7 @@ export async function POST(req: NextRequest) {
       deploymentId: workflowId,
       webhook: webhookUrl,
       inputs: {
-        ...videoUrls.reduce((acc, url, index) => ({
+        ...videoUrls.reduce((acc: any, url: any, index: any) => ({
           ...acc,
           [`input_video_${index + 1}`]: url
         }), {}),

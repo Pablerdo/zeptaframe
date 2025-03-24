@@ -98,7 +98,7 @@ const VideoTimeline = ({
       );
       
       // Use our service to export the video timeline
-      const newExportId = await exportVideoTimeline(selectedGenerations, projectId);
+      const newExportId = await exportVideoTimeline(selectedVideos, projectId);
       
       console.log('newExportId', newExportId);
       // Update the export context

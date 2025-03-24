@@ -8,17 +8,19 @@ import { comfyDeployWorkflows } from '../utils/comfy-deploy-workflows';
  * @returns Promise with the export ID for tracking status
  */
 export async function exportVideoTimeline(
-  videoGenerations: VideoGeneration[], 
+  // videoGenerations: VideoGeneration[], 
+  videoUrls: string[],
   projectId?: string
 ): Promise<string> {
-  // Filter to only selected generations for each workbench 
-  const validVideos = videoGenerations
-    .filter(gen => gen.status === 'success' && gen.videoUrl)
-    .map(gen => gen.videoUrl as string);
   
-  if (validVideos.length === 0) {
-    throw new Error('No valid videos to export');
-  }
+  // Filter to only selected generations for each workbench 
+  // const validVideos = videoGenerations
+  //   .filter(gen => gen.status === 'success' && gen.videoUrl)
+  //   .map(gen => gen.videoUrl as string);
+  
+  // if (validVideos.length === 0) {
+  //   throw new Error('No valid videos to export');
+  // }
 
   try {
     // Call our API route to create the combined video
@@ -29,7 +31,7 @@ export async function exportVideoTimeline(
       },
       body: JSON.stringify({
         videoGenData: {
-          videoUrls: validVideos,
+          videoUrls: videoUrls,// validVideos,
           projectId
         },
         workflowData: {
