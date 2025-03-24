@@ -449,14 +449,13 @@ export const Workbench = ({
     bestMaskBinary = resizeCanvas(bestMaskBinary, { w: 720, h: 480 });
     
     // Optional: apply morpohological closing and slight blur for better ui
-    bestMaskCanvas = enhanceMaskEdges(bestMaskCanvas, 3, 2); // Reduced blur radius
+    bestMaskCanvas = enhanceMaskEdges(bestMaskCanvas, 3, 0); // Reduced blur radius
     
     setMask(bestMaskCanvas);
     setMaskBinary(bestMaskBinary);
     setPrevMaskArray(bestMaskArray);
 
     // We have direct access to activeWorkbenchTool and editor within the workbench component
-
     
     // Add mask to canvas if in animate mode
     if (activeWorkbenchTool === "animate" && editor?.canvas) {
@@ -494,7 +493,7 @@ export const Workbench = ({
           height: workspaceHeight, // Original workspace height
           selectable: false,
           evented: false,
-          opacity: 0.9,
+          opacity: 0.95,
         });
 
         // Remove any existing mask before adding the new one

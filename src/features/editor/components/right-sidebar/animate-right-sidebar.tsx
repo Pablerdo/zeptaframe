@@ -559,6 +559,53 @@ export const AnimateRightSidebar = ({
         x: maskObject.left! + (maskObject.width! * (maskObject.scaleX || 1)) / 2,
         y: maskObject.top! + (maskObject.height! * (maskObject.scaleY || 1)) / 2
       });
+
+      // I need to also draw the mask object on the canvas, so as to see the movement
+      
+      // Track the last position we drew a ghost mask at
+      if (!maskObject.data.lastDrawnPosition) {
+        maskObject.data.lastDrawnPosition = {
+          x: maskObject.left! + (maskObject.width! * (maskObject.scaleX || 1)) / 2,
+          y: maskObject.top! + (maskObject.height! * (maskObject.scaleY || 1)) / 2
+        };
+        maskObject.data.ghostMasks = [];
+      }
+      
+      // Calculate the current center position of the mask
+      const currentPosition = {
+        x: maskObject.left! + (maskObject.width! * (maskObject.scaleX || 1)) / 2,
+        y: maskObject.top! + (maskObject.height! * (maskObject.scaleY || 1)) / 2
+      };
+      
+      // Calculate distance from last drawn position
+      const dx = currentPosition.x - maskObject.data.lastDrawnPosition.x;
+      const dy = currentPosition.y - maskObject.data.lastDrawnPosition.y;
+      const distance = Math.sqrt(dx * dx + dy * dy);
+      
+      // Only draw a new ghost mask if we've moved at least 5 pixels
+      if (distance >= 5) {
+        // Create a clone of the mask at reduced opacity
+        const ghostMask = new fabric.Image((maskObject as fabric.Image).getElement() as HTMLImageElement, {
+          left: maskObject.left,
+          top: maskObject.top,
+          width: maskObject.width,
+          height: maskObject.height,
+          scaleX: maskObject.scaleX,
+          scaleY: maskObject.scaleY,
+          selectable: false,
+          evented: false,
+          opacity: 0.3,
+        });
+        
+        // Add the ghost mask to the canvas
+        editor.canvas.add(ghostMask);
+        
+        // Add this ghost mask to our list for cleanup later
+        maskObject.data.ghostMasks.push(ghostMask);
+        
+        // Update the last drawn position
+        maskObject.data.lastDrawnPosition = {...currentPosition};
+      }
     };
 
     // Add mouse up handler
@@ -576,6 +623,8 @@ export const AnimateRightSidebar = ({
         ...maskObject.data,
         trajectoryPoints
       };
+      
+      // Ghost masks will remain visible until Save or Cancel is clicked
     };
 
     // Attach event listeners
@@ -606,6 +655,14 @@ export const AnimateRightSidebar = ({
     // Clean up event listeners
     if (maskObject.data?.cleanupEvents) {
       maskObject.data.cleanupEvents();
+    }
+
+    // Clean up any remaining ghost masks
+    if (maskObject.data?.ghostMasks && maskObject.data.ghostMasks.length > 0) {
+      maskObject.data.ghostMasks.forEach((ghostMask: fabric.Image) => {
+        editor.canvas.remove(ghostMask);
+      });
+      maskObject.data.ghostMasks = [];
     }
 
     // Get the recorded trajectory points
@@ -669,6 +726,14 @@ export const AnimateRightSidebar = ({
     // Clean up event listeners
     if (maskObject.data?.cleanupEvents) {
       maskObject.data.cleanupEvents();
+    }
+
+    // Clean up any remaining ghost masks
+    if (maskObject.data?.ghostMasks && maskObject.data.ghostMasks.length > 0) {
+      maskObject.data.ghostMasks.forEach((ghostMask: fabric.Image) => {
+        editor.canvas.remove(ghostMask);
+      });
+      maskObject.data.ghostMasks = [];
     }
 
     // Reset object state and cursor without saving trajectory
