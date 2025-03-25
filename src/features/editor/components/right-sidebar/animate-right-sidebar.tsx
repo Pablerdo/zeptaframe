@@ -5,6 +5,7 @@ import {
   ActiveWorkbenchTool, 
   Editor,
   SegmentedMask,
+  ActiveSegmentationTool,
 } from "@/features/editor/types";
 import { ToolSidebarHeader } from "@/features/editor/components/tool-sidebar-header";
 
@@ -12,7 +13,7 @@ import { cn } from "@/lib/utils";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { X, Check, Loader2, Trash2, Pencil, Plus, ChevronRight } from "lucide-react";
+import { X, Check, Loader2, Trash2, Pencil, Plus, ChevronRight, ChevronDown, Move } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { interpolatePoints, interpolatePosition, smoothTrajectory } from "@/features/editor/utils";
 
@@ -51,7 +52,7 @@ export const AnimateRightSidebar = ({
   const [imageSize, setImageSize] = useState({ w: 1024, h: 1024 });
   const [maskSize, setMaskSize] = useState({ w: 256, h: 256 });
   const pointsRef = useRef<Array<{ x: number; y: number; label: number }>>([]);
-  const [isSegmentationActive, setIsSegmentationActive] = useState(false);
+  const [activeSegmentationTool, setActiveSegmentationTool] = useState<ActiveSegmentationTool>("none");
   const [recordingMotion, setRecordingMotion] = useState<string | null>(null);
   const [activeAnimations, setActiveAnimations] = useState<{[key: string]: {
     stop: () => void;
@@ -62,12 +63,42 @@ export const AnimateRightSidebar = ({
   const [editingMaskId, setEditingMaskId] = useState<string | null>(null);
   const [tempMaskName, setTempMaskName] = useState<string>("");
 
-  const [isManualSegmentationActive, setIsManualSegmentationActive] = useState(false);
   const [manualMaskPoints, setManualMaskPoints] = useState<Array<{x: number, y: number}>>([]);
   const [temporaryPolygon, setTemporaryPolygon] = useState<fabric.Polygon | null>(null);
 
+  // When the component mounts, enable drawing mode to prevent object selection
+  // useEffect(() => {
+  //   if (editor) {
+  //     console.log("animate right sidebar mounted");
+  //     // Disable selection mode and enable drawing mode when sidebar opens
+  //     editor.disableDrawingMode();
+  //     editor.canvas.selection = false;
+      
+  //     // Disable all object interactions
+  //     editor.canvas.forEachObject((obj) => {
+  //       obj.selectable = false;
+  //       obj.evented = false;
+  //     });
+      
+  //     // Set cursor style
+  //     editor.canvas.defaultCursor = 'default';
+      
+  //     // Clean up when unmounting
+  //     return () => {
+  //       editor.canvas.selection = true;
+  //       editor.canvas.defaultCursor = 'default';
+        
+  //       // Re-enable object interactions
+  //       editor.canvas.forEachObject((obj) => {
+  //         obj.selectable = true;
+  //         obj.evented = true;
+  //       });
+  //     };
+  //   }
+  // }, [editor]);
+
   const onClose = () => {
-    setIsSegmentationActive(false);
+    setActiveSegmentationTool("none");
     onChangeActiveWorkbenchTool("select");
   };
 
@@ -83,7 +114,7 @@ export const AnimateRightSidebar = ({
       editor.canvas.renderAll();
     }
     
-    setIsManualSegmentationActive(true);
+    setActiveSegmentationTool("manual");
     setManualMaskPoints([]);
     
     if (editor) {
@@ -98,13 +129,9 @@ export const AnimateRightSidebar = ({
       
       // Reset any current mask
       setMask(null);
-      // setSamWorkerLoading(false);
-
-      // Need to implement this
-
-      // somehow need to enable the manual mask enclosure logic, which allows the user to click and draw a mask, 
-      // which when the user gets near the start point, it will trigger the saveInProgressManualMask function
-
+      
+      // Set cursor to crosshair for manual drawing
+      editor.canvas.defaultCursor = 'crosshair';
     }
   };
 
@@ -134,7 +161,8 @@ export const AnimateRightSidebar = ({
       editor.canvas.renderAll();
     }
     
-    setIsSegmentationActive(true);
+    setActiveSegmentationTool("auto");
+    
     if (editor) {
       // Create a completely new array with a unique ID for the in-progress mask
       const updatedMasks = [
@@ -148,7 +176,9 @@ export const AnimateRightSidebar = ({
       
       // Reset any current mask
       setMask(null);
-      // setSamWorkerLoading(false);
+      
+      // Set cursor to crosshair for SAM segmentation
+      editor.canvas.defaultCursor = 'crosshair';
     }
   };
 
@@ -216,7 +246,7 @@ export const AnimateRightSidebar = ({
           
           // Double check the data is set
           const addedObject = editor.canvas.getObjects().find(obj => obj.data?.isMask);
-          setIsSegmentationActive(false);
+          setActiveSegmentationTool("none");
           editor.canvas.renderAll();
         });
 
@@ -224,7 +254,7 @@ export const AnimateRightSidebar = ({
         setMask(null);
         setPrevMaskArray(null);
         pointsRef.current = [];
-        setIsSegmentationActive(false);
+        setActiveSegmentationTool("none");
       }
     }
   };
@@ -241,7 +271,7 @@ export const AnimateRightSidebar = ({
     setMask(null);
     setPrevMaskArray(null);
     pointsRef.current = [];
-    setIsSegmentationActive(false);
+    setActiveSegmentationTool("none");
     
     // Reset the top stub to "New Mask" state
     if (editor) {
@@ -277,7 +307,7 @@ export const AnimateRightSidebar = ({
     const existingMasks = editor.canvas.getObjects().filter(obj => obj.data?.isMask);
     existingMasks.forEach(mask => editor.canvas.remove(mask));
     
-    setIsSegmentationActive(false);
+    setActiveSegmentationTool("none");
     setMask(null);
     setPrevMaskArray(null);
     pointsRef.current = [];
@@ -323,13 +353,13 @@ export const AnimateRightSidebar = ({
 
   // Update click handling to only work when segmentation is active
   useEffect(() => {
-
-    // Add this isSegmentationActive check
-    if (!editor?.canvas || activeWorkbenchTool !== "animate" || isManualSegmentationActive) return;
+    if (!editor?.canvas || activeWorkbenchTool !== "animate" || activeSegmentationTool === "none") return;
 
     const imageClick = (e: fabric.IEvent) => {
-
-      if (samWorkerLoading || !editor?.canvas ||  !isSegmentationActive) return;
+      // Only process clicks if actively in AUTO segmentation mode
+      if (activeSegmentationTool !== "auto" || !samWorker.current || samWorkerLoading || !editor?.canvas) {
+        return;
+      }
 
       const pointer = editor.canvas.getPointer(e.e);
       const workspace = editor.getWorkspace();
@@ -392,7 +422,7 @@ export const AnimateRightSidebar = ({
     return () => {
       editor.canvas.off('mouse:down', imageClick);
     };
-  }, [editor?.canvas, activeWorkbenchTool, samWorkerLoading, isSegmentationActive]);
+  }, [editor?.canvas, activeWorkbenchTool, samWorkerLoading, activeSegmentationTool]);
 
   // editor?.canvas, activeTool, imageEncoded, imageSize.w, imageSize.h, maskSize.w, maskSize.h
   // Clear masks when sidebar closes
@@ -1056,7 +1086,7 @@ export const AnimateRightSidebar = ({
           <div className="space-y-2">
             {/* Always show the "New Object" stub at the top */}
             <div className="flex items-center bg-gray-100 dark:bg-editor-bg-dark justify-between p-2 border border-gray-300 dark:border-gray-400 rounded-md">
-              {!isSegmentationActive && (
+              {activeSegmentationTool === "none" && (
                 <div className="flex items-center space-x-2">
                   <span className="text-sm">New Object</span>
                   {/* Add loading and status indicator */}
@@ -1076,7 +1106,7 @@ export const AnimateRightSidebar = ({
                 </div>
               )}
               <div className="flex items-center space-x-2">
-                {isSegmentationActive ? (
+                {activeSegmentationTool === "auto" ? (
                   <>
                     <div className="flex flex-col gap-2">
                       <div className="text-md pl-1 text-muted-foreground">Click an object to animate</div>
@@ -1120,13 +1150,13 @@ export const AnimateRightSidebar = ({
             {/* Add a manual animation button */}
 
             <div className="flex items-center bg-gray-100 dark:bg-editor-bg-dark justify-between p-2 border border-gray-300 dark:border-gray-400 rounded-md">
-              {!isManualSegmentationActive && (
+              {activeSegmentationTool === "none" && (
                 <div className="flex items-center space-x-2">
                   <span className="text-sm">New Manual Object</span>
                 </div>
               )}
               <div className="flex items-center space-x-2">
-                {isManualSegmentationActive ? (
+                {activeSegmentationTool === "manual" ? (
                   <>
                   
                     <div className="flex flex-col gap-2">
@@ -1194,7 +1224,7 @@ export const AnimateRightSidebar = ({
                 const hasTrajectory = !!mask.trajectory;
                 
                 return (
-                  <div key={mask.url} className={`flex flex-col p-2 border border-gray-300 dark:border-gray-500 rounded-md space-y-2 dark:bg-editor-bg-dark ${isSegmentationActive ? 'opacity-50' : ''}`}>
+                  <div key={mask.url} className={`flex flex-col p-2 border border-gray-300 dark:border-gray-500 rounded-md space-y-2 dark:bg-editor-bg-dark ${activeSegmentationTool !== "none" ? 'opacity-50' : ''}`}>
                     <div className="flex items-center justify-between">
                       <div className="flex items-center space-x-2">
                         <img 
@@ -1210,14 +1240,14 @@ export const AnimateRightSidebar = ({
                               onKeyPress={(e) => handleKeyPress(e, actualIndex)}
                               className="h-8 w-40 text-sm"
                               autoFocus
-                              disabled={isSegmentationActive}
+                              disabled={activeSegmentationTool !== "none"}
                             />
                             <Button
                               variant="ghost"
                               size="icon"
                               onClick={() => handleFinishRename(actualIndex, tempMaskName)}
                               className="h-8 w-8"
-                              disabled={isSegmentationActive}
+                              disabled={activeSegmentationTool !== "none"}
                             >
                               <Check className="w-4 h-4" />
                             </Button> 
@@ -1230,7 +1260,7 @@ export const AnimateRightSidebar = ({
                               size="icon"
                               onClick={() => handleStartRename(actualIndex)}
                               className="h-8 w-8"
-                              disabled={isSegmentationActive}
+                              disabled={activeSegmentationTool !== "none"}
                             >
                               <Pencil className="w-4 h-4" />
                             </Button>
@@ -1244,7 +1274,7 @@ export const AnimateRightSidebar = ({
                             size="sm"
                             onClick={() => handleApplyMask(mask.url, actualIndex)}
                             className={mask.isApplied ? "bg-green-600 hover:bg-green-700 text-white" : ""}
-                            disabled={isSegmentationActive}
+                            disabled={activeSegmentationTool !== "none"}
                           >
                             {mask.isApplied ? 'Applied' : 'Apply'}
                           </Button>
@@ -1253,7 +1283,7 @@ export const AnimateRightSidebar = ({
                             size="icon"
                             onClick={() => handleDeleteMask(actualIndex)}
                             className="h-8 w-8"
-                            disabled={isSegmentationActive}
+                            disabled={activeSegmentationTool !== "none"}
                           >
                             <Trash2 className="w-4 h-4" />
                           </Button>
@@ -1263,7 +1293,7 @@ export const AnimateRightSidebar = ({
                     <div className="rounded-md bg-gray-100 dark:bg-gray-800 p-2">
                       <div className="flex items-center space-x-2 cursor-pointer select-none" 
                           onClick={() => {
-                            if (editor && !isSegmentationActive) {
+                            if (editor && activeSegmentationTool === "none") {
                               const updatedMasks = segmentedMasks.map((m, i) => 
                                 m.url === mask.url ? { ...m, isTextDetailsOpen: !m.isTextDetailsOpen } : m
                               );
@@ -1283,7 +1313,7 @@ export const AnimateRightSidebar = ({
                             placeholder="Add specific object motion details to help with generation"
                             value={mask.textDetails || ""}
                             onChange={(e) => {
-                              if (editor && !isSegmentationActive) {
+                              if (editor && activeSegmentationTool === "none") {
                                 const updatedMasks = segmentedMasks.map((m, i) => 
                                   m.url === mask.url ? { ...m, textDetails: e.target.value } : m
                                 );
@@ -1291,7 +1321,7 @@ export const AnimateRightSidebar = ({
                               }
                             }}
                             rows={2}
-                            disabled={isSegmentationActive}
+                            disabled={activeSegmentationTool !== "none"}
                           />
                         </div>
                       )}
@@ -1307,7 +1337,7 @@ export const AnimateRightSidebar = ({
                           className="flex-1 bg-green-600 hover:bg-green-700 text-white"
                           size="sm"
                           onClick={handleSaveMotion}
-                          disabled={isSegmentationActive}
+                          disabled={activeSegmentationTool !== "none"}
                         >
                           <Check className="w-4 h-4 mr-1" />
                           Save Motion
@@ -1316,7 +1346,7 @@ export const AnimateRightSidebar = ({
                           className="flex-1 bg-red-600 hover:bg-red-700 text-white"
                           size="sm"
                           onClick={handleCancelMotion}
-                          disabled={isSegmentationActive}
+                          disabled={activeSegmentationTool !== "none"}
                         >
                           <X className="w-4 h-4 mr-1" />
                           Cancel
@@ -1328,7 +1358,7 @@ export const AnimateRightSidebar = ({
                           className="flex-1 bg-blue-600 hover:bg-blue-700 text-white"
                           size="sm"
                           onClick={() => handleToggleTrajectory(mask.url)}
-                          disabled={isSegmentationActive}
+                          disabled={activeSegmentationTool !== "none"}
                         >
                           {mask.trajectory.isVisible ? 'Hide' : 'Show'} Trajectory
                         </Button>
@@ -1336,7 +1366,7 @@ export const AnimateRightSidebar = ({
                           className="flex-1 bg-purple-600 hover:bg-purple-700 text-white"
                           size="sm"
                           onClick={() => handleRedoTrajectory(mask.url)}
-                          disabled={isSegmentationActive}
+                          disabled={activeSegmentationTool !== "none"}
                         >
                           Retrace Trajectory
                         </Button>
@@ -1345,9 +1375,10 @@ export const AnimateRightSidebar = ({
                       <Button
                         className="w-full bg-purple-600 hover:bg-purple-700 text-white"
                         size="sm"
-                        disabled={!mask.isApplied || isSegmentationActive}
+                        disabled={!mask.isApplied || activeSegmentationTool !== "none"}
                         onClick={() => handleControlMotion(mask.id, mask.url)}
                       >
+                        <Move className="w-4 h-4 mr-1" />
                         Trace Trajectory
                       </Button>
                     )}

@@ -110,11 +110,7 @@ export type ActiveTool =
   | "generate-image"
   | "remove-bg"
   | "templates"
-  | "control-motion"
   | "segment"
-  | "animate"
-  | "camera-control"
-  | "prompt";
 
 export type ActiveWorkbenchTool = 
   | "select"
@@ -122,6 +118,11 @@ export type ActiveWorkbenchTool =
   | "camera-control"
   | "prompt"
   | "model";
+
+export type ActiveSegmentationTool = 
+  | "none"
+  | "auto"
+  | "manual"
 
 export const FILL_COLOR = "rgba(0,0,0,1)";
 export const STROKE_COLOR = "rgba(0,0,0,1)";

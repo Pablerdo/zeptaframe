@@ -214,20 +214,42 @@ export const Workbench = ({
     }
   }, [activeWorkbenchTool, editor]);
 
+  // Sync activeTool and activeWorkbenchTool for animation interactions
+  useEffect(() => {
+    if (activeWorkbenchTool === "animate") {
+      // onChangeActiveTool("draw");
+    }
+  }, [activeWorkbenchTool]);
+
   // Handle tool changes when this workbench is active
   useEffect(() => {
     if (isActive && editor) {
       if (activeTool === "draw") {
         editor.enableDrawingMode();
-      } else if (activeTool === "segment") {
-        editor.enableSegmentationMode();
+      } else if (activeWorkbenchTool === "animate") {
+        // When in animation mode, disable selection but keep canvas interactive for segmentation
+        editor.disableDrawingMode();
+        
+        // Disable selection for all objects
+        editor.canvas.selection = false;
+        editor.canvas.forEachObject((obj) => {
+          obj.selectable = false;
+          obj.evented = false;
+        });
       } else {
-        // Disable special modes when not active
+        // Default behavior - normal selection mode
         editor.disableDrawingMode();
         editor.disableSegmentationMode();
+        
+        // Re-enable selection
+        editor.canvas.selection = true;
+        editor.canvas.forEachObject((obj) => {
+          obj.selectable = true;
+          obj.evented = true;
+        });
       }
     }
-  }, [isActive, activeTool, editor]);
+  }, [isActive, activeTool, activeWorkbenchTool, editor]);
 
   // Prevent canvas from being reset or losing content
   const handleContainerClick = (e: React.MouseEvent) => {
@@ -610,11 +632,21 @@ export const Workbench = ({
     }
   }, [isActive, editor, index, onActive, encodeWorkbenchImage, samWorker]);
 
-  // TODO: Review this function, ideally it would have event listeners ,but they were not working.
-
   // We don't need the debounced function reference anymore since we're using a direct interval
   useEffect(() => {
-    if (editor?.canvas && activeWorkbenchTool !== "animate" && samWorkerInitialized && isActive && !samWorkerLoading) {
+    // Only encode the image when:
+    // 1. We have an active editor
+    // 2. We're NOT in animation mode
+    // 3. SAM worker is initialized
+    // 4. This workbench is active
+    // 5. SAM worker is not currently loading
+    if (
+      editor?.canvas && 
+      activeWorkbenchTool !== "animate" && 
+      samWorkerInitialized && 
+      isActive && 
+      !samWorkerLoading
+    ) {
       console.log("Setting up periodic encoding for workbench");
       
       // Run encoding immediately when effect initializes
@@ -632,8 +664,7 @@ export const Workbench = ({
         clearInterval(encodingInterval);
       };
     }
-  }, [editor?.canvas, activeWorkbenchTool, samWorkerInitialized, isActive]);
-
+  }, [editor?.canvas, activeWorkbenchTool, samWorkerInitialized, isActive]); // Don't add encodeWorkbenchImage to dependencies because it'll break the interval
   // When this workbench becomes active, set its editor as the active editor in context
   useEffect(() => {
     if (isActive && editor) {
