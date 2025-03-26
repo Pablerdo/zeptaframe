@@ -13,7 +13,7 @@ import { cn } from "@/lib/utils";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { X, Check, Loader2, Trash2, Pencil, Plus, ChevronRight, ChevronDown, Move } from "lucide-react";
+import { X, Check, Loader2, Trash2, Pencil, Plus, ChevronRight, ChevronDown, Move, Hand } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { interpolatePoints, interpolatePosition, smoothTrajectory } from "@/features/editor/utils";
 
@@ -66,6 +66,7 @@ export const AnimateRightSidebar = ({
   const [manualMaskPoints, setManualMaskPoints] = useState<Array<{x: number, y: number}>>([]);
   const [temporaryPolygon, setTemporaryPolygon] = useState<fabric.Polygon | null>(null);
 
+  const [hasFinishedDragging, setHasFinishedDragging] = useState(false);
   // When the component mounts, enable drawing mode to prevent object selection
   // useEffect(() => {
   //   if (editor) {
@@ -641,6 +642,7 @@ export const AnimateRightSidebar = ({
     // Add mouse up handler
     const handleMouseUp = (e: fabric.IEvent) => {
       if (!isDragging || !maskObject) return;
+      setHasFinishedDragging(true);
       isDragging = false;
       // Record final point
       trajectoryPoints.push({
@@ -765,6 +767,7 @@ export const AnimateRightSidebar = ({
       // Store the original trajectory in case user cancels
       mask.originalTrajectory = mask.trajectory;
       
+      setHasFinishedDragging(false);
       // Set recordingMotion state to show Save/Cancel buttons FIRST
       setRecordingMotion(maskUrl);
       
@@ -778,6 +781,8 @@ export const AnimateRightSidebar = ({
 
   const handleSaveMotion = () => {
     if (!recordingMotion || !editor?.canvas) return;
+    
+    setHasFinishedDragging(false);
 
     editor.canvas.skipTargetFind = true;
     const maskObject = editor.canvas.getObjects().find(obj => obj.data?.isMask && obj.data.url === recordingMotion);
@@ -1085,38 +1090,38 @@ export const AnimateRightSidebar = ({
           {/* Segmented masks list */}
           <div className="space-y-2">
             {/* Always show the "New Object" stub at the top */}
-            <div className="flex items-center bg-gray-100 dark:bg-editor-bg-dark justify-between p-2 border border-gray-300 dark:border-gray-400 rounded-md">
-              {activeSegmentationTool === "none" && (
-                <div className="flex items-center space-x-2">
-                  <span className="text-sm">New Object</span>
-                  {/* Add loading and status indicator */}
-                  <div className="space-y-2">
-                    {samWorkerLoading && (
-                      <div className="flex items-center space-x-2 text-muted-foreground">
-                        <Loader2 className="w-4 h-4 animate-spin" />
-                        <span className="text-sm">{status}</span>
-                      </div>
-                    )}
-                    {!samWorkerLoading && status && (
-                      <div className="text-sm text-muted-foreground">
-                        {status}
-                      </div>
-                    )}
-                  </div>
-                </div>
-              )}
-              <div className="flex items-center space-x-2">
-                {activeSegmentationTool === "auto" ? (
+            <div className="flex items-center bg-gray-100 dark:bg-editor-bg-dark p-2 border border-gray-300 dark:border-gray-400 rounded-md">
+              <div className="flex items-center justify-between w-full">
+                {activeSegmentationTool === "none" && (
+                  /* Add loading and status indicator */
+                  <>
+                    <Button
+                      variant="default"
+                      size="sm"
+                      onClick={handleNewMask}
+                      disabled={samWorkerLoading}
+                    >
+                      {samWorkerLoading ? (
+                        <Loader2 className="w-4 h-4 mr-1 animate-spin" />
+                      ) : (
+                        <Plus className="w-4 h-4 mr-1" />
+                      )}
+                        New Mask
+                    </Button>
+                  </>
+                )}
+
+                {activeSegmentationTool === "auto" && (
                   <>
                     <div className="flex flex-col gap-2">
-                      <div className="text-md pl-1 text-muted-foreground">Click an object to animate</div>
+                      <div className="text-md pl-1 text-muted-foreground animate-[pulse_1s_ease-in-out_infinite]">Click an object to animate</div>
                       <div className="flex gap-2">
                         <Button
                           variant="default"
                           size="sm"
                           onClick={handleSaveInProgressMask}
                           disabled={!mask}
-                          className="bg-green-500 hover:bg-green-600 text-white"
+                          className="bg-green-600 hover:bg-green-700 text-white"
                         >
                           <Check className="w-4 h-4 mr-1" />
                           Save Mask as Object
@@ -1133,16 +1138,6 @@ export const AnimateRightSidebar = ({
                       </div>
                     </div>
                   </>
-                ) : (
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={handleNewMask}
-                    disabled={samWorkerLoading}
-                  >
-                    <Plus className="w-4 h-4 mr-1" />
-                    New Mask
-                  </Button>
                 )}
               </div>
             </div>
@@ -1150,15 +1145,25 @@ export const AnimateRightSidebar = ({
             {/* Add a manual animation button */}
 
             <div className="flex items-center bg-gray-100 dark:bg-editor-bg-dark justify-between p-2 border border-gray-300 dark:border-gray-400 rounded-md">
-              {activeSegmentationTool === "none" && (
-                <div className="flex items-center space-x-2">
-                  <span className="text-sm">New Manual Object</span>
-                </div>
-              )}
               <div className="flex items-center space-x-2">
-                {activeSegmentationTool === "manual" ? (
+                {activeSegmentationTool === "none" && (
+                  /* Add loading and status indicator */
                   <>
-                  
+                    <Button
+                      variant="default"
+                      size="sm"
+                      onClick={handleNewMask}
+                      disabled={samWorkerLoading}
+                    >
+
+                      <Plus className="w-4 h-4 mr-1" />
+                      New Manual Mask
+                    </Button>
+                  </>
+                )}
+
+                {activeSegmentationTool === "manual" && (
+                  <>   
                     <div className="flex flex-col gap-2">
                       <div className="text-md pl-1 text-foreground/80 animate-[pulse_1s_ease-in-out_infinite]">
                         Encircle the object to create a mask. 
@@ -1173,17 +1178,7 @@ export const AnimateRightSidebar = ({
                         Cancel
                       </Button>
                     </div>
-
                   </>
-                ) : (
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={handleNewManualMask}
-                  >
-                    <Plus className="w-4 h-4 mr-1" />
-                    New Manual Mask
-                  </Button>
                 )}
               </div>
             </div>
@@ -1333,23 +1328,29 @@ export const AnimateRightSidebar = ({
                         3. No trajectory (show Trace Trajectory) */}
                     {isRetracing ? (
                       <div className="flex space-x-2">
+                        {hasFinishedDragging ? ( 
+                          <Button
+                            className="flex-1 bg-green-600 hover:bg-green-700 text-white"
+                            size="sm"
+                            onClick={handleSaveMotion}
+                            disabled={activeSegmentationTool !== "none"}
+                          >
+                            <Check className="w-4 h-4 mr-1" />
+                            Save Motion
+                          </Button>
+                        ) : (
+                          <span className="text-sm text-muted-foreground animate-pulse">
+                            Drag and drop the object to create a trajectory
+                          </span>    
+                        )}
                         <Button
-                          className="flex-1 bg-green-600 hover:bg-green-700 text-white"
-                          size="sm"
-                          onClick={handleSaveMotion}
-                          disabled={activeSegmentationTool !== "none"}
-                        >
-                          <Check className="w-4 h-4 mr-1" />
-                          Save Motion
-                        </Button>
-                        <Button
-                          className="flex-1 bg-red-600 hover:bg-red-700 text-white"
-                          size="sm"
-                          onClick={handleCancelMotion}
-                          disabled={activeSegmentationTool !== "none"}
-                        >
-                          <X className="w-4 h-4 mr-1" />
-                          Cancel
+                              className="flex-1 bg-red-600 hover:bg-red-700 text-white"
+                              size="sm"
+                              onClick={handleCancelMotion}
+                              disabled={activeSegmentationTool !== "none"}
+                            >
+                              <X className="w-4 h-4 mr-1" />
+                              Cancel
                         </Button>
                       </div>
                     ) : hasTrajectory && mask.trajectory ? (
@@ -1378,7 +1379,7 @@ export const AnimateRightSidebar = ({
                         disabled={!mask.isApplied || activeSegmentationTool !== "none"}
                         onClick={() => handleControlMotion(mask.id, mask.url)}
                       >
-                        <Move className="w-4 h-4 mr-1" />
+                        <Hand className="w-4 h-4 mr-1" />
                         Trace Trajectory
                       </Button>
                     )}

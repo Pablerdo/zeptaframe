@@ -486,7 +486,7 @@ export const Workbench = ({
     bestMaskBinary = resizeCanvas(bestMaskBinary, { w: 960, h: 640 });
     
     // Optional: apply morpohological closing and slight blur for better ui
-    bestMaskCanvas = enhanceMaskEdges(bestMaskCanvas, 6, 1); // Reduced blur radius
+    bestMaskCanvas = enhanceMaskEdges(bestMaskCanvas, 6, 0); // Reduced blur radius
     
 
     setMask(bestMaskCanvas);
@@ -917,12 +917,12 @@ export const Workbench = ({
                 isActive={activeWorkbenchTool === "prompt"}
                 onClick={() => setActiveWorkbenchTool("prompt")}
               />
-              <RightSidebarItem
+              {/* <RightSidebarItem
                 icon={Film}
                 label="Model"
                 isActive={activeWorkbenchTool === "model"}
                 onClick={() => setActiveWorkbenchTool("model")}
-              />
+              /> */}
             </ul>
             
             {/* Generate Video Submit Button */}
@@ -975,7 +975,7 @@ export const Workbench = ({
                   <div className="flex flex-col items-center">
                     <ArrowRightSquare className="h-6 w-6" />
                     <span className="text-xs font-medium mt-1">Submit</span>
-                    <span className="text-[10px] text-blue-200/80 mt-0.5">{selectedModel.name}</span>
+                    {/* <span className="text-[10px] text-blue-200/80 mt-0.5">{selectedModel.name}</span> */}
                   </div>
                 )}
               </button>
