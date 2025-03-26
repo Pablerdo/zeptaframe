@@ -220,12 +220,6 @@ export const Workbench = ({
     }
   }, [activeWorkbenchTool, editor]);
 
-  // Sync activeTool and activeWorkbenchTool for animation interactions
-  useEffect(() => {
-    if (activeWorkbenchTool === "animate") {
-      // onChangeActiveTool("draw");
-    }
-  }, [activeWorkbenchTool]);
 
   // Handle tool changes when this workbench is active
   useEffect(() => {
@@ -248,9 +242,15 @@ export const Workbench = ({
         editor.disableDrawingMode();
         editor.disableSegmentationMode();
         editor.disableCropMode();
+
+        editor.canvas.selection = true;
+        editor.canvas.forEachObject((obj: fabric.Object) => {
+          obj.selectable = true;
+          obj.evented = true;
+        });
       }
     }
-  }, [isActive, activeTool, activeSegmentationTool, editor]);
+  }, [isActive, activeTool, activeSegmentationTool, editor, activeWorkbenchTool, onChangeActiveTool]);
 
   // Prevent canvas from being reset or losing content
   const handleContainerClick = (e: React.MouseEvent) => {

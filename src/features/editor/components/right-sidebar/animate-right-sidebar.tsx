@@ -1300,14 +1300,14 @@ export const AnimateRightSidebar = ({
             {/* Always show the "New Object" stub at the top */}
             <div className="flex items-center bg-gray-100 dark:bg-editor-bg-dark p-2 border border-gray-300 dark:border-gray-400 rounded-md">
               <div className="flex items-center justify-between w-full">
-                {activeSegmentationTool !== "auto" && (
+                {activeSegmentationTool !== "auto" ? (
                   /* Add loading and status indicator */
                   <>
                     <Button
                       variant="default"
                       size="sm"
                       onClick={handleNewMask}
-                      disabled={samWorkerLoading}
+                      disabled={samWorkerLoading || activeSegmentationTool === "manual"}
                     >
                       {samWorkerLoading ? (
                         <Loader2 className="w-4 h-4 mr-1 animate-spin" />
@@ -1317,9 +1317,7 @@ export const AnimateRightSidebar = ({
                         New Mask
                     </Button>
                   </>
-                )}
-
-                {activeSegmentationTool === "auto" && (
+                ) : (
                   <div className="flex flex-col gap-2 w-full">
                     <div className="w-full text-md text-center pl-1 animate-[pulse_1s_ease-in-out_infinite]">Click an object to animate</div>
                     <div className="flex gap-2 w-full">
@@ -1352,23 +1350,20 @@ export const AnimateRightSidebar = ({
 
             <div className="flex items-center bg-gray-100 dark:bg-editor-bg-dark justify-between p-2 border border-gray-300 dark:border-gray-400 rounded-md w-full">
               <div className="flex items-center space-x-2 w-full">
-                {activeSegmentationTool !== "manual" && (
+                {activeSegmentationTool !== "manual" ? (
                   /* Add loading and status indicator */
                   <>
                     <Button
                       variant="default"
                       size="sm"
                       onClick={() => handleNewManualMask()}
-                      disabled={samWorkerLoading}
+                      disabled={samWorkerLoading || activeSegmentationTool === "auto"}
                     >
-
                       <Plus className="w-4 h-4 mr-1" />
                       New Manual Mask
                     </Button>
                   </>
-                )}
-
-                {activeSegmentationTool === "manual" && (
+                ) : (
                   <>   
                     <div className="flex flex-col gap-2 w-full">
                       <div className="text-md text-center pl-1 text-white animate-[pulse_1s_ease-in-out_infinite]">
