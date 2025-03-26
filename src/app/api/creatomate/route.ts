@@ -52,8 +52,8 @@ export async function POST(req: NextRequest) {
 //       body: JSON.stringify({
 //         source: {
 //           output_format: "mp4",
-//           width: 720,
-//           height: 480,
+//           width: 960,
+//           height: 640,
 //           elements: elements
 //         },
 //         webhook_url: webhookUrl,

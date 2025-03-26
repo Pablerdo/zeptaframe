@@ -87,7 +87,7 @@ export const SettingsSidebar = ({
             </Label>
             <Input
               placeholder="Width"
-              value="720" //locked at 720 for now
+              value="960" //locked at 960 for now
               type="number"
               disabled
             />
@@ -97,7 +97,7 @@ export const SettingsSidebar = ({
             </Label>
             <Input
               placeholder="Height"
-              value="480" //locked at 480 for now
+              value="640" //locked at 640 for now
               type="number"
               disabled
             />

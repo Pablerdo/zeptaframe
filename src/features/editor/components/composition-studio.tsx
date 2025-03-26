@@ -83,14 +83,14 @@ export const CompositionStudio = ({ initialData, isTrial }: CompositionStudioPro
           lastModified: new Date().toISOString() 
         },
         defaultSettings: {
-          width: initialData.width || 720,
-          height: initialData.height || 480
+          width: initialData.width || 960,
+          height: initialData.height || 640
         },
         workbenches: {
           [defaultId]: {
             json: jsonString, // Original project JSON becomes the first workbench
-            width: initialData.width || 720,
-            height: initialData.height || 480
+            width: initialData.width || 960,
+            height: initialData.height || 640
           }
         }
       };
@@ -103,14 +103,14 @@ export const CompositionStudio = ({ initialData, isTrial }: CompositionStudioPro
           lastModified: new Date().toISOString() 
         },
         defaultSettings: {
-          width: initialData.width || 720,
-          height: initialData.height || 480
+          width: initialData.width || 960,
+          height: initialData.height || 640
         },
         workbenches: {
           [defaultId]: {
             json: "", 
-            width: initialData.width || 720,
-            height: initialData.height || 480
+            width: initialData.width || 960,
+            height: initialData.height || 640
           }
         }
       };
@@ -327,8 +327,8 @@ export const CompositionStudio = ({ initialData, isTrial }: CompositionStudioPro
       const templateWorkbench = // prev.workbenches[activeId] || {
       {  
         json: "",
-        width: prev.defaultSettings?.width || 720,
-        height: prev.defaultSettings?.height || 480
+        width: prev.defaultSettings?.width || 960,
+        height: prev.defaultSettings?.height || 640
       };
       
       const updated = {
@@ -447,8 +447,8 @@ export const CompositionStudio = ({ initialData, isTrial }: CompositionStudioPro
   //   let bestMaskCanvas = float32ArrayToCanvas(bestMaskArray, width, height)
   //   let bestMaskBinary = float32ArrayToBinaryMask(bestMaskArray, width, height)
 
-  //   bestMaskCanvas = resizeCanvas(bestMaskCanvas, { w: 720, h: 480 });
-  //   bestMaskBinary = resizeCanvas(bestMaskBinary, { w: 720, h: 480 });
+  //   bestMaskCanvas = resizeCanvas(bestMaskCanvas, { w: 960, h: 640 });
+  //   bestMaskBinary = resizeCanvas(bestMaskBinary, { w: 960, h: 640 });
   //   setMask(bestMaskCanvas);
   //   setMaskBinary(bestMaskBinary);
   //   setPrevMaskArray(bestMaskArray);
@@ -467,8 +467,8 @@ export const CompositionStudio = ({ initialData, isTrial }: CompositionStudioPro
   //     if (!workspace) return;
 
   //     // Get workspace dimensions with type assertion since we know these are fabric.Object properties
-  //     const workspaceWidth = (workspace as fabric.Object).width as number || 720;
-  //     const workspaceHeight = (workspace as fabric.Object).height as number || 480;
+  //     const workspaceWidth = (workspace as fabric.Object).width as number || 960;
+  //     const workspaceHeight = (workspace as fabric.Object).height as number || 640;
 
   //     // Create a temporary canvas to properly scale the mask
   //     const tempCanvas = document.createElement('canvas');
@@ -522,8 +522,8 @@ export const CompositionStudio = ({ initialData, isTrial }: CompositionStudioPro
   //   if (!workspace) return;
 
   //   // Get the workspace dimensions and position
-  //   const workspaceWidth = workspace.width || 720;
-  //   const workspaceHeight = workspace.height || 480;
+  //   const workspaceWidth = workspace.width || 960;
+  //   const workspaceHeight = workspace.height || 640;
   //   const workspaceLeft = workspace.left || 0;
   //   const workspaceTop = workspace.top || 0;
     
@@ -563,7 +563,7 @@ export const CompositionStudio = ({ initialData, isTrial }: CompositionStudioPro
   //         { h: largestDim, w: largestDim }
   //       );
         
-  //       tempCtx?.drawImage(img, 0, 0, 720, 480, box?.x || 0, 0, box?.w, box?.h);
+  //       tempCtx?.drawImage(img, 0, 0, 960, 640, box?.x || 0, 0, box?.w, box?.h);
 
   //       // tempCtx?.drawImage(img, 0, 0, workspaceWidth, workspaceHeight, box?.x || 0, box?.y || 0, box?.w, box?.h);
       

@@ -10,8 +10,8 @@ export const generateImage = async (prompt: string): Promise<ITextToImage | null
       numberResults: 4,
       positivePrompt: prompt,
       model: "rundiffusion:110@101",
-      width: 1024,
-      height: 1024,
+      width: 960,
+      height: 960,
       steps: 4,
       outputType: "URL",
     });

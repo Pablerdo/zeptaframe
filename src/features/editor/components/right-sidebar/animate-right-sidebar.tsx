@@ -228,8 +228,8 @@ export const AnimateRightSidebar = ({
           maskImage.set({
             left: workspace.left || 0,
             top: workspace.top || 0,
-            width: workspace.width || 720,
-            height: workspace.height || 480,
+            width: workspace.width || 960,
+            height: workspace.height || 640,
             selectable: false,
             evented: false,
             opacity: 0.9,
@@ -320,8 +320,8 @@ export const AnimateRightSidebar = ({
       maskImage.set({
         left: workspace.left || 0,
         top: workspace.top || 0,
-        width: workspace.width || 720,
-        height: workspace.height || 480,
+        width: workspace.width || 960,
+        height: workspace.height || 640,
         selectable: false,
         evented: false,
         opacity: 0.9
@@ -377,8 +377,8 @@ export const AnimateRightSidebar = ({
       if (relativeX >= 0 && relativeX <= imageSize.w && relativeY >= 0 && relativeY <= imageSize.h) {
 
         // Get workspace dimensions
-        const workspaceWidth = workspace.width || 720;
-        const workspaceHeight = workspace.height || 480;
+        const workspaceWidth = workspace.width || 960;
+        const workspaceHeight = workspace.height || 640;
 
 
         // Normalize coordinates from workspace dimensions to target size
@@ -916,16 +916,16 @@ export const AnimateRightSidebar = ({
     const workspace = editor.getWorkspace() as fabric.Object;
     if (!workspace) return null;
     
-    const workspaceWidth = workspace.width || 720;
-    const workspaceHeight = workspace.height || 480;
+    const workspaceWidth = workspace.width || 960;
+    const workspaceHeight = workspace.height || 640;
 
     // Create animation canvas
     const animationCanvas = document.createElement('canvas');
     const parentElement = (editor.canvas.getElement() as HTMLCanvasElement).parentElement;
     
     // Match parent dimensions
-    animationCanvas.width = parentElement?.offsetWidth || 720;
-    animationCanvas.height = parentElement?.offsetHeight || 480;
+    animationCanvas.width = parentElement?.offsetWidth || 960;
+    animationCanvas.height = parentElement?.offsetHeight || 640;
     
     // Position canvas correctly
     animationCanvas.style.position = 'absolute';

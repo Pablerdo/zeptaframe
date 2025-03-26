@@ -71,8 +71,8 @@ export function AuthModal({
       const result = await createProjectForUserMutation.mutateAsync({
         name: parsedData.name || "Untitled Project 1",
         json: parsedData.json,
-        width: parsedData.width || 720,
-        height: parsedData.height || 480,
+        width: parsedData.width || 960,
+        height: parsedData.height || 640,
         userId: id
       });
       

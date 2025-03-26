@@ -309,6 +309,11 @@ export const Workbench = ({
       }
 
       if (textOnlyMode) {
+
+        // ==========================================
+        // TEXT ONLY MODE: Handle text only generation
+        // ==========================================
+
         if (selectedModel.id === "cogvideox") {
           workflowData.workflow_id = "";
         } else if (selectedModel.id === "hunyuanvideo") {
@@ -360,12 +365,18 @@ export const Workbench = ({
             throw new Error("No video runId received");
         }
       } else {
+
+        // ==========================================
+        // ANIMATION MODE: Handle motion and masking
+        // ==========================================
+
+
         if (selectedModel.id === "cogvideox") {
           workflowData.workflow_id = comfyDeployWorkflows["GWF-ZEPTA-CogVideoX"];
         } else if (selectedModel.id === "hunyuanvideo") {
           workflowData.workflow_id = comfyDeployWorkflows["GWF-ZEPTA-HunyuanVideo"] || "";
         } else if (selectedModel.id === "skyreels") {
-          workflowData.workflow_id = comfyDeployWorkflows["GWF-ZEPTA-SkyReels"] || "";
+          workflowData.workflow_id = comfyDeployWorkflows["GWF-ZEPTA-SkyReels-960x640-2it"] || "";
         } 
 
         const validMasks = segmentedMasks.filter(mask => mask.id && mask.id.trim() !== '');
@@ -467,12 +478,13 @@ export const Workbench = ({
     let bestMaskBinary = float32ArrayToBinaryMask(bestMaskArray, width, height)
 
     // Resize both canvases
-    bestMaskCanvas = resizeCanvas(bestMaskCanvas, { w: 720, h: 480 });
-    bestMaskBinary = resizeCanvas(bestMaskBinary, { w: 720, h: 480 });
+    bestMaskCanvas = resizeCanvas(bestMaskCanvas, { w: 960, h: 640 });
+    bestMaskBinary = resizeCanvas(bestMaskBinary, { w: 960, h: 640 });
     
     // Optional: apply morpohological closing and slight blur for better ui
-    bestMaskCanvas = enhanceMaskEdges(bestMaskCanvas, 3, 0); // Reduced blur radius
+    bestMaskCanvas = enhanceMaskEdges(bestMaskCanvas, 6, 1); // Reduced blur radius
     
+
     setMask(bestMaskCanvas);
     setMaskBinary(bestMaskBinary);
     setPrevMaskArray(bestMaskArray);
@@ -485,8 +497,8 @@ export const Workbench = ({
       if (!workspace) return;
 
       // Get workspace dimensions with type assertion since we know these are fabric.Object properties
-      const workspaceWidth = (workspace as fabric.Object).width as number || 720;
-      const workspaceHeight = (workspace as fabric.Object).height as number || 480;
+      const workspaceWidth = (workspace as fabric.Object).width as number || 960;
+      const workspaceHeight = (workspace as fabric.Object).height as number || 640;
 
       // Create a temporary canvas to properly scale the mask
       const tempCanvas = document.createElement('canvas');
@@ -563,8 +575,8 @@ export const Workbench = ({
 
     setSamWorkerLoading(true);
     // Get the workspace dimensions and position
-    const workspaceWidth = workspace.width || 720;
-    const workspaceHeight = workspace.height || 480;
+    const workspaceWidth = workspace.width || 960;
+    const workspaceHeight = workspace.height || 640;
     const workspaceLeft = workspace.left || 0;
     const workspaceTop = workspace.top || 0;
     
@@ -605,7 +617,7 @@ export const Workbench = ({
         { h: largestDim, w: largestDim }
       );
       
-      tempCtx?.drawImage(img, 0, 0, 720, 480, box?.x || 0, 0, box?.w, box?.h);
+      tempCtx?.drawImage(img, 0, 0, 960, 640, box?.x || 0, 0, box?.w, box?.h);
     
       samWorker.current?.postMessage({
         type: "encodeImage",

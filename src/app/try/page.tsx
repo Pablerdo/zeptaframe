@@ -28,8 +28,8 @@ export default function TryPage() {
         id: `trial-${uuidv4()}`,
         name: "Untitled Trial Project",
         json: "",
-        width: 720,
-        height: 480,
+        width: 960,
+        height: 640,
       };
       
       localStorage.setItem("trial_project", JSON.stringify(newTrial));

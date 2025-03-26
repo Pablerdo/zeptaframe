@@ -176,11 +176,11 @@ export function float32ArrayToCanvas(array, width, height) {
 }
 
 /**
- * Applies morphological closing and blur to a mask canvas for improved results
- * Uses pixelThreshold as the size of the closing operation and blurRadius for final smoothing
+ * Applies morphological opening and blur to a mask canvas for improved results
+ * Uses pixelThreshold as the size of the opening operation and blurRadius for final smoothing
  * 
  * @param {HTMLCanvasElement} canvas - The mask canvas to enhance
- * @param {number} pixelThreshold - Size of morphological closing operation (default: 5px)
+ * @param {number} pixelThreshold - Size of morphological opening operation (default: 5px)
  * @param {number} blurRadius - Amount of final blur to apply (default: 1)
  * @returns {HTMLCanvasElement} - A new canvas with the enhanced mask
  */
@@ -207,24 +207,67 @@ export function enhanceMaskEdges(canvas, pixelThreshold = 5, blurRadius = 1) {
       isMasked[y * width + x] = originalPixels[idx + 3] > 128;
     }
   }
-  
-  // STEP 1: Dilation (expand the mask by pixelThreshold)
-  const dilatedMask = new Array(width * height).fill(false);
+
+  // =============================================
+  // STEP 1: Erosion (shrink the mask by pixelThreshold)
+  // =============================================
+
+  const erodedMask = new Array(width * height).fill(false);
   const radius = Math.max(1, Math.floor(pixelThreshold / 2));
   
   for (let y = 0; y < height; y++) {
     for (let x = 0; x < width; x++) {
       const pixelIdx = y * width + x;
       
-      // Check neighborhood within radius
-      let hasNeighbor = false;
+      // Only check pixels that were masked in the original
+      if (!isMasked[pixelIdx]) continue;
+      
+      // Check if all pixels in neighborhood are masked in original mask
+      let allNeighborsMasked = true;
       for (let dy = -radius; dy <= radius; dy++) {
         for (let dx = -radius; dx <= radius; dx++) {
           const ny = y + dy;
           const nx = x + dx;
           
+          // If outside image or not masked, this pixel doesn't pass erosion
+          if (nx < 0 || nx >= width || ny < 0 || ny >= height || !isMasked[ny * width + nx]) {
+            allNeighborsMasked = false;
+            break;
+          }
+        }
+        if (!allNeighborsMasked) break;
+      }
+      
+      erodedMask[pixelIdx] = allNeighborsMasked;
+    }
+  }
+  
+  
+  // =============================================
+  // STEP 2: Dilation (expand the eroded mask by pixelThreshold)
+  // =============================================
+
+  const resultMask = new Array(width * height).fill(false);
+  
+  for (let y = 0; y < height; y++) {
+    for (let x = 0; x < width; x++) {
+      const pixelIdx = y * width + x;
+      
+      // Check neighborhood within circular radius
+      let hasNeighbor = false;
+      for (let dy = -radius; dy <= radius; dy++) {
+        for (let dx = -radius; dx <= radius; dx++) {
+          // Calculate Euclidean distance for circular structuring element
+          const distance = Math.sqrt(dx * dx + dy * dy);
+          
+          // Skip points outside the circle
+          if (distance > radius) continue;
+          
+          const ny = y + dy;
+          const nx = x + dx;
+          
           if (nx >= 0 && nx < width && ny >= 0 && ny < height) {
-            if (isMasked[ny * width + nx]) {
+            if (erodedMask[ny * width + nx]) {
               hasNeighbor = true;
               break;
             }
@@ -233,37 +276,7 @@ export function enhanceMaskEdges(canvas, pixelThreshold = 5, blurRadius = 1) {
         if (hasNeighbor) break;
       }
       
-      dilatedMask[pixelIdx] = hasNeighbor;
-    }
-  }
-  
-  // STEP 2: Erosion (shrink the mask by pixelThreshold)
-  const resultMask = new Array(width * height).fill(false);
-  
-  for (let y = 0; y < height; y++) {
-    for (let x = 0; x < width; x++) {
-      const pixelIdx = y * width + x;
-      
-      // Only check pixels that were marked in dilation
-      if (!dilatedMask[pixelIdx]) continue;
-      
-      // Check if all pixels in neighborhood are masked in dilated mask
-      let allNeighborsMasked = true;
-      for (let dy = -radius; dy <= radius; dy++) {
-        for (let dx = -radius; dx <= radius; dx++) {
-          const ny = y + dy;
-          const nx = x + dx;
-          
-          // If outside image or not masked, this pixel doesn't pass erosion
-          if (nx < 0 || nx >= width || ny < 0 || ny >= height || !dilatedMask[ny * width + nx]) {
-            allNeighborsMasked = false;
-            break;
-          }
-        }
-        if (!allNeighborsMasked) break;
-      }
-      
-      resultMask[pixelIdx] = allNeighborsMasked;
+      resultMask[pixelIdx] = hasNeighbor;
     }
   }
   
@@ -288,7 +301,49 @@ export function enhanceMaskEdges(canvas, pixelThreshold = 5, blurRadius = 1) {
     }
   }
   
-  // Put the morphologically closed mask on the temp canvas
+  // =============================================  
+  // STEP 3: Add darker borders to the mask
+  // =============================================
+
+  for (let y = 0; y < height; y++) {
+    for (let x = 0; x < width; x++) {
+      const pixelIdx = y * width + x;
+      const dataIdx = pixelIdx * 4;
+      
+      // Only process mask pixels
+      if (!resultMask[pixelIdx]) continue;
+      
+      // Check if this is a border pixel (within 2 pixels of an edge)
+      let isBorder = false;
+      const borderWidth = 2;  // Width of the border in pixels
+      
+      // Check in a small area around the pixel for non-mask pixels
+      for (let dy = -borderWidth; dy <= borderWidth && !isBorder; dy++) {
+        for (let dx = -borderWidth; dx <= borderWidth && !isBorder; dx++) {
+          // Skip checking the pixel itself
+          if (dx === 0 && dy === 0) continue;
+          
+          const ny = y + dy;
+          const nx = x + dx;
+          
+          // If we find a non-mask pixel within range, this is a border pixel
+          if (nx >= 0 && nx < width && ny >= 0 && ny < height && !resultMask[ny * width + nx]) {
+            isBorder = true;
+          }
+        }
+      }
+      
+      if (isBorder) {
+        // Make borders darker (around 40% darker)
+        resultData.data[dataIdx] = 0x66;     // Red: 102
+        resultData.data[dataIdx + 1] = 0x66; // Green: 102
+        resultData.data[dataIdx + 2] = 0x66; // Blue: 102
+        resultData.data[dataIdx + 3] = 230;  // Slightly more opaque
+      }
+    }
+  }
+  
+  // Put the morphologically opened mask on the temp canvas
   tempCtx.putImageData(resultData, 0, 0);
   
   // Apply blur to the result

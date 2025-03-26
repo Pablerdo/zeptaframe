@@ -838,8 +838,8 @@ export const useEditor = ({
       };
 
       const initialWorkspace = new fabric.Rect({
-        width: 720, //initialWidth.current, locked at 720 for now
-        height: 480, //initialHeight.current, locked at 480 for now
+        width: 960, //initialWidth.current, locked at 960 for now
+        height: 640, //initialHeight.current, locked at 640 for now
         name: "clip",
         fill: createGridPattern(),
         backgroundColor: 'white',

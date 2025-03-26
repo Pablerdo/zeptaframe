@@ -145,7 +145,7 @@ export const SegmentationSidebar = ({
 //   setMaskBinary,
 // }: SegmentationSidebarProps) => {
 
-//   const [imageSize, setImageSize] = useState({ w: 1024, h: 1024 });
+//   const [imageSize, setImageSize] = useState({ w: 960, h: 960 });
 //   const [maskSize, setMaskSize] = useState({ w: 256, h: 256 });
 //   const pointsRef = useRef<Array<{ x: number; y: number; label: number }>>([]);
 //   const [isSegmentationActive, setIsSegmentationActive] = useState(false);
@@ -280,8 +280,8 @@ export const SegmentationSidebar = ({
 //           maskImage.set({
 //             left: workspace.left || 0,
 //             top: workspace.top || 0,
-//             width: workspace.width || 720,
-//             height: workspace.height || 480,
+//             width: workspace.width || 960,
+//             height: workspace.height || 640,
 //             selectable: false,
 //             evented: false,
 //             opacity: 0.9,
@@ -373,8 +373,8 @@ export const SegmentationSidebar = ({
 //       maskImage.set({
 //         left: workspace.left || 0,
 //         top: workspace.top || 0,
-//         width: workspace.width || 720,
-//         height: workspace.height || 480,
+//         width: workspace.width || 960,
+//         height: workspace.height || 640,
 //         selectable: false,
 //         evented: false,
 //         opacity: 0.9
@@ -437,8 +437,8 @@ export const SegmentationSidebar = ({
 //       if (relativeX >= 0 && relativeX <= imageSize.w && relativeY >= 0 && relativeY <= imageSize.h) {
 
 //         // Get workspace dimensions
-//         const workspaceWidth = workspace.width || 720;
-//         const workspaceHeight = workspace.height || 480;
+//         const workspaceWidth = workspace.width || 960;
+//         const workspaceHeight = workspace.height || 640;
 
 
 //         // Normalize coordinates from workspace dimensions to target size
