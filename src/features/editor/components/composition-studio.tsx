@@ -15,9 +15,7 @@ import {
   VideoExport
 } from "@/features/editor/types";
 import { Navbar } from "@/features/editor/components/navbar";
-import { Footer } from "@/features/editor/components/footer";
 import { Sidebar } from "@/features/editor/components/sidebar";
-import { Toolbar } from "@/features/editor/components/toolbar";
 import { ShapeSidebar } from "@/features/editor/components/shape-sidebar";
 import { FillColorSidebar } from "@/features/editor/components/fill-color-sidebar";
 import { StrokeColorSidebar } from "@/features/editor/components/stroke-color-sidebar";
@@ -922,13 +920,6 @@ export const CompositionStudio = ({ initialData, isTrial }: CompositionStudioPro
                 onChangeActiveTool={onChangeActiveTool}
               />
               <main className="bg-transparent flex-1 overflow-hidden relative flex flex-col rounded-xl mx-2">
-                <Toolbar
-                  editor={activeEditor}
-                  activeTool={activeTool}
-                  onChangeActiveTool={onChangeActiveTool}
-                />
-
-
                 <div className="flex flex-row h-full w-full mb-4 relative overflow-hidden">
                   <ScrollableWorkbenchViewer
                     editorsContainerRef={editorsContainerRef}

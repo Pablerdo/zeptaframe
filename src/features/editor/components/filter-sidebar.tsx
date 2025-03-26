@@ -9,6 +9,7 @@ import { ToolSidebarHeader } from "@/features/editor/components/tool-sidebar-hea
 import { cn } from "@/lib/utils";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Button } from "@/components/ui/button";
+import { X } from "lucide-react";
 
 interface FilterSidebarProps {
   editor: Editor | undefined;
@@ -28,14 +29,23 @@ export const FilterSidebar = ({
   return (
     <aside
       className={cn(
-        "bg-white relative border-r z-[40] w-[360px] h-full flex flex-col",
+        "bg-editor-sidebar relative border-r z-[40] rounded-xl w-[320px] flex flex-col my-2",
         activeTool === "filter" ? "visible" : "hidden",
       )}
     >
-      <ToolSidebarHeader
-        title="Filters"
-        description="Apply a filter to selected image"
-      />
+      <div className="relative">
+        <ToolSidebarHeader
+          title="Filters"
+          description="Apply a filter to selected image"
+        />
+        <button
+          onClick={onClose}
+          className="absolute top-3 right-3 p-1.5 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+          title="Close sidebar"
+        >
+          <X className="h-6 w-6 text-gray-600 dark:text-gray-100" />
+        </button>
+      </div>
       <ScrollArea>
         <div className="p-4 space-y-1 border-b">
           {filters.map((filter) => (
@@ -51,7 +61,6 @@ export const FilterSidebar = ({
           ))}
         </div>
       </ScrollArea>
-      <ToolSidebarClose onClick={onClose} />
     </aside>
   );
 };

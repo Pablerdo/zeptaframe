@@ -10,6 +10,7 @@ import { ToolSidebarHeader } from "@/features/editor/components/tool-sidebar-hea
 import { cn } from "@/lib/utils";
 import { Slider } from "@/components/ui/slider";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { X } from "lucide-react";
 
 interface OpacitySidebarProps {
   editor: Editor | undefined;
@@ -45,14 +46,23 @@ export const OpacitySidebar = ({
   return (
     <aside
       className={cn(
-        "bg-white relative border-r z-[40] w-[360px] h-full flex flex-col",
+        "bg-editor-sidebar relative border-r z-[40] rounded-xl w-[320px] flex flex-col my-2",
         activeTool === "opacity" ? "visible" : "hidden",
       )}
     >
-      <ToolSidebarHeader
-        title="Opacity"
-        description="Change the opacity of the selected object"
-      />
+      <div className="relative">
+        <ToolSidebarHeader
+          title="Opacity"
+          description="Change the opacity of the selected object"
+        />
+        <button
+          onClick={onClose}
+          className="absolute top-3 right-3 p-1.5 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+          title="Close sidebar"
+        >
+          <X className="h-6 w-6 text-gray-600 dark:text-gray-100" />
+        </button>
+      </div>
       <ScrollArea>
         <div className="p-4 space-y-4 border-b">
           <Slider
@@ -64,7 +74,6 @@ export const OpacitySidebar = ({
           />
         </div>
       </ScrollArea>
-      <ToolSidebarClose onClick={onClose} />
     </aside>
   );
 };

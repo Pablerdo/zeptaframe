@@ -30,6 +30,7 @@ import { toast } from "sonner";
 import { useUserStatus } from "@/features/auth/contexts/user-status-context";
 import { AuthModal } from "./auth-modal";
 import { comfyDeployWorkflows } from "../utils/comfy-deploy-workflows";
+import { Toolbar } from "./toolbar";
 
 interface WorkbenchProps {
   projectId: string;
@@ -723,7 +724,12 @@ export const Workbench = ({
   };
 
   return (
-    <>
+    <div className="flex flex-col h-full"> 
+      <Toolbar
+        editor={editor}
+        activeTool={activeTool}
+        onChangeActiveTool={onChangeActiveTool}
+      />
       <div className="grid h-full" style={{
         gridTemplateColumns: activeWorkbenchTool !== "select" 
           ? "minmax(0, 1fr) 300px 75px" 
@@ -748,9 +754,9 @@ export const Workbench = ({
             />
             {/* workbench number indicator */}
             <div className="absolute top-2 left-2 flex items-center space-x-2">
-              <div className="bg-blue-600 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs font-bold">
+              {/* <div className="bg-blue-600 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs font-bold">
                 {index + 1}
-              </div>
+              </div> */}
 
               <button
                 onClick={handleDelete}
@@ -1148,6 +1154,6 @@ export const Workbench = ({
           </div>
         </div>
       )}
-    </>
+    </div>
   );
 }; 

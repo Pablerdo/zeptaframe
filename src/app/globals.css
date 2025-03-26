@@ -115,7 +115,7 @@ body {
   }
   
   .modern-toolbar {
-    @apply bg-editor-sidebar shadow-soft dark:shadow-dark-raised rounded-xl mx-2 my-2 border border-gray-100 dark:border-slate-700;
+    @apply bg-editor-sidebar shadow-soft dark:shadow-dark-raised rounded-xl my-2 border border-gray-100 dark:border-slate-700;
   }
   
   .modern-button {
