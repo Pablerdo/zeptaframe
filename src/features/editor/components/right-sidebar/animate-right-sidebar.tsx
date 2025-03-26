@@ -6,6 +6,7 @@ import {
   Editor,
   SegmentedMask,
   ActiveSegmentationTool,
+  ActiveTool,
 } from "@/features/editor/types";
 import { ToolSidebarHeader } from "@/features/editor/components/tool-sidebar-header";
 
@@ -21,6 +22,7 @@ interface AnimateRightSidebarProps {
   editor: Editor | undefined;
   activeWorkbenchTool: ActiveWorkbenchTool;
   onChangeActiveWorkbenchTool: (tool: ActiveWorkbenchTool) => void;
+  onChangeActiveTool: (tool: ActiveTool) => void;
   samWorker: React.RefObject<Worker | null>;
   samWorkerLoading: boolean;
   prevMaskArray: Float32Array | null;
@@ -31,12 +33,15 @@ interface AnimateRightSidebarProps {
   setMaskBinary: (maskBinary: HTMLCanvasElement | null) => void;
   segmentedMasks: SegmentedMask[];
   setSegmentedMasks: (masks: SegmentedMask[]) => void;
-};
+  activeSegmentationTool: ActiveSegmentationTool;
+  setActiveSegmentationTool: (tool: ActiveSegmentationTool) => void;
+}
 
 export const AnimateRightSidebar = ({
   editor,
   activeWorkbenchTool,
   onChangeActiveWorkbenchTool,
+  onChangeActiveTool,
   samWorker,
   samWorkerLoading,
   prevMaskArray,
@@ -47,12 +52,13 @@ export const AnimateRightSidebar = ({
   setMaskBinary,
   segmentedMasks,
   setSegmentedMasks,
+  activeSegmentationTool,
+  setActiveSegmentationTool,
 }: AnimateRightSidebarProps) => {
 
   const [imageSize, setImageSize] = useState({ w: 1024, h: 1024 });
   const [maskSize, setMaskSize] = useState({ w: 256, h: 256 });
   const pointsRef = useRef<Array<{ x: number; y: number; label: number }>>([]);
-  const [activeSegmentationTool, setActiveSegmentationTool] = useState<ActiveSegmentationTool>("none");
   const [recordingMotion, setRecordingMotion] = useState<string | null>(null);
   const [activeAnimations, setActiveAnimations] = useState<{[key: string]: {
     stop: () => void;
@@ -63,44 +69,13 @@ export const AnimateRightSidebar = ({
   const [editingMaskId, setEditingMaskId] = useState<string | null>(null);
   const [tempMaskName, setTempMaskName] = useState<string>("");
 
-  const [manualMaskPoints, setManualMaskPoints] = useState<Array<{x: number, y: number}>>([]);
-  const [temporaryPolygon, setTemporaryPolygon] = useState<fabric.Polygon | null>(null);
-
   const [hasFinishedDragging, setHasFinishedDragging] = useState(false);
-  // When the component mounts, enable drawing mode to prevent object selection
-  // useEffect(() => {
-  //   if (editor) {
-  //     console.log("animate right sidebar mounted");
-  //     // Disable selection mode and enable drawing mode when sidebar opens
-  //     editor.disableDrawingMode();
-  //     editor.canvas.selection = false;
-      
-  //     // Disable all object interactions
-  //     editor.canvas.forEachObject((obj) => {
-  //       obj.selectable = false;
-  //       obj.evented = false;
-  //     });
-      
-  //     // Set cursor style
-  //     editor.canvas.defaultCursor = 'default';
-      
-  //     // Clean up when unmounting
-  //     return () => {
-  //       editor.canvas.selection = true;
-  //       editor.canvas.defaultCursor = 'default';
-        
-  //       // Re-enable object interactions
-  //       editor.canvas.forEachObject((obj) => {
-  //         obj.selectable = true;
-  //         obj.evented = true;
-  //       });
-  //     };
-  //   }
-  // }, [editor]);
+
 
   const onClose = () => {
     setActiveSegmentationTool("none");
     onChangeActiveWorkbenchTool("select");
+    onChangeActiveTool("select");
   };
 
   const handleNewManualMask = () => {
@@ -113,16 +88,82 @@ export const AnimateRightSidebar = ({
       const existingMasks = editor.canvas.getObjects().filter(obj => obj.data?.isMask);
       existingMasks.forEach(mask => editor.canvas.remove(mask));
       editor.canvas.renderAll();
-    }
     
-    setActiveSegmentationTool("manual");
-    setManualMaskPoints([]);
-    
-    if (editor) {
-      // Create a completely new array with a unique ID for the in-progress mask
+      setActiveSegmentationTool("manual");
+
+      // Enable drawing mode, so that we can draw a manual mask
+      editor.enableSegmentationMode(true);
+      
+      // Remove any previous path:created listeners to avoid duplicates
+      editor.canvas.off('path:created');
+      
+      // Add event listener for when a path is created (after mouse up)
+      editor.canvas.on('path:created', function(e: any) {
+        const path = e.path as fabric.Path;
+        
+        // Add metadata to identify this as a manual mask path
+        path.data = { isManualMaskPath: true };
+        
+        // Minimum distance to consider the path closed
+        const closeDistance = 20;
+        
+        // Check if the path is closed (start and end points are close enough)
+        if (path.path && Array.isArray(path.path)) {
+          if (path.path.length < 10) {
+            // Path is too short, discard and allow starting over
+            editor.canvas.remove(path);
+            return;
+          }
+          
+          // Get start and end coordinates
+          const start = path.path[0];
+          const end = path.path[path.path.length - 1];
+          
+          if (Array.isArray(start) && start[0] === 'M' && Array.isArray(end) && end[0] === 'L') {
+            const startX = start[1] as number;
+            const startY = start[2] as number;
+            const endX = end[1] as number;
+            const endY = end[2] as number;
+            
+            // Calculate distance between start and end points
+            const dx = endX - startX;
+            const dy = endY - startY;
+            const distance = Math.sqrt(dx * dx + dy * dy);
+            
+            if (distance < closeDistance) {
+              // Add a closing segment to ensure it's a closed path
+              // Cast to any to bypass type checking for the path array
+              (path.path as any).push(['L', startX, startY]);
+              
+              path.set({ 
+                stroke: 'rgba(255, 0, 0, 0.7)',
+                strokeWidth: 2,
+                fill: 'transparent'
+              });
+              
+              // Save the mask
+              handleSaveInProgressManualMask();
+            } else {
+              // Not closed enough, discard and allow starting over
+              editor.canvas.remove(path);
+            }
+          } else {
+            // Path doesn't have expected structure, discard
+            editor.canvas.remove(path);
+          }
+        }
+      });
+      
       const updatedMasks = [
-        { id: crypto.randomUUID(), url: '', binaryUrl: '', name: 'New Manual Object', inProgress: true },
-        ...segmentedMasks.map(mask => ({ ...mask, isApplied: false }))
+        ...segmentedMasks,
+        {
+          id: 'manual-mask-in-progress',
+          name: 'Manual Mask (in progress)',
+          url: '',
+          binaryUrl: '',
+          inProgress: true,
+          isApplied: false
+        }
       ];
 
       // Force update by creating a new array
@@ -137,17 +178,185 @@ export const AnimateRightSidebar = ({
   };
 
   const handleSaveInProgressManualMask = () => {
-    // TODO: Implement this
-
-    // This will run when the user reaches the start point of the manual mask enclosure
-
-
+    if (editor?.canvas) {
+      editor.enableSegmentationMode(false);
+      
+      // Get the drawn path from the canvas
+      const drawnPath = editor.canvas.getObjects().find(
+        obj => obj.data?.isManualMaskPath
+      ) as fabric.Object & { path?: any[] };
+      
+      if (drawnPath && drawnPath.path) {
+        // Create a mask from the path
+        const fabricCanvas = editor.canvas;
+        const workspace = editor.getWorkspace();
+        if (!workspace) return;
+        
+        // Get workspace dimensions and position
+        const workspaceLeft = workspace.left as number || 0;
+        const workspaceTop = workspace.top as number || 0;
+        const workspaceWidth = workspace.width as number || 960;
+        const workspaceHeight = workspace.height as number || 640;
+        
+        // Create a binary mask canvas first (for the data)
+        const binaryCanvas = document.createElement('canvas');
+        binaryCanvas.width = workspaceWidth;
+        binaryCanvas.height = workspaceHeight;
+        const binaryCtx = binaryCanvas.getContext('2d');
+        
+        if (!binaryCtx) return;
+        
+        // Fill with black (transparent in mask terms)
+        binaryCtx.fillStyle = 'black';
+        binaryCtx.fillRect(0, 0, binaryCanvas.width, binaryCanvas.height);
+        
+        // Fill the path with white (opaque in mask terms)
+        binaryCtx.fillStyle = 'white';
+        binaryCtx.beginPath();
+        
+        // Recreate the path from Fabric.js path but adjust for workspace position
+        if (Array.isArray(drawnPath.path)) {
+          drawnPath.path.forEach((pathCmd: any[], i: number) => {
+            if (i === 0 && pathCmd[0] === 'M') {
+              // Adjust coordinates to be relative to the workspace
+              const x = pathCmd[1] - workspaceLeft;
+              const y = pathCmd[2] - workspaceTop;
+              binaryCtx.moveTo(x, y);
+            } else if (pathCmd[0] === 'L') {
+              // Adjust coordinates to be relative to the workspace
+              const x = pathCmd[1] - workspaceLeft;
+              const y = pathCmd[2] - workspaceTop;
+              binaryCtx.lineTo(x, y);
+            } else if (pathCmd[0] === 'Q') {
+              // Adjust coordinates to be relative to the workspace
+              const x1 = pathCmd[1] - workspaceLeft;
+              const y1 = pathCmd[2] - workspaceTop;
+              const x2 = pathCmd[3] - workspaceLeft;
+              const y2 = pathCmd[4] - workspaceTop;
+              binaryCtx.quadraticCurveTo(x1, y1, x2, y2);
+            } else if (pathCmd[0] === 'C') {
+              // Adjust coordinates to be relative to the workspace
+              const x1 = pathCmd[1] - workspaceLeft;
+              const y1 = pathCmd[2] - workspaceTop;
+              const x2 = pathCmd[3] - workspaceLeft;
+              const y2 = pathCmd[4] - workspaceTop;
+              const x3 = pathCmd[5] - workspaceLeft;
+              const y3 = pathCmd[6] - workspaceTop;
+              binaryCtx.bezierCurveTo(x1, y1, x2, y2, x3, y3);
+            }
+          });
+        }
+        
+        // Close and fill the path
+        binaryCtx.closePath();
+        binaryCtx.fill();
+        
+        // Now create a visual representation canvas with transparency
+        const tempCanvas = document.createElement('canvas');
+        tempCanvas.width = workspaceWidth;
+        tempCanvas.height = workspaceHeight;
+        const tempCtx = tempCanvas.getContext('2d');
+        
+        if (!tempCtx) return;
+        
+        // Start with a transparent canvas
+        tempCtx.clearRect(0, 0, tempCanvas.width, tempCanvas.height);
+        
+        // Draw a semi-transparent overlay
+        tempCtx.fillStyle = 'rgba(128, 128, 255, 0.6)'; // Semi-transparent blue
+        
+        // Recreate the same path for the visual representation
+        tempCtx.beginPath();
+        if (Array.isArray(drawnPath.path)) {
+          drawnPath.path.forEach((pathCmd: any[], i: number) => {
+            if (i === 0 && pathCmd[0] === 'M') {
+              const x = pathCmd[1] - workspaceLeft;
+              const y = pathCmd[2] - workspaceTop;
+              tempCtx.moveTo(x, y);
+            } else if (pathCmd[0] === 'L') {
+              const x = pathCmd[1] - workspaceLeft;
+              const y = pathCmd[2] - workspaceTop;
+              tempCtx.lineTo(x, y);
+            } else if (pathCmd[0] === 'Q') {
+              const x1 = pathCmd[1] - workspaceLeft;
+              const y1 = pathCmd[2] - workspaceTop;
+              const x2 = pathCmd[3] - workspaceLeft;
+              const y2 = pathCmd[4] - workspaceTop;
+              tempCtx.quadraticCurveTo(x1, y1, x2, y2);
+            } else if (pathCmd[0] === 'C') {
+              const x1 = pathCmd[1] - workspaceLeft;
+              const y1 = pathCmd[2] - workspaceTop;
+              const x2 = pathCmd[3] - workspaceLeft;
+              const y2 = pathCmd[4] - workspaceTop;
+              const x3 = pathCmd[5] - workspaceLeft;
+              const y3 = pathCmd[6] - workspaceTop;
+              tempCtx.bezierCurveTo(x1, y1, x2, y2, x3, y3);
+            }
+          });
+        }
+        tempCtx.closePath();
+        tempCtx.fill();
+        
+        // Add a border to make it more visible
+        tempCtx.strokeStyle = 'rgba(0, 0, 255, 0.8)';
+        tempCtx.lineWidth = 2;
+        tempCtx.stroke();
+        
+        // Set the masks
+        setMask(tempCanvas);
+        setMaskBinary(binaryCanvas);
+        
+        // Remove the drawing path
+        fabricCanvas.remove(drawnPath);
+        
+        // Turn off path:created listener
+        fabricCanvas.off('path:created');
+        
+        // Add the new mask to segmentedMasks
+        const newMaskId = `mask-${Date.now()}`;
+        const newMask: SegmentedMask = {
+          id: newMaskId,
+          name: `Manual Mask ${segmentedMasks.length + 1}`,
+          url: tempCanvas.toDataURL(),
+          binaryUrl: binaryCanvas.toDataURL(),
+          isApplied: false,
+          trajectory: undefined,
+          rotation: 0
+        };
+        
+        // Remove the 'in progress' mask and add the new one
+        const updatedMasks = segmentedMasks
+          .filter(mask => mask.id !== 'manual-mask-in-progress')
+          .concat(newMask);
+        
+        setSegmentedMasks(updatedMasks);
+      }
+      
+      // Reset segmentation tool and canvas state
+      setActiveSegmentationTool("none");
+      editor.canvas.defaultCursor = 'default';
+    }
   };
 
   const handleCancelInProgressManualMask = () => {
-    // TODO: Implement this
-
-    // This will run if the user has a mouseUp event before reaching the start point of the manual mask enclosure
+    if (editor?.canvas) {
+      editor.enableSegmentationMode(false);
+      setActiveSegmentationTool("none");
+      
+      // Remove any drawing paths
+      const existingPaths = editor.canvas.getObjects().filter(obj => obj.data?.isManualMaskPath);
+      existingPaths.forEach(path => editor.canvas.remove(path));
+      
+      // Remove the in-progress mask from the list
+      const updatedMasks = segmentedMasks.filter(mask => mask.id !== 'manual-mask-in-progress');
+      setSegmentedMasks(updatedMasks);
+      
+      // Reset canvas state
+      editor.canvas.defaultCursor = 'default';
+      
+      // Remove path:created listener
+      editor.canvas.off('path:created');
+    }
   };
 
   const handleNewMask = () => {
@@ -191,7 +400,6 @@ export const AnimateRightSidebar = ({
       
       // Get count of actual saved masks (excluding the stub)
       const savedMasksCount = segmentedMasks.filter(mask => mask.url).length;
-
 
       // First update the state with a new array
       const updatedMasks = [
@@ -1092,7 +1300,7 @@ export const AnimateRightSidebar = ({
             {/* Always show the "New Object" stub at the top */}
             <div className="flex items-center bg-gray-100 dark:bg-editor-bg-dark p-2 border border-gray-300 dark:border-gray-400 rounded-md">
               <div className="flex items-center justify-between w-full">
-                {activeSegmentationTool === "none" && (
+                {activeSegmentationTool !== "auto" && (
                   /* Add loading and status indicator */
                   <>
                     <Button
@@ -1112,47 +1320,45 @@ export const AnimateRightSidebar = ({
                 )}
 
                 {activeSegmentationTool === "auto" && (
-                  <>
-                    <div className="flex flex-col gap-2">
-                      <div className="text-md pl-1 text-muted-foreground animate-[pulse_1s_ease-in-out_infinite]">Click an object to animate</div>
-                      <div className="flex gap-2">
-                        <Button
-                          variant="default"
-                          size="sm"
-                          onClick={handleSaveInProgressMask}
-                          disabled={!mask}
-                          className="bg-green-600 hover:bg-green-700 text-white"
-                        >
-                          <Check className="w-4 h-4 mr-1" />
-                          Save Mask as Object
-                        </Button>
-                        <Button
-                          variant="default"
-                          size="sm"
-                          onClick={handleCancelInProgressMask}
-                          className="bg-red-500 hover:bg-red-600 text-white"
-                        >
-                          <X className="w-4 h-4 mr-1" />
-                          Cancel
-                        </Button>
-                      </div>
+                  <div className="flex flex-col gap-2 w-full">
+                    <div className="w-full text-md text-center pl-1 animate-[pulse_1s_ease-in-out_infinite]">Click an object to animate</div>
+                    <div className="flex gap-2 w-full">
+                      <Button
+                        variant="default"
+                        size="sm"
+                        onClick={handleSaveInProgressMask}
+                        disabled={!mask}
+                        className="flex-1 bg-green-600 hover:bg-green-700 text-white"
+                      >
+                        <Check className="w-4 h-4 mr-1" />
+                        Save Mask as Object
+                      </Button>
+                      <Button
+                        variant="default"
+                        size="sm"
+                        onClick={handleCancelInProgressMask}
+                        className="flex-1 bg-red-500 hover:bg-red-600 text-white"
+                      >
+                        <X className="w-4 h-4 mr-1" />
+                        Cancel
+                      </Button>
                     </div>
-                  </>
+                  </div>
                 )}
               </div>
             </div>
 
             {/* Add a manual animation button */}
 
-            <div className="flex items-center bg-gray-100 dark:bg-editor-bg-dark justify-between p-2 border border-gray-300 dark:border-gray-400 rounded-md">
-              <div className="flex items-center space-x-2">
-                {activeSegmentationTool === "none" && (
+            <div className="flex items-center bg-gray-100 dark:bg-editor-bg-dark justify-between p-2 border border-gray-300 dark:border-gray-400 rounded-md w-full">
+              <div className="flex items-center space-x-2 w-full">
+                {activeSegmentationTool !== "manual" && (
                   /* Add loading and status indicator */
                   <>
                     <Button
                       variant="default"
                       size="sm"
-                      onClick={handleNewMask}
+                      onClick={() => handleNewManualMask()}
                       disabled={samWorkerLoading}
                     >
 
@@ -1164,8 +1370,8 @@ export const AnimateRightSidebar = ({
 
                 {activeSegmentationTool === "manual" && (
                   <>   
-                    <div className="flex flex-col gap-2">
-                      <div className="text-md pl-1 text-foreground/80 animate-[pulse_1s_ease-in-out_infinite]">
+                    <div className="flex flex-col gap-2 w-full">
+                      <div className="text-md text-center pl-1 text-white animate-[pulse_1s_ease-in-out_infinite]">
                         Encircle the object to create a mask. 
                       </div>
                       <Button
@@ -1223,7 +1429,7 @@ export const AnimateRightSidebar = ({
                     <div className="flex items-center justify-between">
                       <div className="flex items-center space-x-2">
                         <img 
-                          src={mask.url} 
+                          src={mask.binaryUrl} 
                           alt={mask.name} 
                           className="w-12 h-12 object-contain"
                         />

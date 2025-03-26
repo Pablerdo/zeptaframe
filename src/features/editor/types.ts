@@ -111,6 +111,7 @@ export type ActiveTool =
   | "remove-bg"
   | "templates"
   | "segment"
+  | "crop";
 
 export type ActiveWorkbenchTool = 
   | "select"
@@ -340,10 +341,10 @@ export interface Editor {
   changeSize: (value: { width: number; height: number }) => void;
   enableDrawingMode: () => void;
   disableDrawingMode: () => void;
-  enableSegmentationMode: () => void;
+  enableSegmentationMode: (drawMode: boolean) => void;
   disableSegmentationMode: () => void;
-  enableManualSegmentationMode: () => void;
-  disableManualSegmentationMode: () => void;
+  enableCropMode: () => void;
+  disableCropMode: () => void;
   onCopy: () => void;
   onPaste: () => void;
   changeImageFilter: (value: string) => void;

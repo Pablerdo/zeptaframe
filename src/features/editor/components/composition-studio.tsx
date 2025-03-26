@@ -30,7 +30,7 @@ import { FilterSidebar } from "@/features/editor/components/filter-sidebar";
 import { DrawSidebar } from "@/features/editor/components/draw-sidebar";
 // import { TemplateSidebar } from "@/features/editor/components/template-sidebar";
 import { SettingsSidebar } from "@/features/editor/components/settings-sidebar";
-import { SegmentationSidebar } from "@/features/editor/components/segmentation-sidebar";
+import { CropSidebar } from "@/features/editor/components/crop-sidebar";
 import { cn } from "@/lib/utils";
 import CollapsibleVideoViewer from "@/features/editor/components/collapsible-video-viewer";
 import { ScrollableWorkbenchViewer } from "@/features/editor/components/scrollable-workbench-viewer";
@@ -852,7 +852,7 @@ export const CompositionStudio = ({ initialData, isTrial }: CompositionStudioPro
                 activeTool={activeTool}
                 onChangeActiveTool={onChangeActiveTool}
               />
-              <SegmentationSidebar
+              <CropSidebar
                 editor={activeEditor}
                 activeTool={activeTool}
                 onChangeActiveTool={onChangeActiveTool}

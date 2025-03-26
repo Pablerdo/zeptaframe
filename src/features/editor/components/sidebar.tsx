@@ -68,11 +68,10 @@ export const Sidebar = ({
         />
         <SidebarItem
           icon={Crosshair}
-          label="Segment"
-          isActive={activeTool === "segment"}
-          onClick={() => onChangeActiveTool("segment")}
+          label="Crop"
+          isActive={activeTool === "crop"}
+          onClick={() => onChangeActiveTool("crop")}
         />
-
         <SidebarItem
           icon={Settings}
           label="Settings"

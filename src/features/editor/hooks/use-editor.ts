@@ -629,34 +629,24 @@ const buildEditor = ({
       return value;
     },
     selectedObjects,
-    enableSegmentationMode: () => {
+    enableSegmentationMode: (drawMode: boolean) => {
       canvas.discardActiveObject();
       canvas.renderAll();
-      canvas.selection = false; // Disable group selection
-      canvas.defaultCursor = 'crosshair';
-      // Disable all object interactions while in segmentation mode
-      canvas.forEachObject((obj) => {
-        obj.selectable = false;
-        obj.evented = false;
-      });
+      canvas.isDrawingMode = drawMode;
+      canvas.freeDrawingBrush.width = 2;
+      canvas.freeDrawingBrush.color = "#000000";
     },
     disableSegmentationMode: () => {
-      canvas.selection = true;
-      canvas.defaultCursor = 'default';
-      // Re-enable object interactions
-      canvas.forEachObject((obj) => {
-        obj.selectable = true;
-        obj.evented = true;
-      });
+      canvas.isDrawingMode = false;
     },
-    enableManualSegmentationMode: () => {
+    enableCropMode: () => {
       canvas.discardActiveObject();
       canvas.renderAll();
       canvas.isDrawingMode = true;
       canvas.freeDrawingBrush.width = strokeWidth;
       canvas.freeDrawingBrush.color = strokeColor;
     },
-    disableManualSegmentationMode: () => {
+    disableCropMode: () => {
       canvas.isDrawingMode = false;
     },
     workspaceURL,

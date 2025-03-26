@@ -4,7 +4,7 @@ import { fabric } from "fabric";
 import { useEffect, useRef, useState, useCallback, useMemo } from "react";
 import { MessageSquare, Trash2, Video, Film, ArrowRightSquare, ArrowRightCircle, Loader2, CornerUpRight, ChevronDown, X } from "lucide-react";
 import { useEditor } from "@/features/editor/hooks/use-editor";
-import { ActiveTool, ActiveWorkbenchTool, BaseVideoModel, Editor as EditorType, JSON_KEYS, SegmentedMask, SupportedVideoModelId, VideoGeneration, WorkflowMode } from "@/features/editor/types";
+import { ActiveSegmentationTool, ActiveTool, ActiveWorkbenchTool, BaseVideoModel, Editor as EditorType, JSON_KEYS, SegmentedMask, SupportedVideoModelId, VideoGeneration, WorkflowMode } from "@/features/editor/types";
 import { cn } from "@/lib/utils";
 import { RightSidebarItem } from "./right-sidebar-item";
 import { AnimateRightSidebar } from "./right-sidebar/animate-right-sidebar";
@@ -123,6 +123,8 @@ export const Workbench = ({
   const [selectedModel, setSelectedModel] = useState<BaseVideoModel>(videoModels[defaultVideoModelId]);
   const [cameraControl, setCameraControl] = useState<Record<string, any>>({});
 
+  const [activeSegmentationTool, setActiveSegmentationTool] = useState<ActiveSegmentationTool>("none");
+
   
   const { lastFrameGenerations, importLastFrame, setActiveEditor } = useLastFrames();
   const [dropdownOpen, setDropdownOpen] = useState(false);
@@ -230,30 +232,25 @@ export const Workbench = ({
     if (isActive && editor) {
       if (activeTool === "draw") {
         editor.enableDrawingMode();
-      } else if (activeWorkbenchTool === "animate") {
-        // When in animation mode, disable selection but keep canvas interactive for segmentation
+      } else if (activeTool === "segment") {
         editor.disableDrawingMode();
-        
-        // Disable selection for all objects
-        editor.canvas.selection = false;
-        editor.canvas.forEachObject((obj) => {
-          obj.selectable = false;
-          obj.evented = false;
-        });
-      } else {
-        // Default behavior - normal selection mode
+        editor.disableCropMode();
+        if (activeSegmentationTool === "manual") {
+          editor.enableSegmentationMode(true);
+        } else {
+          editor.enableSegmentationMode(false);
+        }
+      } else if (activeTool === "crop") {
         editor.disableDrawingMode();
         editor.disableSegmentationMode();
-        
-        // Re-enable selection
-        editor.canvas.selection = true;
-        editor.canvas.forEachObject((obj) => {
-          obj.selectable = true;
-          obj.evented = true;
-        });
+        editor.enableCropMode();
+      } else { 
+        editor.disableDrawingMode();
+        editor.disableSegmentationMode();
+        editor.disableCropMode();
       }
     }
-  }, [isActive, activeTool, activeWorkbenchTool, editor]);
+  }, [isActive, activeTool, activeSegmentationTool, editor]);
 
   // Prevent canvas from being reset or losing content
   const handleContainerClick = (e: React.MouseEvent) => {
@@ -860,7 +857,10 @@ export const Workbench = ({
             <AnimateRightSidebar 
               editor={editor}
               activeWorkbenchTool={activeWorkbenchTool}
+              activeSegmentationTool={activeSegmentationTool}
+              setActiveSegmentationTool={setActiveSegmentationTool}
               onChangeActiveWorkbenchTool={setActiveWorkbenchTool}
+              onChangeActiveTool={onChangeActiveTool}
               segmentedMasks={segmentedMasks}
               setSegmentedMasks={setSegmentedMasks}
               samWorker={samWorker}
@@ -903,7 +903,10 @@ export const Workbench = ({
                 icon={ArrowRightCircle}
                 label="Animate"
                 isActive={activeWorkbenchTool === "animate"}
-                onClick={() => setActiveWorkbenchTool("animate")}
+                onClick={() => {
+                  setActiveWorkbenchTool("animate");
+                  onChangeActiveTool("segment");
+                }}
               />
               <RightSidebarItem
                 icon={Video}

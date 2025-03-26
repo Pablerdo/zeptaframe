@@ -115,38 +115,6 @@ export function float32ArrayToCanvas(array, width, height) {
   const C = 4; // 4 output channels, RGBA
   const imageData = new Uint8ClampedArray(array.length * C);
   
-    // // First pass: identify which pixels are part of the mask
-    // const isMasked = new Array(array.length).fill(false);
-    // for (let i = 0; i < array.length; i++) {
-    //   isMasked[i] = array[i] > 0;
-    // }
-    
-    // // Second pass: identify border pixels (pixels at the edge of the mask)
-    // const isBorder = new Array(array.length).fill(false);
-    
-    // for (let y = 0; y < height; y++) {
-    //   for (let x = 0; x < width; x++) {
-    //     const idx = y * width + x;
-        
-    //     // Skip if not part of the mask
-    //     if (!isMasked[idx]) continue;
-        
-    //     // Check if any neighboring pixel is not masked (8-connected neighbors)
-    //     const hasNonMaskedNeighbor = 
-    //       (x > 0 && !isMasked[idx - 1]) ||                     // left
-    //       (x < width - 1 && !isMasked[idx + 1]) ||             // right
-    //       (y > 0 && !isMasked[idx - width]) ||                 // top
-    //       (y < height - 1 && !isMasked[idx + width]) ||        // bottom
-    //       (x > 0 && y > 0 && !isMasked[idx - width - 1]) ||    // top-left
-    //       (x < width - 1 && y > 0 && !isMasked[idx - width + 1]) || // top-right
-    //       (x > 0 && y < height - 1 && !isMasked[idx + width - 1]) || // bottom-left
-    //       (x < width - 1 && y < height - 1 && !isMasked[idx + width + 1]); // bottom-right
-        
-    //     isBorder[idx] = hasNonMaskedNeighbor;
-    //   }
-    // }
-    
-    // // Third pass: set color values
   // Create a simple mask without the border detection
   for (let srcIdx = 0; srcIdx < array.length; srcIdx++) {
     const trgIdx = srcIdx * C;

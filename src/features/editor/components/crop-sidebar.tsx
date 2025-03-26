@@ -11,7 +11,7 @@ import { cn } from "@/lib/utils";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Button } from "@/components/ui/button";
 
-interface SegmentationSidebarProps {
+interface CropSidebarProps {
   editor: Editor | undefined;
   activeTool: ActiveTool;
   onChangeActiveTool: (tool: ActiveTool) => void;
@@ -19,16 +19,17 @@ interface SegmentationSidebarProps {
 
 }
 
-export const SegmentationSidebar = ({ 
+export const CropSidebar = ({ 
   editor, 
   activeTool, 
   onChangeActiveTool,
   samWorker 
-}: SegmentationSidebarProps) => {
+}: CropSidebarProps) => {
   // const { data, isLoading, isError } = useGetImages();
   const { data, isLoading, isError } = useGetSegmentedObjects();
 
   const onClose = () => {
+    editor?.disableCropMode();
     onChangeActiveTool("select");
   };
 
@@ -36,11 +37,11 @@ export const SegmentationSidebar = ({
     <aside
       className={cn(
         "bg-editor-sidebar relative border-r z-[40] rounded-xl w-[320px] flex flex-col my-2",
-        activeTool === "segment" ? "visible" : "hidden"
+        activeTool === "crop" ? "visible" : "hidden"
       )}
     >
       <div className="relative">
-        <ToolSidebarHeader title="Segmented Objects" description="Crop objects from your canvas and save them. Coming soon..." />
+        <ToolSidebarHeader title="Cropped Objects" description="Crop objects from your canvas and save them. Coming soon..." />
         <button
           onClick={onClose}
           className="absolute top-3 right-3 p-1.5 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
@@ -53,7 +54,7 @@ export const SegmentationSidebar = ({
         <Button
           onClick={() => void 0}
         >
-          Segment Object
+          Crop Object
         </Button>
       </div>
       {isLoading && (
