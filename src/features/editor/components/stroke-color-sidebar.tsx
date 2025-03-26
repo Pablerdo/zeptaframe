@@ -5,6 +5,7 @@ import { ColorPicker } from "@/features/editor/components/color-picker";
 
 import { cn } from "@/lib/utils";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { X } from "lucide-react";
 
 interface StrokeColorSidebarProps {
   editor: Editor | undefined;
@@ -34,10 +35,19 @@ export const StrokeColorSidebar = ({
         activeTool === "stroke-color" ? "visible" : "hidden",
       )}
     >
-      <ToolSidebarHeader
-        title="Stroke color"
-        description="Add stroke color to your element"
-      />
+      <div className="relative">
+        <ToolSidebarHeader
+          title="Stroke color"
+          description="Add stroke color to your element"
+        />
+        <button
+          onClick={onClose}
+          className="absolute top-3 right-3 p-1.5 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+          title="Close sidebar"
+        >
+          <X className="h-6 w-6 text-gray-600 dark:text-gray-100" />
+        </button>
+      </div>
       <ScrollArea>
         <div className="p-4 space-y-6">
           <ColorPicker
@@ -46,7 +56,6 @@ export const StrokeColorSidebar = ({
           />
         </div>
       </ScrollArea>
-      <ToolSidebarClose onClick={onClose} />
     </aside>
   );
 };

@@ -31,6 +31,8 @@ import { useUserStatus } from "@/features/auth/contexts/user-status-context";
 import { AuthModal } from "./auth-modal";
 import { comfyDeployWorkflows } from "../utils/comfy-deploy-workflows";
 import { Toolbar } from "./toolbar";
+import { BuyCreditsModal } from "@/features/subscriptions/components/credits/buy-credits-modal";
+import { generationPrices } from "@/features/subscriptions/utils";
 
 interface WorkbenchProps {
   projectId: string;
@@ -109,14 +111,10 @@ export const Workbench = ({
   const isActiveNotifiedRef = useRef(false);
   const [activeWorkbenchTool, setActiveWorkbenchTool] = useState<ActiveWorkbenchTool>("select");
   const [isGenerating, setIsGenerating] = useState(false);
-  const [showUsageLimitModal, setShowUsageLimitModal] = useState(false);
-  const [upgradeStep, setUpgradeStep] = useState<"info" | "payment">("info");
-  const [paymentOption, setPaymentOption] = useState<"monthly" | "yearly">("monthly");
-  const [isUpgrading, setIsUpgrading] = useState(false);
   const [textOnlyMode, setTextOnlyMode] = useState(false);
   
   // Use the user status context
-  const { userStatus, canGenerateVideo, incrementVideoUsage } = useUserStatus();
+  const { userStatus, hasEnoughCredits, deductCredits } = useUserStatus();
   
   // New state - promptData elements owned by workbench
   const [generalTextPrompt, setGeneralTextPrompt] = useState<string>("");
@@ -131,6 +129,10 @@ export const Workbench = ({
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
+  // Add state for BuyCreditsModal
+  const [showBuyCreditsModal, setShowBuyCreditsModal] = useState(false);
+  const [requiredCredits, setRequiredCredits] = useState(0);
+  
   // Initialize from defaultPromptData if available
   useEffect(() => {
     if (typeof defaultPromptData === 'string') {
@@ -278,6 +280,11 @@ export const Workbench = ({
       return;
     }
 
+    if (!textOnlyMode && (segmentedMasks.length === 0 || segmentedMasks.filter(mask => mask.id && mask.id.trim() !== '').length === 0)) {
+      toast.error("Animation mode requires at least one mask. Please add a mask in the animate sidebar.");
+      return;
+    }
+
     // Check permissions based on user status
     if (!userStatus.isAuthenticated) {
       // Show authentication modal instead of redirecting
@@ -285,13 +292,16 @@ export const Workbench = ({
       return;
     }
     
-    // Check usage limits for free users
-    if (!canGenerateVideo()) {
-      // Show usage limit modal
-      setShowUsageLimitModal(true);
+    // Check if user has enough credits
+    const videoPrice = generationPrices.video;
+    if (!hasEnoughCredits(videoPrice)) {
+      // Calculate needed credits
+      const needed = videoPrice - userStatus.credits;
+      setRequiredCredits(needed);
+      setShowBuyCreditsModal(true);
       return;
     }
-
+    
     try {
       setIsGenerating(true);
       
@@ -303,7 +313,6 @@ export const Workbench = ({
       } else {
         throw new Error("No workbench image available");
       }
-
 
       const workflowData = {
         "mode": "",
@@ -371,7 +380,6 @@ export const Workbench = ({
         // ==========================================
         // ANIMATION MODE: Handle motion and masking
         // ==========================================
-
 
         if (selectedModel.id === "cogvideox") {
           workflowData.workflow_id = comfyDeployWorkflows["GWF-ZEPTA-CogVideoX"];
@@ -450,6 +458,9 @@ export const Workbench = ({
 
       // TODO: Uncomment this when we have a way to increment the usage counter
       // incrementVideoUsage();
+      
+      // When successful, deduct credits
+      deductCredits(videoPrice);
       
       toast.success("Video generation started successfully. Check timeline for progress.");
       console.log("Video generation started. Please wait...");
@@ -703,25 +714,6 @@ export const Workbench = ({
     
     return grouped;
   }, [lastFrameGenerations]);
-
-  // Function to handle upgrade
-  const handleUpgrade = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    try {
-      setIsUpgrading(true);
-      
-      // Here you would implement your actual payment processing logic
-      // For now, we'll just redirect to a payment page with the selected option
-      window.location.href = `/upgrade?plan=${paymentOption}&redirect=${encodeURIComponent(window.location.href)}`;
-      
-    } catch (error) {
-      console.error("Upgrade error:", error);
-      toast.error("Failed to process upgrade. Please try again.");
-    } finally {
-      setIsUpgrading(false);
-    }
-  };
 
   return (
     <div className="flex flex-col h-full"> 
@@ -993,167 +985,14 @@ export const Workbench = ({
         </div>
       </div>
 
-      {/* Usage Limit Modal */}
-      {showUsageLimitModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-gray-900 border border-gray-700 rounded-lg shadow-lg w-full max-w-md p-6 animate-in fade-in duration-200">
-            {upgradeStep === "info" ? (
-              <>
-                <h3 className="text-xl font-bold text-white mb-2">Daily Limit Reached</h3>
-                <p className="text-gray-300 mb-4">
-                  You&apos;ve used all {userStatus.dailyVideoGenerations.limit} of your daily video generations on the free plan.
-                </p>
-                <div className="bg-gray-800 rounded-md p-4 mb-4">
-                  <h4 className="text-blue-300 font-medium mb-2">Upgrade to Pro for:</h4>
-                  <ul className="text-gray-300 text-sm space-y-2">
-                    <li className="flex items-start">
-                      <div className="bg-blue-500/20 rounded-full p-1 mr-2 mt-0.5">
-                        <svg className="h-3 w-3 text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                        </svg>
-                      </div>
-                      <span>Unlimited video generations</span>
-                    </li>
-                    <li className="flex items-start">
-                      <div className="bg-blue-500/20 rounded-full p-1 mr-2 mt-0.5">
-                        <svg className="h-3 w-3 text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                        </svg>
-                      </div>
-                      <span>Higher resolution output (up to 1080p)</span>
-                    </li>
-                    <li className="flex items-start">
-                      <div className="bg-blue-500/20 rounded-full p-1 mr-2 mt-0.5">
-                        <svg className="h-3 w-3 text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                        </svg>
-                      </div>
-                      <span>Priority processing (faster generation)</span>
-                    </li>
-                    <li className="flex items-start">
-                      <div className="bg-blue-500/20 rounded-full p-1 mr-2 mt-0.5">
-                        <svg className="h-3 w-3 text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                        </svg>
-                      </div>
-                      <span>Exclusive models and features</span>
-                    </li>
-                  </ul>
-                </div>
-                <div className="flex gap-2 justify-end">
-                  <button
-                    onClick={() => setShowUsageLimitModal(false)}
-                    className="px-4 py-2 rounded-md text-gray-300 bg-gray-800 hover:bg-gray-700 transition-colors"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    onClick={() => setUpgradeStep("payment")}
-                    className="px-4 py-2 rounded-md text-white bg-blue-600 hover:bg-blue-500 transition-colors"
-                  >
-                    Upgrade Now
-                  </button>
-                </div>
-              </>
-            ) : (
-              <>
-                <h3 className="text-xl font-bold text-white mb-2">Choose Your Plan</h3>
-                <p className="text-gray-300 mb-4">
-                  Select a subscription plan to continue generating videos without limits.
-                </p>
-                
-                <form onSubmit={handleUpgrade} className="space-y-4">
-                  <div className="grid grid-cols-2 gap-3">
-                    <button
-                      type="button"
-                      onClick={() => setPaymentOption("monthly")}
-                      className={`text-left border rounded-lg p-4 transition-colors ${
-                        paymentOption === "monthly"
-                          ? "border-blue-500 bg-blue-900/20"
-                          : "border-gray-700 bg-gray-800 hover:border-gray-500"
-                      }`}
-                    >
-                      <div className="flex justify-between items-center mb-2">
-                        <span className="font-medium text-white">Monthly</span>
-                        {paymentOption === "monthly" && (
-                          <div className="bg-blue-500 rounded-full p-1">
-                            <svg className="h-3 w-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                            </svg>
-                          </div>
-                        )}
-                      </div>
-                      <div className="text-xl font-bold text-white">$19<span className="text-sm font-normal text-gray-400">/mo</span></div>
-                      <div className="text-xs text-gray-400 mt-1">Billed monthly</div>
-                    </button>
-                    
-                    <button
-                      type="button"
-                      onClick={() => setPaymentOption("yearly")}
-                      className={`text-left border rounded-lg p-4 transition-colors ${
-                        paymentOption === "yearly"
-                          ? "border-blue-500 bg-blue-900/20"
-                          : "border-gray-700 bg-gray-800 hover:border-gray-500"
-                      }`}
-                    >
-                      <div className="flex justify-between items-center mb-2">
-                        <div>
-                          <span className="font-medium text-white">Yearly</span>
-                          <span className="ml-2 text-xs font-medium bg-green-900/60 text-green-400 px-2 py-0.5 rounded">SAVE 25%</span>
-                        </div>
-                        {paymentOption === "yearly" && (
-                          <div className="bg-blue-500 rounded-full p-1">
-                            <svg className="h-3 w-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                            </svg>
-                          </div>
-                        )}
-                      </div>
-                      <div className="text-xl font-bold text-white">$14<span className="text-sm font-normal text-gray-400">/mo</span></div>
-                      <div className="text-xs text-gray-400 mt-1">Billed annually ($168)</div>
-                    </button>
-                  </div>
-                  
-                  <button
-                    type="submit"
-                    disabled={isUpgrading}
-                    className="w-full flex items-center justify-center bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-md transition-colors duration-200"
-                  >
-                    {isUpgrading ? (
-                      <>
-                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                        Processing...
-                      </>
-                    ) : (
-                      "Continue to Payment"
-                    )}
-                  </button>
-                  
-                  <p className="text-xs text-gray-500 text-center">
-                    You can cancel your subscription at any time.
-                    By continuing, you agree to our Terms and Privacy Policy.
-                  </p>
-                </form>
-                
-                <div className="mt-4 flex justify-between">
-                  <button
-                    onClick={() => setUpgradeStep("info")}
-                    className="text-sm text-gray-400 hover:text-gray-300"
-                  >
-                    Back
-                  </button>
-                  <button
-                    onClick={() => setShowUsageLimitModal(false)}
-                    className="text-sm text-gray-400 hover:text-gray-300"
-                  >
-                    Cancel
-                  </button>
-                </div>
-              </>
-            )}
-          </div>
-        </div>
-      )}
+      {/* Buy Credits Modal */}
+      <BuyCreditsModal
+        isOpen={showBuyCreditsModal}
+        onClose={() => setShowBuyCreditsModal(false)}
+        requiredCredits={requiredCredits}
+        actionLabel="generate a video"
+        projectId={projectId}
+      />
     </div>
   );
 }; 

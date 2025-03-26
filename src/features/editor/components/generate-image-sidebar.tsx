@@ -2,6 +2,8 @@ import { useState, useEffect } from "react";
 
 import { useUserStatus } from "@/features/auth/contexts/user-status-context";
 import { AuthModal } from "../components/auth-modal";
+import { BuyCreditsModal } from "@/features/subscriptions/components/credits/buy-credits-modal";
+import { generationPrices } from "@/features/subscriptions/utils";
 
 import { ActiveTool, Editor, ImageGeneration } from "@/features/editor/types";
 import { ToolSidebarHeader } from "@/features/editor/components/tool-sidebar-header";
@@ -32,12 +34,13 @@ export const GenerateImageSidebar = ({
   }: GenerateImageSidebarProps) => {
 
     const [isCurrentlyGenerating, setIsCurrentlyGenerating] = useState(false);
+    const [showBuyCreditsModal, setShowBuyCreditsModal] = useState(false);
+    const [requiredCredits, setRequiredCredits] = useState(0);
 
-    const { userStatus, canGenerateImage, incrementImageUsage } = useUserStatus();
+    const { userStatus, hasEnoughCredits, deductCredits } = useUserStatus();
 
     const [textPrompt, setTextPrompt] = useState("");
-    const [showUsageLimitModal, setShowUsageLimitModal] = useState(false);
-
+    
     const [imageGenerations, setImageGenerations] = useState<ImageGeneration[]>([]);
 
     const fetchImageGenerations = async () => {
@@ -71,10 +74,13 @@ export const GenerateImageSidebar = ({
         return;
       }
       
-      // Check usage limits for free users
-      if (!canGenerateImage()) {
-        // Show usage limit modal
-        setShowUsageLimitModal(true);
+      // Check if user has enough credits
+      const imagePrice = generationPrices.image;
+      if (!hasEnoughCredits(imagePrice)) {
+        // Calculate needed credits
+        const needed = imagePrice - userStatus.credits;
+        setRequiredCredits(needed);
+        setShowBuyCreditsModal(true);
         setIsCurrentlyGenerating(false);
         return;
       }
@@ -100,12 +106,12 @@ export const GenerateImageSidebar = ({
         
         const data = await response.json();
         
-        console.log("data", data);
         if (data.images && data.images.length > 0) {
           editor?.addImage(data.images[0].imageURL);
 
-          // Increment usage count
-          // incrementImageUsage();
+          // Deduct credits
+          deductCredits(imagePrice);
+          
           // add image to imageGenerations array
           const imageGeneration: ImageGeneration = {
             id: crypto.randomUUID(), // TODO: get imageUUID from database instead of generating a new one
@@ -113,7 +119,6 @@ export const GenerateImageSidebar = ({
             status: "success",
             projectId: projectId,
           }
-          // console.log("imageGeneration", imageGeneration);
           setImageGenerations([imageGeneration, ...imageGenerations]);
 
           // save image to database
@@ -218,42 +223,15 @@ export const GenerateImageSidebar = ({
               </div>
             </div>
           </ScrollArea>
-          {/* Usage Limit Modal */}
-        {showUsageLimitModal && (
-          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-            <div className="bg-gray-900 border border-gray-700 rounded-lg shadow-lg w-full max-w-md p-6 animate-in fade-in duration-200">
-              <h3 className="text-xl font-bold text-white mb-2">Daily Limit Reached</h3>
-              <p className="text-gray-300 mb-4">
-                You&apos;ve used all {userStatus.dailyImageGenerations.limit} of your daily image generations on the free plan.
-              </p>
-              <div className="bg-gray-800 rounded-md p-4 mb-4">
-                <h4 className="text-blue-300 font-medium mb-2">Upgrade to Pro for:</h4>
-                <ul className="text-gray-300 text-sm space-y-1">
-                  <li>• Unlimited image generations</li>
-                  <li>• Higher resolution outputs</li>
-                  <li>• Priority processing</li>
-                  <li>• Advanced features</li>
-                </ul>
-              </div>
-              <div className="flex gap-2 justify-end">
-                <button
-                  onClick={() => setShowUsageLimitModal(false)}
-                  className="px-4 py-2 rounded-md text-gray-300 bg-gray-800 hover:bg-gray-700 transition-colors"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={() => {
-                    window.location.href = "/upgrade";
-                  }}
-                  className="px-4 py-2 rounded-md text-white bg-blue-600 hover:bg-blue-500 transition-colors"
-                >
-                  Upgrade to Pro
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
-      </aside>
+          
+          {/* Buy Credits Modal */}
+          <BuyCreditsModal
+            isOpen={showBuyCreditsModal}
+            onClose={() => setShowBuyCreditsModal(false)}
+            requiredCredits={requiredCredits}
+            actionLabel="generate an image"
+            projectId={projectId}
+          />
+        </aside>
     );
 };

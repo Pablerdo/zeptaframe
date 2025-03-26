@@ -1,9 +1,9 @@
 import Link from "next/link";
 import Image from "next/image";
 
-export const Logo = () => {
+export const Logo = ({ isTrial }: { isTrial: boolean }) => {
   return (
-    <Link href="/">
+    <Link href={isTrial ? "/try" : "/"}>
       <div className="size-8 relative shrink-0">
         <Image
           src="/zeptaframe-logo.svg"

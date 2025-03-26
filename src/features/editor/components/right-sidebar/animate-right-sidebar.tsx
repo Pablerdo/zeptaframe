@@ -1314,7 +1314,7 @@ export const AnimateRightSidebar = ({
                       ) : (
                         <Plus className="w-4 h-4 mr-1" />
                       )}
-                        New Mask
+                        New Auto Mask
                     </Button>
                   </>
                 ) : (
@@ -1348,7 +1348,7 @@ export const AnimateRightSidebar = ({
 
             {/* Add a manual animation button */}
 
-            <div className="flex items-center bg-gray-100 dark:bg-editor-bg-dark justify-between p-2 border border-gray-300 dark:border-gray-400 rounded-md w-full">
+            <div className="flex items-center bg-gray-200 dark:bg-editor-bg-dark justify-between p-2 border border-gray-300 dark:border-gray-400 rounded-md w-full">
               <div className="flex items-center space-x-2 w-full">
                 {activeSegmentationTool !== "manual" ? (
                   /* Add loading and status indicator */

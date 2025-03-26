@@ -3,66 +3,63 @@
 import { CreditCard, Crown, Home, MessageCircleQuestion } from "lucide-react";
 import { usePathname } from "next/navigation";
 
-import { usePaywall } from "@/features/subscriptions/hooks/use-paywall";
-import { useCheckout } from "@/features/subscriptions/api/use-checkout";
-import { useBilling } from "@/features/subscriptions/api/use-billing";
+// import { usePaywall } from "@/features/subscriptions/hooks/use-paywall";
+// import { useCheckout } from "@/features/subscriptions/api/use-checkout";
+// import { useBilling } from "@/features/subscriptions/api/use-billing";
 
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 
 import { SidebarItem } from "./sidebar-item";
+import { BuyCreditsModal } from "@/features/subscriptions/components/credits/buy-credits-modal";
+import { useState } from "react";
 
 export const SidebarRoutes = () => {
-  const mutation = useCheckout();
-  const billingMutation = useBilling();
-  const { shouldBlock, isLoading, triggerPaywall } = usePaywall();
+  // const mutation = useCheckout();
+  // const billingMutation = useBilling();
+  // const { shouldBlock, isLoading, triggerPaywall } = usePaywall();
 
   const pathname = usePathname();
 
+  const [isBuyCreditsModalOpen, setIsBuyCreditsModalOpen] = useState(false);
   const onClick = () => {
-    if (shouldBlock) {
-      triggerPaywall();
-      return;
-    }
+    console.log("clicked");
 
-    billingMutation.mutate();
+    setIsBuyCreditsModalOpen(true);
+    // if (shouldBlock) {
+    //   triggerPaywall();
+    //   return;
+    // }
+
+    // billingMutation.mutate();
   };
 
   return (
-    <div className="flex flex-col gap-y-4 flex-1">
-      {/* {shouldBlock && !isLoading && (
-        <>
-          {/* <div className="px-3">
-            <Button
-              onClick={() => mutation.mutate()}
-              disabled={mutation.isPending}
-              className="w-full rounded-xl border-none hover:bg-white hover:opacity-75 transition"
-              variant="outline"
-              size="lg"
-            >
-              <Crown className="mr-2 size-4 fill-yellow-500 text-yellow-500" />
-              Upgrade to Pro
-            </Button>
-          </div>
-          <div className="px-3">
-            <Separator />
-          </div> 
-        </>
-      )} */}
-      <ul className="flex flex-col gap-y-1 px-3">
-        <SidebarItem href="/" icon={Home} label="Home" isActive={pathname === "/"} />
-      </ul>
-      <div className="px-3">
-        <Separator />
+    <>
+      <div className="flex flex-col gap-y-4 flex-1">
+        <ul className="flex flex-col gap-y-1 px-3">
+          <SidebarItem href="/" icon={Home} label="Home" isActive={pathname === "/"} />
+        </ul>
+        <div className="px-3">
+          <Separator />
+        </div>
+        <ul className="flex flex-col gap-y-1 px-3">
+          <SidebarItem href={pathname} icon={CreditCard} label="Get Credits" onClick={onClick} />
+          <SidebarItem
+            href="mailto:support@zeptaframe.com"
+            icon={MessageCircleQuestion}
+            label="Get Help"
+          />
+        </ul>
+        
       </div>
-      <ul className="flex flex-col gap-y-1 px-3">
-        <SidebarItem href={pathname} icon={CreditCard} label="Billing" onClick={onClick} />
-        <SidebarItem
-          href="mailto:support@example.com"
-          icon={MessageCircleQuestion}
-          label="Get Help"
-        />
-      </ul>
-    </div>
+      <BuyCreditsModal
+        isOpen={isBuyCreditsModalOpen}
+        onClose={() => setIsBuyCreditsModalOpen(false)}
+        requiredCredits={undefined}
+        actionLabel="cover GPU usage"
+        projectId={null}
+      />
+    </>
   );
 };

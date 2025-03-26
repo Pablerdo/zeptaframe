@@ -6,7 +6,7 @@ import { AuthConfig, initAuthConfig } from "@hono/auth-js";
 import users from "./users";
 import images from "./images";
 import projects from "./projects";
-import subscriptions from "./subscriptions";
+import creditPurchases from "./credit-purchases";
 import videoGenerations from "./video-generations";
 import imageGenerations from "./image-generations";
 
@@ -36,7 +36,7 @@ const routes = app
   .route("/users", users)
   .route("/images", images)
   .route("/projects", projects)
-  .route("/subscriptions", subscriptions)
+  .route("/credit-purchases", creditPurchases)
   .route("/video-generations", videoGenerations)
   .route("/segmented-objects", segmentedObjects)
   .route("/video-exports", videoExports)

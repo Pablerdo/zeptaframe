@@ -171,7 +171,7 @@ export const Toolbar = ({
               size="icon"
               variant="ghost"
               className={cn(
-                activeTool === "fill" && "bg-blue-50 dark:bg-slate-700 border-blue-200 dark:border-slate-600 text-blue-600 dark:text-blue-400"
+                activeTool === "fill" && "text-white"
               )}
             >
               <div

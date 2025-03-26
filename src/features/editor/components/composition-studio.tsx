@@ -830,7 +830,7 @@ export const CompositionStudio = ({ initialData, isTrial }: CompositionStudioPro
       <UserStatusProvider 
         initialUserStatus={{
           isAuthenticated: !isTrial,
-          userPlan: isTrial ? "trial" : "free", // Add pro plan to this logic as well
+          userId: !isTrial ? initialData.userId : undefined,
         }}
       >
         <LastFrameProvider videoGenerations={videoGenerations}>

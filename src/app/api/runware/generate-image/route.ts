@@ -34,6 +34,9 @@ export async function POST(request: Request) {
 
     console.log("images", images);
 
+    // TODO: Deduct credits from user
+
+
     return NextResponse.json({ images });
   } catch (error) {
     console.error('Error generating image:', error);

@@ -1,46 +1,27 @@
 "use client";
 
 import { createContext, useContext, ReactNode, useState, useEffect } from "react";
-
-export type UserPlan = "trial" | "free" | "pro";
+import { generationPrices } from "@/features/subscriptions/utils";
 
 interface UserStatus {
   isAuthenticated: boolean;
-  userPlan: UserPlan;
-  dailyVideoGenerations: {
-    limit: number;
-    used: number;
-    remaining: number;
-  };
-  dailyImageGenerations: {
-    limit: number;
-    used: number;
-    remaining: number;
-  };
+  credits: number;
+  userId?: string;
 }
 
 interface UserStatusContextType {
   userStatus: UserStatus;
   canGenerateVideo: () => boolean;
   canGenerateImage: () => boolean;
-  incrementVideoUsage: () => void;
-  incrementImageUsage: () => void;
+  hasEnoughCredits: (amount: number) => boolean;
+  deductCredits: (amount: number) => void;
   refreshUsage: () => Promise<void>;
 }
 
 const defaultUserStatus: UserStatus = {
   isAuthenticated: false,
-  userPlan: "trial",
-  dailyVideoGenerations: {
-    limit: 0,
-    used: 0,
-    remaining: 0
-  },
-  dailyImageGenerations: {
-    limit: 0,
-    used: 0,
-    remaining: 0
-  }
+  credits: 0, // Start with 0 and fetch from DB
+  userId: undefined
 };
 
 const UserStatusContext = createContext<UserStatusContextType | undefined>(undefined);
@@ -57,75 +38,17 @@ export function UserStatusProvider({
     ...initialUserStatus
   });
 
-  // Set plan-specific limits when plan changes
-  useEffect(() => {
-    if (userStatus.userPlan === "trial") {
-      setUserStatus(prev => ({
-        ...prev,
-        dailyVideoGenerations: {
-          limit: 0,
-          used: 0,
-          remaining: 0
-        },
-        dailyImageGenerations: {
-          limit: 0,
-          used: 0,
-          remaining: 0
-        }
-      }));
-    } else if (userStatus.userPlan === "free") {
-      // Update limits for free plan
-      setUserStatus(prev => ({
-        ...prev,
-        dailyVideoGenerations: {
-          limit: 3,
-          used: prev.dailyVideoGenerations.used,
-          remaining: 3 - prev.dailyVideoGenerations.used
-        },
-        dailyImageGenerations: {
-          limit: 5,
-          used: prev.dailyImageGenerations.used,
-          remaining: 5 - prev.dailyImageGenerations.used
-        }
-      }));
-    } else if (userStatus.userPlan === "pro") {
-      // For pro, we could either set a high number or keep track differently
-      setUserStatus(prev => ({
-        ...prev,
-        dailyVideoGenerations: {
-          limit: 30,
-          used: prev.dailyVideoGenerations.used,
-          remaining: 30 - prev.dailyVideoGenerations.used
-        },
-        dailyImageGenerations: {
-          limit: 30,
-          used: prev.dailyImageGenerations.used,
-          remaining: 30 - prev.dailyImageGenerations.used
-        }
-      }));
-    }
-  }, [userStatus.userPlan]);
-
   // Fetch current usage from API
   const refreshUsage = async () => {
-    if (!userStatus.isAuthenticated) return;
+    if (!userStatus.isAuthenticated || !userStatus.userId) return;
     
     try {
-      const response = await fetch('/api/user/usage');
+      const response = await fetch(`/api/users/${userStatus.userId}/credits`);
       if (response.ok) {
         const data = await response.json();
         setUserStatus(prev => ({
           ...prev,
-          dailyVideoGenerations: {
-            ...prev.dailyVideoGenerations,
-            used: data.videoGenerationsUsed,
-            remaining: prev.dailyVideoGenerations.limit - data.videoGenerationsUsed
-          },
-          dailyImageGenerations: {
-            ...prev.dailyImageGenerations,
-            used: data.imageGenerationsUsed,
-            remaining: prev.dailyImageGenerations.limit - data.imageGenerationsUsed
-          }
+          credits: data.credits || 0
         }));
       }
     } catch (error) {
@@ -133,44 +56,72 @@ export function UserStatusProvider({
     }
   };
 
-  // Utility function to check if user can generate video
+
+  // Fetch credits whenever the auth state changes (e.g., on login)
+  useEffect(() => {
+    if (initialUserStatus?.isAuthenticated && initialUserStatus?.userId) {
+      setUserStatus(prev => ({
+        ...prev,
+        userId: initialUserStatus.userId
+      }));
+      refreshUsage();
+    }
+  }, [initialUserStatus?.isAuthenticated, initialUserStatus?.userId]);
+
+  // Utility function to check if user has enough credits
+  const hasEnoughCredits = (amount: number) => {
+    return userStatus.credits >= amount;
+  };
+
+  // Check if user can generate video based on credits
   const canGenerateVideo = () => {
-    if (userStatus.userPlan === "trial") return false;
-    return userStatus.dailyVideoGenerations.remaining > 0;
+    if (!userStatus.isAuthenticated) return false;
+    return hasEnoughCredits(generationPrices.video);
   };
 
-  // Utility function to check if user can generate image
+  // Check if user can generate image based on credits
   const canGenerateImage = () => {
-    if (userStatus.userPlan === "trial") return false;
-    return userStatus.dailyImageGenerations.remaining > 0;
+    if (!userStatus.isAuthenticated) return false;
+    return hasEnoughCredits(generationPrices.image);
   };
 
-  // Increment video usage
-  const incrementVideoUsage = () => {
-    if (!userStatus.isAuthenticated) return;
+  // Deduct credits
+  const deductCredits = (amount: number) => {
+    if (!userStatus.isAuthenticated || !userStatus.userId) return;
     
+    // Update state optimistically
     setUserStatus(prev => ({
       ...prev,
-      dailyVideoGenerations: {
-        ...prev.dailyVideoGenerations,
-        used: prev.dailyVideoGenerations.used + 1,
-        remaining: prev.dailyVideoGenerations.remaining - 1
-      }
+      credits: Math.max(0, prev.credits - amount)
     }));
-  };
-
-  // Increment image usage
-  const incrementImageUsage = () => {
-    if (!userStatus.isAuthenticated) return;
     
-    setUserStatus(prev => ({
-      ...prev,
-      dailyImageGenerations: {
-        ...prev.dailyImageGenerations,
-        used: prev.dailyImageGenerations.used + 1,
-        remaining: prev.dailyImageGenerations.remaining - 1
+    // Update credits in the database
+    fetch(`/api/users/${userStatus.userId}/credits`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ 
+        action: 'deduct', 
+        amount 
+      })
+    })
+    .then(response => {
+      if (response.ok) {
+        return response.json();
       }
-    }));
+      throw new Error('Failed to update credits');
+    })
+    .then(data => {
+      // Sync with server value
+      setUserStatus(prev => ({
+        ...prev,
+        credits: data.credits
+      }));
+    })
+    .catch(error => {
+      console.error("Failed to update credits:", error);
+      // Refresh to get accurate count
+      refreshUsage();
+    });
   };
 
   return (
@@ -178,8 +129,8 @@ export function UserStatusProvider({
       userStatus,
       canGenerateVideo,
       canGenerateImage,
-      incrementVideoUsage,
-      incrementImageUsage,
+      hasEnoughCredits,
+      deductCredits,
       refreshUsage
     }}>
       {children}

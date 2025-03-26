@@ -4,7 +4,7 @@ import { CiFileOn } from "react-icons/ci";
 import { BsCloudCheck, BsCloudSlash } from "react-icons/bs";
 import { useFilePicker } from "use-file-picker";
 import { useMutationState } from "@tanstack/react-query";
-import { useState, KeyboardEvent } from "react";
+import { useState, KeyboardEvent, useRef } from "react";
 import { 
   ChevronDown, 
   Download, 
@@ -14,7 +14,8 @@ import {
   Undo2,
   Pencil,
   Check,
-  HelpCircle
+  HelpCircle,
+  CreditCard
 } from "lucide-react";
 import { FaDiscord } from "react-icons/fa";
 import {
@@ -23,6 +24,11 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 
 import { UserButton } from "@/features/auth/components/user-button";
 import { DarkModeToggle } from "@/features/editor/components/dark-mode-toggle";
@@ -41,6 +47,9 @@ import {
   DropdownMenuContent,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+
+import { useUserStatus } from "@/features/auth/contexts/user-status-context";
+import { BuyCreditsModal } from "@/features/subscriptions/components/credits/buy-credits-modal";
 
 interface NavbarProps {
   id: string;
@@ -65,6 +74,10 @@ export const Navbar = ({
 }: NavbarProps) => {
   const [isEditingName, setIsEditingName] = useState(false);
   const [editedName, setEditedName] = useState(projectName);
+  const [showCreditsModal, setShowCreditsModal] = useState(false);
+  const [infoOpen, setInfoOpen] = useState(false);
+  const infoButtonRef = useRef<HTMLButtonElement>(null);
+  const { userStatus } = useUserStatus();
 
   const handleClickSignUp = () => {
     setShowAuthModal(true);
@@ -119,7 +132,7 @@ export const Navbar = ({
 
   return (
     <nav className="w-full flex items-center p-4 h-[50px] gap-x-8 border-b-2 border-gray-300 dark:border-gray-900 lg:pl-[34px] bg-background text-foreground dark:shadow-dark-raised">
-      <Logo />
+      <Logo isTrial={isTrial || true} />
       <div className="flex items-center gap-x-2">
         {isEditingName ? (
           <div className="flex items-center space-x-2">
@@ -156,7 +169,7 @@ export const Navbar = ({
         )}
       </div>
       <div className="w-full flex items-center gap-x-1 h-full">
-        <DropdownMenu modal={false}>
+        {/* <DropdownMenu modal={false}>
           <DropdownMenuTrigger asChild>
             <Button size="sm" variant="ghost">
               File
@@ -177,7 +190,7 @@ export const Navbar = ({
               </div>
             </DropdownMenuItem>
           </DropdownMenuContent>
-        </DropdownMenu>
+        </DropdownMenu> */}
         <Separator orientation="vertical" className="mx-2" />
         <Hint label="Select" side="bottom" sideOffset={10}>
           <Button
@@ -244,26 +257,51 @@ export const Navbar = ({
               Sign Up
             </Button>
           )}
-          <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button size="sm" variant="ghost">
-                  <HelpCircle className="size-4" />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent className="max-w-[300px] text-white bg-slate-800 border-slate-800">
-                <p className="font-semibold">What the hell is this?</p>
-                <br/>
-                <p>
-                  This is Pablo Salamanca&apos;s thesis project, which 
-                  aims to build the first fully visual based AI video editor. 
-                  I hope you enjoy it. Shoot me a message on Discord or at 
-                  pablosalamanca88@gmail.com if you have any questions or feedback.
-                </p>
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
-          <DropdownMenu modal={false}>
+
+          {userStatus.isAuthenticated && (
+            <Button variant="default" className="bg-blue-600 hover:bg-blue-700 text-white" onClick={() => setShowCreditsModal(true)}>
+              <CreditCard className="size-4 mr-2" />
+              Credits: {userStatus.credits}
+            </Button>
+          )}
+
+          <Popover open={infoOpen} > {/*</div>onOpenChange={setInfoOpen}> */}
+            <PopoverTrigger asChild>
+              <div 
+                className="text-sm px-3 py-2 hover:bg-gray-200 dark:hover:bg-gray-800 hover:text-accent-foreground rounded-md cursor-pointer h-12 w-50 flex items-center justify-center"
+                // ref={infoButtonRef}
+                onMouseEnter={() => setInfoOpen(true)}
+                onMouseLeave={(e) => {
+                  // Only close if we're not leaving to go to the popover content
+                  // const relatedTarget = e.relatedTarget as HTMLElement;
+                  // if (!relatedTarget?.closest('[role="dialog"]')) {
+                  //   setInfoOpen(false);
+                  // }
+                }}
+              >
+                <span className="text-sm">What the hell is this?</span>
+              </div>
+            </PopoverTrigger><PopoverContent 
+              className="max-w-[300px] text-white bg-slate-800 border-slate-800"
+              sideOffset={0}
+              onMouseLeave={(e) => {
+                // Only close if we're not leaving to go to the button
+                const relatedTarget = e.relatedTarget as HTMLElement;
+                if (relatedTarget !== infoButtonRef.current) {
+                  setInfoOpen(false);
+                }
+              }}
+            >
+              <p className="text-sm">
+                This is <a href="https://x.com/realPSalamanca" target="_blank" rel="noopener noreferrer" className="font-bold hover:cursor-pointer underline">Pablo Salamanca&apos;s</a> thesis project, which 
+                aims to build the first fully visual based AI video editor. 
+                I hope you enjoy it. Shoot me a message on Discord or at 
+                <span className="font-bold cursor-pointer hover:underline" onClick={() => window.open("mailto:pablosalamanca88@gmail.com", "_blank")}> pablosalamanca88@gmail.com</span> if you have any questions or feedback.
+              </p>
+            </PopoverContent>
+          </Popover>
+
+          {/* <DropdownMenu modal={false}>
             <DropdownMenuTrigger asChild>
               <Button size="sm" variant="ghost">
                 Export Project JSON
@@ -320,7 +358,8 @@ export const Navbar = ({
                 </div>
               </DropdownMenuItem>
             </DropdownMenuContent>
-          </DropdownMenu>
+          </DropdownMenu> */}
+
           <DarkModeToggle />
           <Hint label="Join our Discord" side="bottom" sideOffset={10}>
             <Button
@@ -334,9 +373,15 @@ export const Navbar = ({
               </a>
             </Button>
           </Hint>
-          {!isTrial && <UserButton />}
+          {!userStatus.isAuthenticated && <UserButton />}
         </div>
       </div>
+
+      <BuyCreditsModal 
+        isOpen={showCreditsModal}
+        onClose={() => setShowCreditsModal(false)}
+        projectId={id}
+      />
     </nav>
   );
 };
