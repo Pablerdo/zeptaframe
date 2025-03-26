@@ -65,6 +65,8 @@ interface WorkbenchProps {
   samWorkerInitialized: boolean;
   isTrial: boolean;
   setShowAuthModal: (showAuthModal: boolean) => void;
+  lastEncodedWorkbenchId: string;
+  setLastEncodedWorkbenchId: (lastEncodedWorkbenchId: string) => void;
 }
 
 export const Workbench = ({
@@ -96,6 +98,8 @@ export const Workbench = ({
   samWorkerInitialized,
   isTrial,
   setShowAuthModal,
+  lastEncodedWorkbenchId,
+  setLastEncodedWorkbenchId,
 }: WorkbenchProps) => {
   // Create refs for canvas and container
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -625,8 +629,11 @@ export const Workbench = ({
       });
     };
 
+    // Track that we're encoding this specific workbench
+    setLastEncodedWorkbenchId(workbenchId);
+
     img.src = workspaceImage;
-  }, [editor, samWorker]);
+  }, [editor, samWorker, workbenchId, lastEncodedWorkbenchId, setLastEncodedWorkbenchId]);
 
   // Notify parent component ONLY when this workbench BECOMES active,
   // not on every editor change
@@ -648,13 +655,13 @@ export const Workbench = ({
   useEffect(() => {
     // Only encode the image when:
     // 1. We have an active editor
-    // 2. We're NOT in animation mode
+    // 2. We're NOT in animation mode OR this is the first time encoding this workbench
     // 3. SAM worker is initialized
     // 4. This workbench is active
     // 5. SAM worker is not currently loading
     if (
       editor?.canvas && 
-      activeWorkbenchTool !== "animate" && 
+      (activeWorkbenchTool !== "animate" || lastEncodedWorkbenchId !== workbenchId) && 
       samWorkerInitialized && 
       isActive && 
       !samWorkerLoading
@@ -676,7 +683,8 @@ export const Workbench = ({
         clearInterval(encodingInterval);
       };
     }
-  }, [editor?.canvas, activeWorkbenchTool, samWorkerInitialized, isActive]); // Don't add encodeWorkbenchImage to dependencies because it'll break the interval
+  }, [editor?.canvas, activeWorkbenchTool, samWorkerInitialized, isActive, lastEncodedWorkbenchId]); // Don't add encodeWorkbenchImage to dependencies because it'll break the interval
+
   // When this workbench becomes active, set its editor as the active editor in context
   useEffect(() => {
     if (isActive && editor) {

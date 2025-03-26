@@ -38,6 +38,8 @@ interface ScrollableWorkbenchViewerProps {
   samWorkerInitialized: boolean;
   isTrial: boolean;
   setShowAuthModal: (showAuthModal: boolean) => void;
+  lastEncodedWorkbenchId: string;
+  setLastEncodedWorkbenchId: (lastEncodedWorkbenchId: string) => void;
 }
 
 export const ScrollableWorkbenchViewer = ({
@@ -67,6 +69,8 @@ export const ScrollableWorkbenchViewer = ({
   samWorkerInitialized,
   isTrial,
   setShowAuthModal,
+  lastEncodedWorkbenchId,
+  setLastEncodedWorkbenchId,
 }: ScrollableWorkbenchViewerProps) => {
 
   return (
@@ -145,6 +149,8 @@ export const ScrollableWorkbenchViewer = ({
               samWorkerInitialized={samWorkerInitialized}
               isTrial={isTrial}
               setShowAuthModal={setShowAuthModal}
+              lastEncodedWorkbenchId={lastEncodedWorkbenchId}
+              setLastEncodedWorkbenchId={setLastEncodedWorkbenchId}
             />
           </div>
         );

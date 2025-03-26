@@ -56,8 +56,6 @@ export const CompositionStudio = ({ initialData, isTrial }: CompositionStudioPro
   const [allowEncodeWorkbenchImage, setAllowEncodeWorkbenchImage] = useState(true);
   const [projectName, setProjectName] = useState(initialData.name);
   
-  const [currentPendingVideoRunIds, setCurrentPendingVideoRunIds] = useState<string[]>([]);
-
   // Add state for trial-related UI
   const [showSignUpModal, setShowSignUpModal] = useState(false);
   const [showAuthModal, setShowAuthModal] = useState(false);
@@ -148,6 +146,8 @@ export const CompositionStudio = ({ initialData, isTrial }: CompositionStudioPro
   const [prevMaskArray, setPrevMaskArray] = useState<Float32Array | null>(null);
   const [mask, setMask] = useState<HTMLCanvasElement | null>(null);
   const [maskBinary, setMaskBinary] = useState<HTMLCanvasElement | null>(null);
+
+  const [lastEncodedWorkbenchId, setLastEncodedWorkbenchId] = useState<string>("");
 
   // Add these new state variables to composition-studio.tsx
   const [isDeletingIndex, setIsDeletingIndex] = useState<number | null>(null);
@@ -957,6 +957,8 @@ export const CompositionStudio = ({ initialData, isTrial }: CompositionStudioPro
                     samWorkerInitialized={samWorkerInitialized}
                     isTrial={isTrial}
                     setShowAuthModal={setShowAuthModal}
+                    lastEncodedWorkbenchId={lastEncodedWorkbenchId}
+                    setLastEncodedWorkbenchId={setLastEncodedWorkbenchId}
                   />
                   
                   {/* Add workbench button */}
