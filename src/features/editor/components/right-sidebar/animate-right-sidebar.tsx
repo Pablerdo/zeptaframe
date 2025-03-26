@@ -1319,7 +1319,7 @@ export const AnimateRightSidebar = ({
                   </>
                 ) : (
                   <div className="flex flex-col gap-2 w-full">
-                    <div className="w-full text-md text-center pl-1 animate-[pulse_1s_ease-in-out_infinite]">Click an object to animate</div>
+                    <div className="w-full text-md font-bold text-center pl-1 animate-[pulse_1s_ease-in-out_infinite]">Click an object to animate</div>
                     <div className="flex gap-2 w-full">
                       <Button
                         variant="default"
@@ -1366,7 +1366,7 @@ export const AnimateRightSidebar = ({
                 ) : (
                   <>   
                     <div className="flex flex-col gap-2 w-full">
-                      <div className="text-md text-center pl-1 text-white animate-[pulse_1s_ease-in-out_infinite]">
+                      <div className="text-md text-center pl-1 text-white animate-[pulse_1s_ease-in-out_infinite] font-bold ">
                         Encircle the object to create a mask. 
                       </div>
                       <Button
