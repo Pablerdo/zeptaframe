@@ -98,6 +98,9 @@ const app = new Hono()
       const body = await c.req.text();
       const signature = c.req.header("Stripe-Signature") as string;
 
+      console.log("inside stripe webhook")
+      console.log(body)
+
       let event: Stripe.Event;
 
       try {
@@ -112,8 +115,12 @@ const app = new Hono()
 
       const session = event.data.object as Stripe.Checkout.Session;
 
+      console.log("session", session)
+
+      console.log("credits amount", session?.metadata?.creditsAmount)
+
       if (event.type === "checkout.session.completed") {
-        // Check if this is a credits purchase or a subscription
+        // Check if this is a credits purchase
         if (session?.metadata?.type === "credits") {
           // Handle credits purchase
           if (!session?.metadata?.userId || !session?.metadata?.creditsAmount) {
@@ -151,30 +158,6 @@ const app = new Hono()
           }
           
           return c.json(null, 200);
-        } else {
-          // Handle subscription completed (existing code)
-          const subscription = await stripe.subscriptions.retrieve(
-            session.subscription as string,
-          );
-
-          if (!session?.metadata?.userId) {
-            return c.json({ error: "Invalid session" }, 400);
-          }
-
-          await db
-            .insert(subscriptions)
-            .values({
-              status: subscription.status,
-              userId: session.metadata.userId,
-              subscriptionId: subscription.id,
-              customerId: subscription.customer as string,
-              priceId: subscription.items.data[0].price.product as string,
-              currentPeriodEnd: new Date(
-                subscription.current_period_end * 1000
-              ),
-              createdAt: new Date(),
-              updatedAt: new Date(),
-            });
         }
       }
 
@@ -187,16 +170,6 @@ const app = new Hono()
           return c.json({ error: "Invalid session" }, 400);
         }
 
-        await db
-          .update(subscriptions)
-          .set({
-            status: subscription.status,
-            currentPeriodEnd: new Date(
-              subscription.current_period_end * 1000,
-            ),
-            updatedAt: new Date(),
-          })
-          .where(eq(subscriptions.id, subscription.id))
       }
 
       return c.json(null, 200);

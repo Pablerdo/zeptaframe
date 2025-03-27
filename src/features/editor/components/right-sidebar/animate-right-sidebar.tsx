@@ -495,6 +495,10 @@ export const AnimateRightSidebar = ({
   const handleApplyMask = (maskUrl: string, index: number) => {
     if (!editor?.canvas) return;
 
+    // Delete all animations in the canvas
+    Object.values(activeAnimations).forEach(animation => animation.stop());
+    setActiveAnimations({});
+
     // Get the actual index in the full segmentedMasks array
     const actualIndex = segmentedMasks.findIndex(mask => mask.url === maskUrl);
     
@@ -504,6 +508,9 @@ export const AnimateRightSidebar = ({
       existingMasks.forEach(mask => editor.canvas.remove(mask));
       editor.canvas.renderAll();
       
+      if (activeAnimations[maskUrl]) {
+        handleToggleTrajectory(maskUrl, false);
+      }
       const updatedMasks = segmentedMasks.map(mask => ({
         ...mask,
         isApplied: false
@@ -548,6 +555,11 @@ export const AnimateRightSidebar = ({
       // Double check the data is set
       const addedObject = editor.canvas.getObjects().find(obj => obj.data?.isMask);
       
+      // Check if the mask has a trajectory
+      if (segmentedMasks[actualIndex].trajectory) {
+        handleToggleTrajectory(maskUrl, true);
+      }
+
       editor.canvas.renderAll();
 
       // Update state to reflect which mask is applied
@@ -885,32 +897,41 @@ export const AnimateRightSidebar = ({
     editor.canvas.renderAll();
   };
 
-  const handleToggleTrajectory = (maskUrl: string) => {
-    // First ensure the mask is applied
-    if (editor) {
-      // Find the mask's index
-      const maskIndex = segmentedMasks.findIndex(mask => mask.url === maskUrl);
-      if (maskIndex >= 0 && !segmentedMasks[maskIndex].isApplied) {
-        // Apply the mask if not already applied
-        handleApplyMask(maskUrl, maskIndex);
-      }
-      
+  const handleToggleTrajectory = (maskUrl: string, startAnimation: boolean) => {
+
+    if (!editor?.canvas) {
+      return;
+    }
+
+    if (startAnimation) {
       // Then toggle trajectory visibility
       const updatedMasks = segmentedMasks.map(mask => 
         mask.url === maskUrl && mask.trajectory ? {
           ...mask,
           trajectory: {
             ...mask.trajectory,
-            isVisible: !mask.trajectory.isVisible
+            isVisible: true
           }
         } : mask
       );
+
+      const mask = segmentedMasks.find(m => m.url === maskUrl);
+
+      const animation = createTrajectoryAnimation(editor, maskUrl, mask?.trajectory?.points || []);
+      if (animation) {
+        animation.start();
+        setActiveAnimations(prev => ({
+          ...prev,
+          [maskUrl]: {
+            stop: animation.stop,
+            isPlaying: true
+          }
+        }));
+      }
       
       // Set the new array directly
       setSegmentedMasks(updatedMasks);
-    }
-
-    if (editor?.canvas) {
+    } else {
       const mask = segmentedMasks.find(m => m.url === maskUrl);
       
       if (mask?.trajectory?.points) {
@@ -921,21 +942,10 @@ export const AnimateRightSidebar = ({
             delete newAnimations[maskUrl];
             return newAnimations;
           });
-        } else {
-          const animation = createTrajectoryAnimation(editor, maskUrl, mask.trajectory.points);
-          if (animation) {
-            animation.start();
-            setActiveAnimations(prev => ({
-              ...prev,
-              [maskUrl]: {
-                stop: animation.stop,
-                isPlaying: true
-              }
-            }));
-          }
-        }
+        } 
       }
     }
+
   };
 
   const handleRedoTrajectory = (maskUrl: string) => {
@@ -1556,14 +1566,6 @@ export const AnimateRightSidebar = ({
                       </div>
                     ) : hasTrajectory && mask.trajectory ? (
                       <div className="flex space-x-2">
-                        <Button
-                          className="flex-1 bg-blue-600 hover:bg-blue-700 text-white"
-                          size="sm"
-                          onClick={() => handleToggleTrajectory(mask.url)}
-                          disabled={activeSegmentationTool !== "none"}
-                        >
-                          {mask.trajectory.isVisible ? 'Hide' : 'Show'} Trajectory
-                        </Button>
                         <Button
                           className="flex-1 bg-purple-600 hover:bg-purple-700 text-white"
                           size="sm"

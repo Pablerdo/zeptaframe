@@ -1,29 +1,19 @@
 "use client";
 
-import { CiFileOn } from "react-icons/ci";
 import { BsCloudCheck, BsCloudSlash } from "react-icons/bs";
 import { useFilePicker } from "use-file-picker";
 import { useMutationState } from "@tanstack/react-query";
 import { useState, KeyboardEvent, useRef } from "react";
-import { 
-  ChevronDown, 
-  Download, 
+import {  
   Loader, 
   MousePointerClick, 
   Redo2, 
   Undo2,
   Pencil,
   Check,
-  HelpCircle,
   CreditCard
 } from "lucide-react";
 import { FaDiscord } from "react-icons/fa";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
 import {
   Popover,
   PopoverContent,
@@ -41,12 +31,6 @@ import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { Input } from "@/components/ui/input";
-import {
-  DropdownMenu,
-  DropdownMenuItem,
-  DropdownMenuContent,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 
 import { useUserStatus } from "@/features/auth/contexts/user-status-context";
 import { BuyCreditsModal } from "@/features/subscriptions/components/credits/buy-credits-modal";
@@ -116,19 +100,19 @@ export const Navbar = ({
   const isError = currentStatus === "error";
   const isPending = currentStatus === "pending";
 
-  const { openFilePicker } = useFilePicker({
-    accept: ".json",
-    onFilesSuccessfullySelected: ({ plainFiles }: any) => {
-      if (plainFiles && plainFiles.length > 0) {
-        const file = plainFiles[0];
-        const reader = new FileReader();
-        reader.readAsText(file, "UTF-8");
-        reader.onload = () => {
-          editor?.loadJson(reader.result as string);
-        };
-      }
-    },
-  });
+  // const { openFilePicker } = useFilePicker({
+  //   accept: ".json",
+  //   onFilesSuccessfullySelected: ({ plainFiles }: any) => {
+  //     if (plainFiles && plainFiles.length > 0) {
+  //       const file = plainFiles[0];
+  //       const reader = new FileReader();
+  //       reader.readAsText(file, "UTF-8");
+  //       reader.onload = () => {
+  //         editor?.loadJson(reader.result as string);
+  //       };
+  //     }
+  //   },
+  // });
 
   return (
     <nav className="w-full flex items-center p-4 h-[50px] gap-x-8 border-b-2 border-gray-300 dark:border-gray-900 lg:pl-[34px] bg-background text-foreground dark:shadow-dark-raised">
@@ -259,7 +243,7 @@ export const Navbar = ({
           )}
 
           {!isTrial && (
-            <Button variant="default" className="bg-blue-600 hover:bg-blue-700 text-white" onClick={() => setShowCreditsModal(true)}>
+            <Button variant="default" className="bg-gray-600 dark:bg-gray-700 hover:bg-gray-700 dark:hover:bg-gray-800 text-white" onClick={() => setShowCreditsModal(true)}>
               <CreditCard className="size-4 mr-2" />
               Credits: {userStatus.credits}
             </Button>
@@ -282,7 +266,7 @@ export const Navbar = ({
                 <span className="text-sm">What the hell is this?</span>
               </div>
             </PopoverTrigger><PopoverContent 
-              className="max-w-[300px] text-white bg-slate-800 border-slate-800"
+              className="max-w-[350px] text-white bg-slate-800 border-slate-800"
               sideOffset={0}
               onMouseLeave={(e) => {
                 // Only close if we're not leaving to go to the button
@@ -293,9 +277,9 @@ export const Navbar = ({
               }}
             >
               <p className="text-sm">
-                This is <a href="https://x.com/realPSalamanca" target="_blank" rel="noopener noreferrer" className="font-bold hover:cursor-pointer underline">Pablo Salamanca&apos;s</a> thesis project, which 
+                This is part of <a href="https://x.com/realPSalamanca" target="_blank" rel="noopener noreferrer" className="font-bold hover:cursor-pointer underline">Pablo Salamanca&apos;s</a> thesis project, which 
                 aims to build the first fully visual based AI video editor. 
-                I hope you enjoy it. Shoot me a message on Discord or at 
+                I hope you enjoy it. Shoot me a message at
                 <span className="font-bold cursor-pointer hover:underline" onClick={() => window.open("mailto:pablosalamanca88@gmail.com", "_blank")}> pablosalamanca88@gmail.com</span> if you have any questions or feedback.
               </p>
             </PopoverContent>
