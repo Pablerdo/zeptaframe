@@ -7,7 +7,7 @@ export const useBuyCredits = (projectId: string | null) => {
   const mutation = useMutation({
     mutationFn: async () => {
 
-      const response = await fetch("/api/subscriptions/credits", {
+      const response = await fetch("/api/credit-purchases/credits", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

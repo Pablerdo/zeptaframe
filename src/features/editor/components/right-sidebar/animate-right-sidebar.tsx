@@ -319,17 +319,44 @@ export const AnimateRightSidebar = ({
           name: `Manual Mask ${segmentedMasks.length + 1}`,
           url: tempCanvas.toDataURL(),
           binaryUrl: binaryCanvas.toDataURL(),
-          isApplied: false,
+          isApplied: true,
           trajectory: undefined,
           rotation: 0
         };
         
         // Remove the 'in progress' mask and add the new one
-        const updatedMasks = segmentedMasks
-          .filter(mask => mask.id !== 'manual-mask-in-progress')
-          .concat(newMask);
+        const updatedMasks = [newMask].concat(
+          segmentedMasks.filter(mask => mask.id !== 'manual-mask-in-progress')
+        );
         
         setSegmentedMasks(updatedMasks);
+
+        // Apply the mask to the canvas
+        fabric.Image.fromURL(tempCanvas.toDataURL(), (maskImage) => {
+          const workspace = editor.getWorkspace();
+          if (!workspace) return;
+
+          // Set all basic properties
+          maskImage.set({
+            left: workspace.left || 0,
+            top: workspace.top || 0,
+            width: workspace.width || 960,
+            height: workspace.height || 640,
+            selectable: false,
+            evented: false,
+            opacity: 0.9,
+          });
+
+          // Explicitly set the data property with both isMask and url
+          maskImage.data = { 
+            isMask: true, 
+            url: tempCanvas.toDataURL() 
+          };
+
+          // Add to canvas and ensure data is set
+          editor.canvas.add(maskImage);
+          editor.canvas.renderAll();
+        });
       }
       
       // Reset segmentation tool and canvas state
@@ -1308,7 +1335,7 @@ export const AnimateRightSidebar = ({
           {/* Segmented masks list */}
           <div className="space-y-2">
             {/* Always show the "New Object" stub at the top */}
-            <div className="flex items-center bg-gray-100 dark:bg-editor-bg-dark p-2 border border-gray-300 dark:border-gray-400 rounded-md">
+            <div className="flex items-center bg-gray-100 dark:bg-[#111530] p-2 border border-blue-600 dark:border-blue-800 rounded-md">
               <div className="flex items-center justify-between w-full">
                 {activeSegmentationTool !== "auto" ? (
                   /* Add loading and status indicator */
@@ -1317,6 +1344,7 @@ export const AnimateRightSidebar = ({
                       variant="default"
                       size="sm"
                       onClick={handleNewMask}
+                      className="bg-blue-600 hover:bg-blue-700 text-white"
                       disabled={samWorkerLoading || activeSegmentationTool === "manual"}
                     >
                       {samWorkerLoading ? (
@@ -1358,13 +1386,14 @@ export const AnimateRightSidebar = ({
 
             {/* Add a manual animation button */}
 
-            <div className="flex items-center bg-gray-200 dark:bg-editor-bg-dark justify-between p-2 border border-gray-300 dark:border-gray-400 rounded-md w-full">
+            <div className="flex items-center bg-gray-200 dark:bg-[#111530] justify-between p-2 border border-gray-300 dark:border-blue-800 rounded-md w-full">
               <div className="flex items-center space-x-2 w-full">
                 {activeSegmentationTool !== "manual" ? (
                   /* Add loading and status indicator */
                   <>
                     <Button
                       variant="default"
+                      className="bg-blue-600 hover:bg-blue-700 text-white"
                       size="sm"
                       onClick={() => handleNewManualMask()}
                       disabled={samWorkerLoading || activeSegmentationTool === "auto"}
@@ -1430,7 +1459,7 @@ export const AnimateRightSidebar = ({
                 const hasTrajectory = !!mask.trajectory;
                 
                 return (
-                  <div key={mask.url} className={`flex flex-col p-2 border border-gray-300 dark:border-gray-500 rounded-md space-y-2 dark:bg-editor-bg-dark ${activeSegmentationTool !== "none" ? 'opacity-50' : ''}`}>
+                  <div key={mask.url} className={`flex flex-col p-2 border border-gray-300 dark:border-blue-700 rounded-md space-y-2 dark:bg-[#111530] ${activeSegmentationTool !== "none" ? 'opacity-50' : ''}`}>
                     <div className="flex items-center justify-between">
                       <div className="flex items-center space-x-2">
                         <img 
@@ -1572,6 +1601,7 @@ export const AnimateRightSidebar = ({
                           onClick={() => handleRedoTrajectory(mask.url)}
                           disabled={activeSegmentationTool !== "none"}
                         >
+                          <Hand className="w-4 h-4 mr-1" />
                           Retrace Trajectory
                         </Button>
                       </div>

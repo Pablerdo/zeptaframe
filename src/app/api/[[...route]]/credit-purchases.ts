@@ -107,7 +107,7 @@ const app = new Hono()
         event = stripe.webhooks.constructEvent(
           body,
           signature,
-          process.env.STRIPE_WEBHOOK_SECRET!
+          (process.env.NODE_ENV === "production" ? process.env.STRIPE_WEBHOOK_SECRET! : process.env.STRIPE_WEBHOOK_SECRET_TEST!)
         );
       } catch (error) {
         return c.json({ error: "Invalid signature" }, 400);
