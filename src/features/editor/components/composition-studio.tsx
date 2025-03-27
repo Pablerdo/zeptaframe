@@ -45,7 +45,7 @@ interface CompositionStudioProps {
 }
 
 export const CompositionStudio = ({ initialData, isTrial }: CompositionStudioProps) => {
-  
+
   const { mutate } = useUpdateProject(initialData.id);
   const [videoGenerations, setVideoGenerations] = useState<VideoGeneration[]>([]);
   const [videoExports, setVideoExports] = useState<VideoExport[]>([]);
@@ -827,12 +827,6 @@ export const CompositionStudio = ({ initialData, isTrial }: CompositionStudioPro
 
   return (
     <ThemeProvider attribute="class" defaultTheme="dark">
-      <UserStatusProvider 
-        initialUserStatus={{
-          isAuthenticated: !isTrial,
-          userId: !isTrial ? initialData.userId : undefined,
-        }}
-      >
         <LastFrameProvider videoGenerations={videoGenerations}>
           <div className="w-full h-full flex flex-col overflow-hidden bg-editor-bg dark:bg-editor-bg-dark">
             <Navbar
@@ -1009,9 +1003,7 @@ export const CompositionStudio = ({ initialData, isTrial }: CompositionStudioPro
             </div>
             
           </div>
-        </LastFrameProvider>
-      </UserStatusProvider>
-      
+        </LastFrameProvider>      
       {/* Auth Modal */}
       <AuthModal
         isOpen={showAuthModal}

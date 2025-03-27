@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { v4 as uuidv4 } from "uuid";
 import { Loader, X } from "lucide-react";
 import { CompositionStudio } from "@/features/editor/components/composition-studio";
+import { UserStatusProvider } from "@/features/auth/contexts/user-status-context";
 
 export default function TryPage() {
   const [trialData, setTrialData] = useState<any>(null);
@@ -49,39 +50,48 @@ export default function TryPage() {
     );
   }
   
+  const isTrial = true;
+
   return (
-    <div className="relative h-full">
-      <CompositionStudio initialData={trialData} isTrial={true} />
-      
-      {/* Welcome Modal */}
-      {showWelcomeModal && (
-        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50">
-          <div className="bg-zinc-900 p-6 rounded-xl max-w-md w-full shadow-lg">
-            <div className="flex justify-between items-center mb-4">
-              <h2 className="text-xl font-bold">Welcome to Zeptaframe</h2>
+    <UserStatusProvider 
+      initialUserStatus={{
+        isAuthenticated: !isTrial,
+        userId: !isTrial ? trialData.userId : undefined,
+      }}
+    >
+      <div className="relative h-full">
+        <CompositionStudio initialData={trialData} isTrial={isTrial} />
+        
+        {/* Welcome Modal */}
+        {showWelcomeModal && (
+          <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50">
+            <div className="bg-zinc-900 p-6 rounded-xl max-w-md w-full shadow-lg">
+              <div className="flex justify-between items-center mb-4">
+                <h2 className="text-xl font-bold">Welcome to Zeptaframe</h2>
+                <button 
+                  onClick={dismissWelcomeModal}
+                  className="text-zinc-400 hover:text-white transition-colors"
+                >
+                  <X className="size-5" />
+                </button>
+              </div>
+              <p className="mb-6 text-zinc-200">
+                This is a AI-native video editor that does not require text input (you can still use text if you want). <br />
+                <br />
+                Head into the image sidebar, choose an image, and animate any object you want over the canvas. <br />
+                <br />
+                Happy Editing!
+              </p>
               <button 
                 onClick={dismissWelcomeModal}
-                className="text-zinc-400 hover:text-white transition-colors"
+                className="bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded-lg font-medium w-full"
               >
-                <X className="size-5" />
+                Get Started
               </button>
             </div>
-            <p className="mb-6 text-zinc-200">
-              This is a AI-native video editor that does not require text input (you can still use text if you want). <br />
-              <br />
-              Head into the image sidebar, choose an image, and animate any object you want over the canvas. <br />
-              <br />
-              Happy Editing!
-            </p>
-            <button 
-              onClick={dismissWelcomeModal}
-              className="bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded-lg font-medium w-full"
-            >
-              Get Started
-            </button>
           </div>
-        </div>
-      )}
-    </div>
+        )}
+      </div>
+    </UserStatusProvider>
   );
 }

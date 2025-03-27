@@ -274,6 +274,13 @@ export const Workbench = ({
   const handleGenerateVideo = async (modelId?: SupportedVideoModelId) => {
     if (!editor) return;
 
+    // Check permissions based on user status
+    if (!userStatus.isAuthenticated) {
+      // Show authentication modal instead of redirecting
+      setShowAuthModal(true);
+      return;
+    }
+
     // Check if text prompt is required but missing
     if (textOnlyMode && generalTextPrompt.trim() === "") {
       toast.error("Text prompt is required for Text-only generation");
@@ -285,13 +292,6 @@ export const Workbench = ({
       return;
     }
 
-    // Check permissions based on user status
-    if (!userStatus.isAuthenticated) {
-      // Show authentication modal instead of redirecting
-      setShowAuthModal(true);
-      return;
-    }
-    
     // Check if user has enough credits
     const videoPrice = generationPrices.video;
     if (!hasEnoughCredits(videoPrice)) {

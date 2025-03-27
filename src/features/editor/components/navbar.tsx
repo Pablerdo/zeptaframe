@@ -258,7 +258,7 @@ export const Navbar = ({
             </Button>
           )}
 
-          {userStatus.isAuthenticated && (
+          {!isTrial && (
             <Button variant="default" className="bg-blue-600 hover:bg-blue-700 text-white" onClick={() => setShowCreditsModal(true)}>
               <CreditCard className="size-4 mr-2" />
               Credits: {userStatus.credits}
@@ -373,7 +373,7 @@ export const Navbar = ({
               </a>
             </Button>
           </Hint>
-          {!userStatus.isAuthenticated && <UserButton />}
+          {!isTrial && <UserButton />}
         </div>
       </div>
 

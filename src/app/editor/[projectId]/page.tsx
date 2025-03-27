@@ -7,6 +7,7 @@ import { useGetProject } from "@/features/projects/api/use-get-project";
 
 import { CompositionStudio } from "@/features/editor/components/composition-studio";
 import { Button } from "@/components/ui/button";
+import { UserStatusProvider } from "@/features/auth/contexts/user-status-context";
 
 interface EditorProjectIdPageProps {
   params: {
@@ -47,7 +48,18 @@ const EditorProjectIdPage = ({
     );
   }
 
-  return <CompositionStudio initialData={data} isTrial={false} />
+  const isTrial = false;
+
+  return (
+    <UserStatusProvider 
+      initialUserStatus={{
+        isAuthenticated: !isTrial,
+        userId: !isTrial ? data.userId : undefined,
+      }}
+    >
+      <CompositionStudio initialData={data} isTrial={isTrial} />
+    </UserStatusProvider>
+  );
 };
  
 export default EditorProjectIdPage;
