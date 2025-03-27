@@ -112,6 +112,8 @@ export const Workbench = ({
   const [activeWorkbenchTool, setActiveWorkbenchTool] = useState<ActiveWorkbenchTool>("select");
   const [isGenerating, setIsGenerating] = useState(false);
   const [textOnlyMode, setTextOnlyMode] = useState(false);
+  // Add flag to track workbench encoding status
+  const [isCurrentWorkbenchEncoded, setIsCurrentWorkbenchEncoded] = useState(false);
   
   // Use the user status context
   const { userStatus, hasEnoughCredits, deductCredits } = useUserStatus();
@@ -562,8 +564,12 @@ export const Workbench = ({
     if (type === "decodeMaskResult" && isActive) {
       // Only process mask results if this workbench is active
       handleDecodingResults(data);
+    } else if (type === "encodeImageDone" && isActive) {
+      // When encoding is done, mark this workbench as encoded
+      setIsCurrentWorkbenchEncoded(true);
+      setSamWorkerLoading(false);
     }
-  }, [isActive, activeWorkbenchTool, editor, setMask, setMaskBinary, setPrevMaskArray]);
+  }, [isActive, activeWorkbenchTool, editor, setMask, setMaskBinary, setPrevMaskArray, setIsCurrentWorkbenchEncoded, setSamWorkerLoading]);
 
   useEffect(() => {
     if (isActive && samWorker.current) {
@@ -636,13 +642,91 @@ export const Workbench = ({
         type: "encodeImage",
         data: canvasToFloat32Array(resizeCanvas(tempCanvas, imageSize)),
       });
+      
+      // Set the encoded workbench ID
+      setLastEncodedWorkbenchId(workbenchId);
+      // Mark current workbench as encoded
+      setIsCurrentWorkbenchEncoded(true);
     };
 
-    // Track that we're encoding this specific workbench
-    setLastEncodedWorkbenchId(workbenchId);
-
     img.src = workspaceImage;
-  }, [editor, samWorker, workbenchId, lastEncodedWorkbenchId, setLastEncodedWorkbenchId]);
+  }, [editor, samWorker, workbenchId, setLastEncodedWorkbenchId]);
+
+  
+  // Set up canvas change listeners to mark workbench as not encoded
+  useEffect(() => {
+    if (editor?.canvas) {
+      const handleCanvasChange = () => {
+        console.log("/////------Canvas changed------/////");
+        setIsCurrentWorkbenchEncoded(false);
+      };
+      
+      // Add event listeners for all object changes
+      editor.canvas.on('object:added', handleCanvasChange);
+      editor.canvas.on('object:modified', handleCanvasChange);
+      editor.canvas.on('object:removed', handleCanvasChange);
+
+      // Add event listener for text changes
+      editor.canvas.on('text:editing:started', handleCanvasChange);
+      editor.canvas.on('text:changed', handleCanvasChange);
+      
+      // Cleanup listeners
+      return () => {
+        editor.canvas.off('object:added', handleCanvasChange);
+        editor.canvas.off('object:modified', handleCanvasChange);
+        editor.canvas.off('object:removed', handleCanvasChange);
+        editor.canvas.off('text:editing:started', handleCanvasChange);
+        editor.canvas.off('text:changed', handleCanvasChange);
+      };
+    }
+  }, [editor, editor?.canvas, isActive]);
+
+  // We don't need the debounced function reference anymore since we're using a direct interval
+  useEffect(() => {
+    // Only encode the image when:
+    // 1. We have an active editor
+    // 2. We're NOT in animation mode OR this is the first time encoding this workbench
+    // 3. SAM worker is initialized
+    // 4. This workbench is active
+    // 5. SAM worker is not currently loading
+    // 6. The workbench is not currently encoded OR it's the first time encoding this workbench
+    if (
+      editor?.canvas && 
+      (activeWorkbenchTool !== "animate" || lastEncodedWorkbenchId !== workbenchId) && 
+      samWorkerInitialized && 
+      isActive && 
+      !samWorkerLoading &&
+      (!isCurrentWorkbenchEncoded || lastEncodedWorkbenchId !== workbenchId)
+    ) {
+      console.log("Setting up periodic encoding for workbench");
+      
+      // Run encoding immediately when effect initializes
+      encodeWorkbenchImage();
+      
+      // Set up interval to encode every second - but only when needed
+      const encodingInterval = setInterval(() => {
+        if (!isCurrentWorkbenchEncoded) {
+          encodeWorkbenchImage();
+          console.log("/////------Encoding workbench image------/////");
+        }
+      }, 2000);
+      
+      // Clean up function to clear the interval when component unmounts or dependencies change
+      return () => {
+        console.log("Cleaning up encoding interval");
+        clearInterval(encodingInterval);
+      };
+    }
+  }, [
+    editor?.canvas, 
+    activeWorkbenchTool, 
+    samWorkerInitialized, 
+    isActive, 
+    lastEncodedWorkbenchId, 
+    isCurrentWorkbenchEncoded, 
+    samWorkerLoading, 
+    workbenchId
+  ]); // Added isCurrentWorkbenchEncoded to dependencies
 
   // Notify parent component ONLY when this workbench BECOMES active,
   // not on every editor change
@@ -660,39 +744,12 @@ export const Workbench = ({
     }
   }, [isActive, editor, index, onActive, encodeWorkbenchImage, samWorker]);
 
-  // We don't need the debounced function reference anymore since we're using a direct interval
+  // Reset the encoded state when the workbench becomes active
   useEffect(() => {
-    // Only encode the image when:
-    // 1. We have an active editor
-    // 2. We're NOT in animation mode OR this is the first time encoding this workbench
-    // 3. SAM worker is initialized
-    // 4. This workbench is active
-    // 5. SAM worker is not currently loading
-    if (
-      editor?.canvas && 
-      (activeWorkbenchTool !== "animate" || lastEncodedWorkbenchId !== workbenchId) && 
-      samWorkerInitialized && 
-      isActive && 
-      !samWorkerLoading
-    ) {
-      console.log("Setting up periodic encoding for workbench");
-      
-      // Run encoding immediately when effect initializes
-      encodeWorkbenchImage();
-      
-      // Set up interval to encode every second
-      const encodingInterval = setInterval(() => {
-        encodeWorkbenchImage();
-        console.log("/////------Encoding workbench image------/////");
-      }, 2000);
-      
-      // Clean up function to clear the interval when component unmounts or dependencies change
-      return () => {
-        console.log("Cleaning up encoding interval");
-        clearInterval(encodingInterval);
-      };
+    if (isActive) {
+      setIsCurrentWorkbenchEncoded(false);
     }
-  }, [editor?.canvas, activeWorkbenchTool, samWorkerInitialized, isActive, lastEncodedWorkbenchId]); // Don't add encodeWorkbenchImage to dependencies because it'll break the interval
+  }, [isActive]);
 
   // When this workbench becomes active, set its editor as the active editor in context
   useEffect(() => {
@@ -899,7 +956,7 @@ export const Workbench = ({
             <ul className="flex flex-col space-y-2">
               <RightSidebarItem
                 icon={ArrowRightCircle}
-                label="Animate"
+                label="Animation"
                 isActive={activeWorkbenchTool === "animate"}
                 onClick={() => {
                   setActiveWorkbenchTool("animate");

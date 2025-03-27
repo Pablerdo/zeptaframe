@@ -1396,7 +1396,7 @@ export const AnimateRightSidebar = ({
                       className="bg-blue-600 hover:bg-blue-700 text-white"
                       size="sm"
                       onClick={() => handleNewManualMask()}
-                      disabled={samWorkerLoading || activeSegmentationTool === "auto"}
+                      disabled={activeSegmentationTool === "auto"}
                     >
                       <Plus className="w-4 h-4 mr-1" />
                       New Manual Mask
