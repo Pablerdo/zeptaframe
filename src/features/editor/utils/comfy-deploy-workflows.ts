@@ -9,7 +9,7 @@ export const comfyDeployWorkflows = {
   "MP4VideoJoiner": "45e11f37-feaf-4d25-a39f-687321e9f94d",
   "GWF-ZEPTA-SkyReels-1024x576": "638db059-72f7-4d4b-9841-7a8232dfb34f",
   "GWF-ZEPTA-SkyReels-960x640-2it": "42107b45-ede7-4440-b544-bd69fd77ae79",
-  "GWF-ZEPTA-SkyR-Fast": "46dbfa1e-ff09-483e-b067-ea649989eeea"
+  "GWF-ZEPTA-SkyR-Fast": "4d087814-bcac-4f8f-8716-c9f1184b9a05"
 };
 
 

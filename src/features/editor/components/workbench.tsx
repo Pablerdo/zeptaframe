@@ -131,6 +131,8 @@ export const Workbench = ({
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
+  const [fastMode, setFastMode] = useState(false);
+
   // Add state for BuyCreditsModal
   const [showBuyCreditsModal, setShowBuyCreditsModal] = useState(false);
   const [requiredCredits, setRequiredCredits] = useState(0);
@@ -380,7 +382,7 @@ export const Workbench = ({
       } else {
 
         // ==========================================
-        // ANIMATION MODE: Handle motion and masking
+        // ANIMATION MODE: Handle animation and text prompt
         // ==========================================
 
         if (selectedModel.id === "cogvideox") {
@@ -388,7 +390,11 @@ export const Workbench = ({
         } else if (selectedModel.id === "hunyuanvideo") {
           workflowData.workflow_id = comfyDeployWorkflows["GWF-ZEPTA-HunyuanVideo"] || "";
         } else if (selectedModel.id === "skyreels") {
-          workflowData.workflow_id = comfyDeployWorkflows["GWF-ZEPTA-SkyReels-960x640-2it"] || "";
+          if (fastMode) {
+            workflowData.workflow_id = comfyDeployWorkflows["GWF-ZEPTA-SkyR-Fast"] || "";
+          } else {
+            workflowData.workflow_id = comfyDeployWorkflows["GWF-ZEPTA-SkyReels-960x640-2it"] || "";
+          }
         } 
 
         const validMasks = segmentedMasks.filter(mask => mask.id && mask.id.trim() !== '');
@@ -1015,6 +1021,28 @@ export const Workbench = ({
                     onClick={() => setTextOnlyMode(true)}
                   >
                     Text Only
+                  </button>
+                </div>
+              </div>
+
+              {/* Fast Mode Toggle */}
+              <div className="mt-auto">
+                <div className="flex flex-col w-full overflow-hidden mb-2">
+                  <button 
+                    className={`py-2 font-medium text-sm rounded-t-md w-full transition-colors duration-200 ${
+                      !fastMode ? 'bg-blue-600 text-white' : 'bg-gray-700 text-gray-300'
+                    }`}
+                    onClick={() => setFastMode(false)}
+                  >
+                    Normal
+                  </button>
+                  <button
+                    className={`py-2 font-medium text-sm rounded-b-md w-full transition-colors duration-200 ${
+                      fastMode ? 'bg-blue-600 text-white' : 'bg-gray-700 text-gray-300'
+                    }`}
+                    onClick={() => setFastMode(true)}
+                  >
+                    Fast
                   </button>
                 </div>
               </div>
