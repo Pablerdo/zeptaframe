@@ -59,7 +59,7 @@ export const BuyCreditsModal = ({
           <div className="bg-blue-50 dark:bg-blue-950 p-6 rounded-lg border border-blue-200 dark:border-blue-800 flex flex-col items-center">
             <CreditCard className="size-12 text-blue-500 mb-2" />
             <div className="text-3xl font-bold text-blue-600 dark:text-blue-400">500 Credits</div>
-            <div className="text-xl font-semibold mt-1 mb-3">$5.00 USD</div>
+            <div className="text-xl font-semibold mt-1 mb-3">${generationPrices.fiveHundredCreditsPrice}.00 USD</div>
           </div>
         </div>
         
