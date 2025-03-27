@@ -2,6 +2,7 @@
 
 import * as React from "react"
 import * as SliderPrimitive from "@radix-ui/react-slider"
+import { useState } from "react"
 
 import { cn } from "@/lib/utils"
 import { ArrowDownIcon, ArrowUpIcon } from "lucide-react";
@@ -10,12 +11,40 @@ interface CameraSliderVerticalProps extends React.ComponentPropsWithoutRef<typeo
   valueDisplay?: number;
   label?: string;
   showEndIcons?: boolean;
+  onValueDisplayChange?: (value: number) => void;
 }
 
 const CameraSliderVertical = React.forwardRef<
   React.ElementRef<typeof SliderPrimitive.Root>,
   CameraSliderVerticalProps
->(({ className, orientation = "horizontal", valueDisplay, label, showEndIcons = false, ...props }, ref) => {
+>(({ className, orientation = "horizontal", valueDisplay, label, showEndIcons = false, onValueDisplayChange, ...props }, ref) => {
+  const [isEditing, setIsEditing] = useState(false);
+  const [editValue, setEditValue] = useState('');
+
+  const handleClick = () => {
+    setIsEditing(true);
+    setEditValue(valueDisplay?.toFixed(1) || '0.0');
+  };
+
+  const handleBlur = () => {
+    setIsEditing(false);
+    if (onValueDisplayChange) {
+      const newValue = parseFloat(editValue);
+      if (!isNaN(newValue) && newValue >= -1 && newValue <= 1) {
+        onValueDisplayChange(newValue);
+      }
+    }
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      handleBlur();
+    }
+    if (e.key === 'Escape') {
+      setIsEditing(false);
+    }
+  };
+
   const isVertical = true;
   
   // Generate gradient colors for slider background
@@ -30,13 +59,28 @@ const CameraSliderVertical = React.forwardRef<
     <div className={cn(
       "flex items-center gap-2 flex-col h-full"
     )}>
-      {/* Display label and value if provided */}
+      {/* Modified value display */}
       {(valueDisplay !== undefined) && (
         <div className={cn(
           "flex text-sm font-medium"
         )}>
-          {valueDisplay !== undefined && (
-            <span className="px-1 py-1 rounded-md bg-gray-800 text-white min-w-[3rem] text-center">{valueDisplay.toFixed(1)}</span>
+          {isEditing ? (
+            <input
+              type="text"
+              value={editValue}
+              onChange={(e) => setEditValue(e.target.value)}
+              onBlur={handleBlur}
+              onKeyDown={handleKeyDown}
+              className="px-1 py-1 rounded-md bg-gray-800 text-white min-w-[3rem] text-center"
+              autoFocus
+            />
+          ) : (
+            <span 
+              onClick={handleClick}
+              className="px-1 py-1 rounded-md bg-gray-800 text-white min-w-[3rem] text-center cursor-pointer hover:bg-gray-700"
+            >
+              {valueDisplay.toFixed(1)}
+            </span>
           )}
         </div>
       )}
@@ -65,7 +109,7 @@ const CameraSliderVertical = React.forwardRef<
           <SliderPrimitive.Track 
             className="relative overflow-hidden rounded-md h-full w-[24px] grow bg-gray-800"
           >
-            <div className="absolute rounded-md h-full w-full" />
+            <div className="absolute rounded-md h-full w-full bg-gray-800" />
 
             <SliderPrimitive.Range 
               className="absolute w-full"

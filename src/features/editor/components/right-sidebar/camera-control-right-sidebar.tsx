@@ -396,16 +396,16 @@ export const CameraControlRightSidebar = ({
   const handleHorizontalPanChange = useCallback((value: number[]) => {
     const newValue = value[0];
     setHorizontalPan(newValue);
-    // Update the target velocity ref directly
-    targetVelocityRef.current.x = newValue * 2.0;
+    // Reduce multiplier from 2.0 to 1.0 for slower movement
+    targetVelocityRef.current.x = newValue * 0.5;
     setCameraControl((prev: Record<string, any>) => ({ ...prev, horizontalPan: newValue }));
   }, [setCameraControl]);
 
   const handleVerticalPanChange = useCallback((value: number[]) => {
     const newValue = value[0];
     setVerticalPan(newValue);
-    // Update the target velocity ref directly
-    targetVelocityRef.current.y = newValue * 2.0;
+    // Reduce multiplier from 2.0 to 1.0 for slower movement
+    targetVelocityRef.current.y = newValue * -0.5;
     setCameraControl((prev: Record<string, any>) => ({ ...prev, verticalPan: newValue }));
   }, [setCameraControl]);
 
@@ -431,9 +431,9 @@ export const CameraControlRightSidebar = ({
       setVerticalPan(vPan);
       setZoom(cameraControl.zoom || 50);
       
-      // Update target velocity refs
-      targetVelocityRef.current.x = hPan * 2.0;
-      targetVelocityRef.current.y = vPan * 2.0;
+      // Update target velocity refs with reduced multiplier
+      targetVelocityRef.current.x = hPan * 0.5;
+      targetVelocityRef.current.y = vPan * -0.5;
     }
   }, [cameraControl, setCameraControl]);
 
@@ -471,7 +471,7 @@ export const CameraControlRightSidebar = ({
       <div className="px-4 py-2">
         <div className="flex gap-4">
           {/* Vertical pan slider on the left */}
-          <div className="h-[200px] flex flex-col justify-center">
+          <div className="h-[150px] flex flex-col justify-center">
             <CameraSliderVertical
               orientation="vertical"
               valueDisplay={verticalPan}
@@ -481,16 +481,17 @@ export const CameraControlRightSidebar = ({
               max={1}
               step={0.1}
               onValueChange={handleVerticalPanChange}
+              onValueDisplayChange={(value) => handleVerticalPanChange([value])}
               showEndIcons
             />
           </div>
           
           {/* Canvas with horizontal slider below */}
-          <div className="flex-1 flex flex-col">
+          <div className="flex-1 flex flex-col h-[190px]">
             <div style={containerStyle} className="border border-gray-200 dark:border-gray-700">
               <canvas 
                 ref={canvasRef}
-                className="w-full h-full"
+                className="w-[223px] h-[149px]"
               />
             </div>
             
@@ -505,6 +506,7 @@ export const CameraControlRightSidebar = ({
                 max={1}
                 step={0.1}
                 onValueChange={handleHorizontalPanChange}
+                onValueDisplayChange={(value) => handleHorizontalPanChange([value])}
                 showEndIcons
               />
             </div>
@@ -526,7 +528,16 @@ export const CameraControlRightSidebar = ({
           onValueChange={handleZoomChange}
           className="mb-6"
         />
+
+        {/* Save button right after zoom slider */}
+        <button
+          className="w-full px-4 py-2 bg-white hover:bg-gray-100 text-gray-900 border border-gray-200 rounded-md transition-colors"
+          onClick={() => {}}
+        >
+          <span className="font-bold">Save Camera Control</span> 
+        </button>
       </div>
+
     </aside>
   );
 };

@@ -2,6 +2,7 @@
 
 import * as React from "react"
 import * as SliderPrimitive from "@radix-ui/react-slider"
+import { useState } from "react"
 
 import { cn } from "@/lib/utils"
 import { ArrowLeftIcon, ArrowRightIcon } from "lucide-react";
@@ -10,12 +11,40 @@ interface CameraSliderProps extends React.ComponentPropsWithoutRef<typeof Slider
   valueDisplay?: number;
   label?: string;
   showEndIcons?: boolean;
+  onValueDisplayChange?: (value: number) => void;
 }
 
 const CameraSlider = React.forwardRef<
   React.ElementRef<typeof SliderPrimitive.Root>,
   CameraSliderProps
->(({ className, valueDisplay, label, showEndIcons = false, ...props }, ref) => {
+>(({ className, valueDisplay, label, showEndIcons = false, onValueDisplayChange, ...props }, ref) => {
+  const [isEditing, setIsEditing] = useState(false);
+  const [editValue, setEditValue] = useState('');
+
+  const handleClick = () => {
+    setIsEditing(true);
+    setEditValue(valueDisplay?.toFixed(1) || '0.0');
+  };
+
+  const handleBlur = () => {
+    setIsEditing(false);
+    if (onValueDisplayChange) {
+      const newValue = parseFloat(editValue);
+      if (!isNaN(newValue) && newValue >= -1 && newValue <= 1) {
+        onValueDisplayChange(newValue);
+      }
+    }
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      handleBlur();
+    }
+    if (e.key === 'Escape') {
+      setIsEditing(false);
+    }
+  };
+
   return (
     <div className="flex items-center gap-2 w-full">
       {/* Display label and value if provided */}
@@ -57,11 +86,24 @@ const CameraSlider = React.forwardRef<
           </div>
         )}
         {(valueDisplay !== undefined) && (
-          <div className={cn(
-            "flex items-center text-sm font-medium ml-1"
-          )}>
-            {valueDisplay !== undefined && (
-              <span className="px-1 py-1 rounded-md bg-gray-800 text-white min-w-[3rem] text-center">{valueDisplay.toFixed(1)}</span>
+          <div className={cn("flex items-center text-sm font-medium ml-1")}>
+            {isEditing ? (
+              <input
+                type="text"
+                value={editValue}
+                onChange={(e) => setEditValue(e.target.value)}
+                onBlur={handleBlur}
+                onKeyDown={handleKeyDown}
+                className="px-1 py-1 rounded-md bg-gray-800 text-white min-w-[3rem] text-center"
+                autoFocus
+              />
+            ) : (
+              <span 
+                onClick={handleClick}
+                className="px-1 py-1 rounded-md bg-gray-800 text-white min-w-[3rem] text-center cursor-pointer hover:bg-gray-700"
+              >
+                {valueDisplay.toFixed(1)}
+              </span>
             )}
           </div>
         )}
