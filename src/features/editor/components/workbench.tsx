@@ -703,7 +703,7 @@ export const Workbench = ({
       // Run encoding immediately when effect initializes
       encodeWorkbenchImage();
       
-      // Set up interval to encode every second - but only when needed
+      // Set up interval to encode every two seconds - but only when needed
       const encodingInterval = setInterval(() => {
         if (!isCurrentWorkbenchEncoded) {
           encodeWorkbenchImage();

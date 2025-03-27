@@ -32,8 +32,7 @@ interface ScrollableWorkbenchViewerProps {
   maskBinary: HTMLCanvasElement | null;
   setMaskBinary: (maskBinary: HTMLCanvasElement | null) => void;
   projectData: ProjectJSON;
-  isDeletingIndex: number | null;
-  transitionDirection: 'left' | 'right' | null;
+  fadingWorkbenchIndex?: number | null;
   setAllowEncodeWorkbenchImage: (allowEncodeWorkbenchImage: boolean) => void;
   samWorkerInitialized: boolean;
   isTrial: boolean;
@@ -63,8 +62,7 @@ export const ScrollableWorkbenchViewer = ({
   maskBinary,
   setMaskBinary,
   projectData,
-  isDeletingIndex,
-  transitionDirection,
+  fadingWorkbenchIndex,
   setAllowEncodeWorkbenchImage,
   samWorkerInitialized,
   isTrial,
@@ -98,17 +96,12 @@ export const ScrollableWorkbenchViewer = ({
       {/* Render workbenches based on workbench IDs array */}
       {workbenchIds.map((id, index) => {
         const workbenchData = projectData.workbenches[id];
-        const isDeleting = index === isDeletingIndex;
+        const isFading = index === fadingWorkbenchIndex;
         
         return (
           <div 
             key={id} 
-            className={cn(
-              "transition-all duration-300 ease-in-out",
-              isDeleting && "opacity-0 scale-95",
-              transitionDirection === 'right' && index > (isDeletingIndex ?? 0) && "translate-x-[-100%]",
-              transitionDirection === 'left' && index < (isDeletingIndex ?? 0) && "translate-x-[100%]"
-            )}
+            className={`transition-all duration-300 ease-in-out ${isFading ? 'opacity-0 scale-95' : 'opacity-100 scale-100'}`}
             style={{
               flex: "0 0 100%", 
               width: "100%", 

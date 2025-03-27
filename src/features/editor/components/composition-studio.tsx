@@ -147,10 +147,6 @@ export const CompositionStudio = ({ initialData, isTrial }: CompositionStudioPro
 
   const [lastEncodedWorkbenchId, setLastEncodedWorkbenchId] = useState<string>("");
 
-  // Add these new state variables to composition-studio.tsx
-  const [isDeletingIndex, setIsDeletingIndex] = useState<number | null>(null);
-  const [transitionDirection, setTransitionDirection] = useState<'left' | 'right' | null>(null);
-
   // Video timeline collapsed state
   const [timelineCollapsed, setTimelineCollapsed] = useState(true);
 
@@ -279,16 +275,30 @@ export const CompositionStudio = ({ initialData, isTrial }: CompositionStudioPro
     const container = editorsContainerRef.current;
     if (!container) return;
     
-    // Give a small delay to ensure DOM is fully updated
-    const timeoutId = setTimeout(() => {
+    // Function to scroll to the active workbench
+    const scrollToActiveWorkbench = () => {
       const scrollTarget = activeWorkbenchIndex * container.clientWidth;
       container.scrollTo({
         left: scrollTarget,
         behavior: 'smooth'
       });
-    }, 50);
+    };
     
-    return () => clearTimeout(timeoutId);
+    // Execute scroll with a small delay to ensure DOM is fully updated
+    const timeoutId = setTimeout(scrollToActiveWorkbench, 50);
+    
+    // Also add a resize listener to maintain scroll position on window resize
+    const handleResize = () => {
+      // Use a short delay to ensure dimensions are updated
+      setTimeout(scrollToActiveWorkbench, 100);
+    };
+    
+    window.addEventListener('resize', handleResize);
+    
+    return () => {
+      clearTimeout(timeoutId);
+      window.removeEventListener('resize', handleResize);
+    };
   }, [activeWorkbenchIndex]);
 
   const onChangeActiveTool = useCallback((tool: ActiveTool) => {
@@ -314,6 +324,9 @@ export const CompositionStudio = ({ initialData, isTrial }: CompositionStudioPro
     
     // Generate a unique ID for the new workbench
     const newId = `workbench-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
+    
+    // The new workbench will be added at the end of the list
+    const newIndex = workbenchIds.length;
     
     // Update workbench IDs array
     setWorkbenchIds(prev => [...prev, newId]);
@@ -348,40 +361,52 @@ export const CompositionStudio = ({ initialData, isTrial }: CompositionStudioPro
     });
     
     // Set as active
-    setActiveWorkbenchIndex(workbenchIds.length);
-  }, [workbenchIds, activeWorkbenchIndex, mutate, isTrial]);
+    setActiveWorkbenchIndex(newIndex);
+    
+    // Scroll to the new workbench after a short delay to allow DOM update
+    setTimeout(() => {
+      if (editorsContainerRef.current) {
+        const targetScrollLeft = newIndex * editorsContainerRef.current.clientWidth;
+        editorsContainerRef.current.scrollTo({
+          left: targetScrollLeft,
+          behavior: 'smooth'
+        });
+      }
+    }, 100);
+    
+  }, [workbenchIds, activeWorkbenchIndex, mutate, isTrial, editorsContainerRef]);
   
-  // Handle deleting a workbench
+  // Add a new state to track the fading workbench
+  const [fadingWorkbenchIndex, setFadingWorkbenchIndex] = useState<number | null>(null);
+
+  // Simplified workbench deletion with clean fade-out animation
   const handleDeleteWorkbench = useCallback((indexToDelete: number) => {
     // Don't allow deleting if it's the last workbench
     if (workbenchIds.length <= 1) return;
     
-    // Get the ID of the workbench to delete
-    const idToDelete = workbenchIds[indexToDelete];
+    // Set the fading workbench index to trigger animation
+    setFadingWorkbenchIndex(indexToDelete);
     
-    // Set deleting state for animation
-    setIsDeletingIndex(indexToDelete);
+    // Determine the new active index before modifying state
+    let newActiveIndex: number;
     
-    // Use consistent transition direction
-    setTransitionDirection('right');
+    if (indexToDelete === activeWorkbenchIndex) {
+      // If deleting active workbench, go to the next one, or previous if it's the last
+      newActiveIndex = indexToDelete === workbenchIds.length - 1 
+        ? indexToDelete - 1 
+        : indexToDelete;
+    } else if (indexToDelete < activeWorkbenchIndex) {
+      // If deleting a workbench before the active one, adjust the index
+      newActiveIndex = activeWorkbenchIndex - 1;
+    } else {
+      // If deleting a workbench after the active one, keep the same index
+      newActiveIndex = activeWorkbenchIndex;
+    }
     
-    // Delay the actual state updates until animation completes
+    // After fade animation completes, update state
     setTimeout(() => {
-      // Determine the new active index before modifying state
-      let newActiveIndex: number;
-      
-      if (indexToDelete === activeWorkbenchIndex) {
-        // If deleting active workbench, go to the next one, or previous if it's the last
-        newActiveIndex = indexToDelete === workbenchIds.length - 1 
-          ? indexToDelete - 1 
-          : indexToDelete;
-      } else if (indexToDelete < activeWorkbenchIndex) {
-        // If deleting a workbench before the active one, adjust the index
-        newActiveIndex = activeWorkbenchIndex - 1;
-      } else {
-        // If deleting a workbench after the active one, keep the same index
-        newActiveIndex = activeWorkbenchIndex;
-      }
+      // Get the ID of the workbench to delete
+      const idToDelete = workbenchIds[indexToDelete];
       
       // Update workbench IDs first
       setWorkbenchIds(prev => prev.filter((_, i) => i !== indexToDelete));
@@ -408,13 +433,25 @@ export const CompositionStudio = ({ initialData, isTrial }: CompositionStudioPro
         return updated;
       });
       
-      // Reset animation states after changes are applied
-      setIsDeletingIndex(null);
-      setTransitionDirection(null);
+      // Clear the fading workbench state
+      setFadingWorkbenchIndex(null);
       
-    }, 300);
+      // After a short delay for DOM update, scroll to new active workbench
+      setTimeout(() => {
+        if (editorsContainerRef.current) {
+          // Calculate target scroll position
+          const targetScrollLeft = newActiveIndex * editorsContainerRef.current.clientWidth;
+          
+          // Scroll to the target position with smooth animation
+          editorsContainerRef.current.scrollTo({
+            left: targetScrollLeft,
+            behavior: 'smooth'
+          });
+        }
+      }, 50);
+    }, 300); // Match this with CSS transition duration
     
-  }, [workbenchIds, activeWorkbenchIndex, mutate]);
+  }, [workbenchIds, activeWorkbenchIndex, editorsContainerRef, mutate]);
 
   /*** SAM WORKER IMPLEMENTATION ***/
   // Add these refs at the component level to track current state
@@ -936,8 +973,7 @@ export const CompositionStudio = ({ initialData, isTrial }: CompositionStudioPro
                     maskBinary={maskBinary}
                     setMaskBinary={setMaskBinary}
                     projectData={projectData}
-                    isDeletingIndex={isDeletingIndex}
-                    transitionDirection={transitionDirection}
+                    fadingWorkbenchIndex={fadingWorkbenchIndex}
                     setAllowEncodeWorkbenchImage={setAllowEncodeWorkbenchImage}
                     samWorkerInitialized={samWorkerInitialized}
                     isTrial={isTrial}

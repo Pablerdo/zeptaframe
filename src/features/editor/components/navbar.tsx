@@ -11,7 +11,8 @@ import {
   Undo2,
   Pencil,
   Check,
-  CreditCard
+  CreditCard,
+  HelpCircle
 } from "lucide-react";
 import { FaDiscord } from "react-icons/fa";
 import {
@@ -34,6 +35,7 @@ import { Input } from "@/components/ui/input";
 
 import { useUserStatus } from "@/features/auth/contexts/user-status-context";
 import { BuyCreditsModal } from "@/features/subscriptions/components/credits/buy-credits-modal";
+import { TutorialModal } from "./tutorial-modal";
 
 interface NavbarProps {
   id: string;
@@ -62,6 +64,7 @@ export const Navbar = ({
   const [infoOpen, setInfoOpen] = useState(false);
   const infoButtonRef = useRef<HTMLButtonElement>(null);
   const { userStatus } = useUserStatus();
+  const [showTutorialModal, setShowTutorialModal] = useState(false);
 
   const handleClickSignUp = () => {
     setShowAuthModal(true);
@@ -113,6 +116,10 @@ export const Navbar = ({
   //     }
   //   },
   // });
+
+  const showTutorial = () => {
+    setShowTutorialModal(true);
+  };
 
   return (
     <nav className="w-full flex items-center p-4 h-[50px] gap-x-8 border-b-2 border-gray-300 dark:border-gray-900 lg:pl-[34px] bg-background text-foreground dark:shadow-dark-raised">
@@ -231,6 +238,9 @@ export const Navbar = ({
             </div>
           </div>
         )}
+        <Button variant="ghost" className="flex items-center justify-center" onClick={() => showTutorial()}>
+          <span className="text-sm text-muted-foreground underline">Watch Tutorial</span>
+        </Button>
 
         <div className="ml-auto flex items-center gap-x-4">
           {isTrial && (
@@ -370,6 +380,10 @@ export const Navbar = ({
         isOpen={showCreditsModal}
         onClose={() => setShowCreditsModal(false)}
         projectId={id}
+      />
+      <TutorialModal 
+        isOpen={showTutorialModal}
+        onClose={() => setShowTutorialModal(false)}
       />
     </nav>
   );
