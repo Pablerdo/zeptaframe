@@ -83,7 +83,7 @@ export const SignInCard = () => {
             )}
           </Button>
         </form>
-        {/* <Separator />
+        <Separator />
         <div className="flex flex-col gap-y-2.5">
           <Button
             onClick={() => onProviderSignIn("google")}
@@ -99,7 +99,7 @@ export const SignInCard = () => {
             )}
             Continue with Google
           </Button>
-          <Button
+          {/* <Button
             onClick={() => onProviderSignIn("github")}
             size="lg"
             variant="outline"
@@ -112,8 +112,8 @@ export const SignInCard = () => {
               <FaGithub className="mr-2 size-5 top-2.5 left-2.5 absolute" />
             )}
             Continue with Github
-          </Button>
-        </div> */}
+          </Button> */}
+        </div>
         <p className="text-xs text-muted-foreground">
           Don&apos;t have an account?{" "}
           <Link href="/sign-up" onClick={() => setLoading(true)}>

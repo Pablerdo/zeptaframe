@@ -14,9 +14,11 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
-import { EyeIcon, EyeOffIcon } from "lucide-react";
+import { EyeIcon, EyeOffIcon, Loader2 } from "lucide-react";
 import { useSignUp } from "@/features/auth/hooks/use-sign-up";
 import { useCreateProjectForUser } from "@/features/projects/api/use-create-project";
+import { Separator } from "@/components/ui/separator";
+import { FcGoogle } from "react-icons/fc";
 
 type AuthMode = "signin" | "signup";
 
@@ -46,6 +48,11 @@ export function AuthModal({
   
   const signUpMutation = useSignUp();
   const createProjectForUserMutation = useCreateProjectForUser();
+
+  const [loading, setLoading] = useState(false);
+  const [loadingGithub, setLoadingGithub] = useState(false);
+  const [loadingGoogle, setLoadingGoogle] = useState(false);
+  const [loadingLogin, setLoadingLogin] = useState(false);
 
   // Save trial project data when modal opens
   useEffect(() => {
@@ -265,6 +272,15 @@ export function AuthModal({
     }
   };
 
+  const onProviderSignIn = (provider: "github" | "google") => {
+    setLoading(true);
+    setLoadingGithub(provider === "github");
+    setLoadingGoogle(provider === "google");
+
+    signIn(provider, { callbackUrl: "/" });
+  };
+
+
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-[425px]">
@@ -278,6 +294,25 @@ export function AuthModal({
               : "Sign up to generate videos, images, and save your projects"}
           </DialogDescription>
         </DialogHeader>
+        <Separator />
+        <div className="flex flex-col gap-y-2">
+          <Button
+            onClick={() => onProviderSignIn("google")}
+            size="lg"
+            variant="default"
+            className="w-full relative"
+            disabled={loading}
+          >
+            {loadingGoogle ? (
+              <Loader2 className="mr-2 size-5 top-2.5 left-2.5 absolute animate-spin" />
+            ) : (
+              <FcGoogle className="mr-2 size-5 top-2.5 left-2.5 absolute" />
+            )}
+            Continue with Google
+          </Button>
+        </div>
+        <Separator />
+
         <form onSubmit={handleSubmit} key={mode}>
           <div className="grid gap-4 py-4">
             {mode === "signup" && (
@@ -343,7 +378,7 @@ export function AuthModal({
             {error && (
               <div className="col-span-4 text-red-500 text-sm">{error}</div>
             )}
-          </div>
+          </div>          
           <DialogFooter className="flex flex-col sm:flex-row gap-2">
             <Button
               type="button"

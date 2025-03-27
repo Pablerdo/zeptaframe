@@ -519,7 +519,7 @@ export const AnimateRightSidebar = ({
     }
   };
 
-  const handleApplyMask = (maskUrl: string, index: number) => {
+  const handleApplyMask = (maskUrl: string, startAnimation: boolean = true) => {
     if (!editor?.canvas) return;
 
     // Delete all animations in the canvas
@@ -535,7 +535,7 @@ export const AnimateRightSidebar = ({
       existingMasks.forEach(mask => editor.canvas.remove(mask));
       editor.canvas.renderAll();
       
-      if (activeAnimations[maskUrl]) {
+      if (activeAnimations[maskUrl] && startAnimation) {
         handleToggleTrajectory(maskUrl, false);
       }
       const updatedMasks = segmentedMasks.map(mask => ({
@@ -981,7 +981,7 @@ export const AnimateRightSidebar = ({
       const maskIndex = segmentedMasks.findIndex(mask => mask.url === maskUrl);
       if (maskIndex >= 0 && !segmentedMasks[maskIndex].isApplied) {
         // Apply the mask if not already applied
-        handleApplyMask(maskUrl, maskIndex);
+        handleApplyMask(maskUrl, false);
         
         // After applying the mask, set a timeout to allow the state to update
         setTimeout(() => {
@@ -1507,7 +1507,7 @@ export const AnimateRightSidebar = ({
                           <Button
                             variant={mask.isApplied ? "default" : "ghost"}
                             size="sm"
-                            onClick={() => handleApplyMask(mask.url, actualIndex)}
+                            onClick={() => handleApplyMask(mask.url)}
                             className={mask.isApplied ? "bg-green-600 hover:bg-green-700 text-white" : ""}
                             disabled={activeSegmentationTool !== "none"}
                           >

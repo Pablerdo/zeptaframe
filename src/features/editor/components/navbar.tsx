@@ -279,7 +279,12 @@ export const Navbar = ({
               <p className="text-sm">
                 This is part of <a href="https://x.com/realPSalamanca" target="_blank" rel="noopener noreferrer" className="font-bold hover:cursor-pointer underline">Pablo Salamanca&apos;s</a> thesis project, which 
                 aims to build the first fully visual based AI video editor. 
-                I hope you enjoy it. Shoot me a message at
+                <br />
+                <br />
+                Expect bugs, but hopefully you enjoy it. 
+                <br />
+                <br />
+                Shoot me a message at
                 <span className="font-bold cursor-pointer hover:underline" onClick={() => window.open("mailto:pablosalamanca88@gmail.com", "_blank")}> pablosalamanca88@gmail.com</span> if you have any questions or feedback.
               </p>
             </PopoverContent>

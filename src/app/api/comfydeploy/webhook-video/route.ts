@@ -18,7 +18,7 @@ function findVideoUrl(outputs: any): string | undefined {
     if (Array.isArray(output.data?.files) && output.data.files.length > 0) {
       // Check if any of the files have .gif or .mp4 extension
       const videoFile = output.data.files.find((file: any) => 
-        file.filename?.match(/_forDisplay_\d{5}\.gif$/) || file.filename?.match(/_forDisplay_\d{5}\.mp4$/)
+        file.filename?.match(/forDisplay$/)
       );
       
       // Return the URL of the first matching file, or fall back to the first file if no match
