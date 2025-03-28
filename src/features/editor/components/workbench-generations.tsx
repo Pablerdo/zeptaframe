@@ -86,6 +86,14 @@ const WorkbenchGenerations = ({
           isLoading={false}
           model="cogvideox"
         />
+
+        {/* Generation history (same scrollable context as VideoBox) */}
+        <div className="w-full mt-2 bg-black/20 rounded-md p-1">
+          <div className="text-xs font-medium text-gray-400 mb-1 flex items-center px-1 py-1 bg-black/40 sticky top-0 z-10">
+            <Calendar className="w-3 h-3 mr-1" />
+            <span>Generation History</span>
+          </div>
+        </div>
       </div>
     );
   }

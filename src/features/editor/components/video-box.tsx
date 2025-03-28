@@ -63,7 +63,7 @@ export const VideoBox = ({
       {videoStatus === null && (
         <div className="w-full h-full bg-gray-800/30 flex items-center justify-center">
           <span className="text-gray-400 text-sm font-medium tracking-wide">
-            No video has been generated yet
+            No video has been generated in this workbench yet
           </span>
         </div>
       )}

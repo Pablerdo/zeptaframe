@@ -1,22 +1,21 @@
-import { X } from "lucide-react";
+import { ArrowRightIcon, ArrowLeftIcon, X, ArrowDownIcon, ArrowUpIcon, ZoomIn, ZoomOut, Rotate3d } from "lucide-react";
 import { useCallback, useState, useEffect, useRef } from "react";
 
 import { 
   ActiveWorkbenchTool, 
+  CameraControl, 
   Editor,
 } from "@/features/editor/types";
 import { ToolSidebarHeader } from "@/features/editor/components/tool-sidebar-header";
 import { cn } from "@/lib/utils";
-import { Slider } from "@/components/ui/slider";
 import { CameraSlider } from "@/components/ui/camera-slider";
-import { CameraSliderVertical } from "@/components/ui/camera-slider-vertical";
 
 interface CameraControlRightSidebarProps {
   editor: Editor | undefined;
   activeWorkbenchTool: ActiveWorkbenchTool;
   onChangeActiveWorkbenchTool: (tool: ActiveWorkbenchTool) => void;
-  cameraControl: Record<string, any>;
-  setCameraControl: (cameraControl: Record<string, any>) => void;
+  cameraControl: CameraControl;
+  setCameraControl: (cameraControl: CameraControl) => void;
 };
 
 interface Dot {
@@ -38,16 +37,21 @@ export const CameraControlRightSidebar = ({
   cameraControl,
   setCameraControl,
 }: CameraControlRightSidebarProps) => {
+
+  const cameraVelocityConstant = 0.2;
+
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const animationRef = useRef<number>(0);
   const dotsRef = useRef<Dot[]>([]);
   const [canvasInitialized, setCanvasInitialized] = useState(false);
   
+  const [horizontalTruck, setHorizontalTruck] = useState(0); // -1 to 1 (center is 0)
+  const [verticalTruck, setVerticalTruck] = useState(0);     // -1 to 1 (center is 0)
+  const [dolly, setDolly] = useState(0);                   // -1 to 1 (center is 0)
   const [horizontalPan, setHorizontalPan] = useState(0); // -1 to 1 (center is 0)
   const [verticalPan, setVerticalPan] = useState(0);     // -1 to 1 (center is 0)
-  const [zoom, setZoom] = useState(50);                  // 0 to 100 (default is 50)
   
-  // Track camera offset (pan) and scale (zoom)
+  // Track camera offset (pan) and scale (dolly)
   const cameraOffsetRef = useRef({ x: 0, y: 0 });
   const lastCameraOffsetRef = useRef({ x: 0, y: 0 });
   const cameraScaleRef = useRef(1);
@@ -60,7 +64,7 @@ export const CameraControlRightSidebar = ({
 
   // Configuration for dot generation
   const dotConfigRef = useRef({
-    spacing: 16,
+    spacing: 8,
     viewMargin: 400, // Extra margin beyond viewport to add dots
     cleanupMargin: 600, // Distance beyond which to remove dots
   });
@@ -77,10 +81,10 @@ export const CameraControlRightSidebar = ({
       initialX: x + offsetX,
       initialY: y + offsetY,
       size: 2, // Math.random() * 1.8 + 1.2, // Slightly larger dots: Size between 1.2-3
-      color: '#ffffff', // Mix in some blue dots
+      color: '#b3d9ff', // Light muted blue color
       opacity: 1,// Math.random() * 0.5 + 0.5, // Higher opacity 0.5-1.0
-      velocityX: (Math.random() - 0.5) * 0.4,
-      velocityY: (Math.random() - 0.5) * 0.4
+      velocityX: (Math.random() - 0.5) * cameraVelocityConstant,
+      velocityY: (Math.random() - 0.5) * cameraVelocityConstant
     };
   }, []);
   
@@ -242,7 +246,7 @@ export const CameraControlRightSidebar = ({
     const height = canvas.height;
     
     // Clear canvas
-    ctx.fillStyle = '#111111';
+    ctx.fillStyle = '#000033';
     ctx.fillRect(0, 0, width, height);
     
     // Get current camera state
@@ -279,7 +283,7 @@ export const CameraControlRightSidebar = ({
     ctx.globalAlpha = 1;
   }, [canvasInitialized]);
   
-  // Animate dots - remove horizontalPan and verticalPan from dependency array
+  // Animate dots - remove horizontalTruck and verticalTruck from dependency array
   const animateDots = useCallback(() => {
     // Use the target velocity from refs instead of directly from state
     const targetVelocityX = targetVelocityRef.current.x;
@@ -313,8 +317,8 @@ export const CameraControlRightSidebar = ({
       
       // Occasionally change velocity slightly
       if (Math.random() < 0.02) {
-        dot.velocityX = (Math.random() - 0.5) * 0.4;
-        dot.velocityY = (Math.random() - 0.5) * 0.4;
+        dot.velocityX = (Math.random() - 0.5) * cameraVelocityConstant;
+        dot.velocityY = (Math.random() - 0.5) * cameraVelocityConstant;
       }
     });
     
@@ -377,14 +381,15 @@ export const CameraControlRightSidebar = ({
   
   // Update camera position based on sliders - only set initial position now
   useEffect(() => {
-    // Calculate camera scale based on zoom only
-    const scale = 0.5 + (zoom / 100) * 1.5;
+    // Calculate camera scale based on dolly
+    // New formula: 0.25 (farther) to 1.75 (closer) instead of 0.5 to 2.0
+    const scale = 0.25 + ((dolly + 1) / 2) * 1.5;
     
     // Update camera scale
     cameraScaleRef.current = scale;
     
     // No need to explicitly call drawDots() here as it's done in the animation loop
-  }, [zoom]);
+  }, [dolly]);
   
   // Initialize camera position when component mounts
   useEffect(() => {
@@ -393,43 +398,64 @@ export const CameraControlRightSidebar = ({
   }, []);
   
   // Handle slider changes
+  const handleHorizontalTruckChange = useCallback((value: number[]) => {
+    const newValue = value[0];
+    setHorizontalTruck(newValue);
+    // Reduce multiplier from 2.0 to 1.0 for slower movement
+    targetVelocityRef.current.x = newValue * 0.5;
+    const updatedCameraControl = { ...cameraControl, horizontalTruck: newValue };
+    setCameraControl(updatedCameraControl);
+  }, [cameraControl, setCameraControl]);
+
+  const handleVerticalTruckChange = useCallback((value: number[]) => {
+    const newValue = value[0];
+    setVerticalTruck(newValue);
+    // Reduce multiplier from 2.0 to 1.0 for slower movement
+    targetVelocityRef.current.y = newValue * -0.5;
+    const updatedCameraControl = { ...cameraControl, verticalTruck: newValue };
+    setCameraControl(updatedCameraControl);
+  }, [cameraControl, setCameraControl]);
+
+  const handleDollyChange = useCallback((value: number[]) => {
+    const newValue = value[0];
+    setDolly(newValue);
+    const updatedCameraControl = { ...cameraControl, dolly: newValue };
+    setCameraControl(updatedCameraControl);
+  }, [cameraControl, setCameraControl]);
+
   const handleHorizontalPanChange = useCallback((value: number[]) => {
     const newValue = value[0];
     setHorizontalPan(newValue);
-    // Reduce multiplier from 2.0 to 1.0 for slower movement
-    targetVelocityRef.current.x = newValue * 0.5;
-    setCameraControl((prev: Record<string, any>) => ({ ...prev, horizontalPan: newValue }));
-  }, [setCameraControl]);
+    const updatedCameraControl = { ...cameraControl, horizontalPan: newValue };
+    setCameraControl(updatedCameraControl);
+  }, [cameraControl, setCameraControl]);
 
   const handleVerticalPanChange = useCallback((value: number[]) => {
     const newValue = value[0];
     setVerticalPan(newValue);
-    // Reduce multiplier from 2.0 to 1.0 for slower movement
-    targetVelocityRef.current.y = newValue * -0.5;
-    setCameraControl((prev: Record<string, any>) => ({ ...prev, verticalPan: newValue }));
-  }, [setCameraControl]);
-
-  const handleZoomChange = useCallback((value: number[]) => {
-    const newValue = value[0];
-    setZoom(newValue);
-    setCameraControl((prev: Record<string, any>) => ({ ...prev, zoom: newValue }));
-  }, [setCameraControl]);
+    const updatedCameraControl = { ...cameraControl, verticalPan: newValue };
+    setCameraControl(updatedCameraControl);
+  }, [cameraControl, setCameraControl]);
 
   // Initialize cameraControl with default values
   useEffect(() => {
     if (Object.keys(cameraControl).length === 0) {
       setCameraControl({
+        horizontalTruck: 0,
+        verticalTruck: 0,
+        dolly: 0,
         horizontalPan: 0,
-        verticalPan: 0,
-        zoom: 50
+        verticalPan: 0
       });
     } else {
       // Sync local state with props
-      const hPan = cameraControl.horizontalPan || 0;
-      const vPan = cameraControl.verticalPan || 0;
-      setHorizontalPan(hPan);
-      setVerticalPan(vPan);
-      setZoom(cameraControl.zoom || 50);
+      const hPan = cameraControl.horizontalTruck || 0;
+      const vPan = cameraControl.verticalTruck || 0;
+      setHorizontalTruck(hPan);
+      setVerticalTruck(vPan);
+      setDolly(cameraControl.dolly || 0);
+      setHorizontalPan(cameraControl.horizontalPan || 0);
+      setVerticalPan(cameraControl.verticalPan || 0);
       
       // Update target velocity refs with reduced multiplier
       targetVelocityRef.current.x = hPan * 0.5;
@@ -444,7 +470,7 @@ export const CameraControlRightSidebar = ({
   const containerStyle = {
     width: "100%",
     // 3:2 aspect ratio
-    height: "200px",
+    height: "180px",
     borderRadius: "8px",
     overflow: "hidden",
     marginBottom: "5px"
@@ -470,37 +496,74 @@ export const CameraControlRightSidebar = ({
       {/* New layout with sliders positioned around canvas */}
       <div className="px-4 py-2">
         <div className="flex gap-4">
-          {/* Vertical pan slider on the left */}
-          <div className="h-[150px] flex flex-col justify-center">
-            <CameraSliderVertical
-              orientation="vertical"
-              valueDisplay={verticalPan}
-              label="Vertical"
-              value={[verticalPan]}
-              min={-1}
-              max={1}
-              step={0.1}
-              onValueChange={handleVerticalPanChange}
-              onValueDisplayChange={(value) => handleVerticalPanChange([value])}
-              showEndIcons
-            />
-          </div>
           
           {/* Canvas with horizontal slider below */}
-          <div className="flex-1 flex flex-col h-[190px]">
+          <div className="flex-1 flex flex-col">
             <div style={containerStyle} className="border border-gray-200 dark:border-gray-700">
               <canvas 
                 ref={canvasRef}
-                className="w-[223px] h-[149px]"
+                className="w-[280px] h-[180px]"
               />
             </div>
             
             {/* Horizontal pan slider under canvas */}
             <div className="mt-2">
+              Horizontal
+              <CameraSlider
+                orientation="horizontal"
+                valueDisplay={horizontalTruck}
+                label="Horizontal Truck"
+                value={[horizontalTruck]}
+                min={-1}
+                max={1}
+                step={0.1}
+                onValueChange={handleHorizontalTruckChange}
+                onValueDisplayChange={(value) => handleHorizontalTruckChange([value])}
+                showEndIcons
+                leftIcon={<ArrowLeftIcon className="h-5 w-5" />}
+                rightIcon={<ArrowRightIcon className="h-5 w-5"/>}
+              />
+            </div>
+            <div className="mt-2">
+              Vertical
+              <CameraSlider
+                orientation="horizontal"
+                valueDisplay={verticalTruck}
+                label="Vertical Truck"
+                value={[verticalTruck]}
+                min={-1}
+                max={1}
+                step={0.1}
+                onValueChange={handleVerticalTruckChange}
+                onValueDisplayChange={(value) => handleVerticalTruckChange([value])}
+                showEndIcons
+                leftIcon={<ArrowDownIcon className="h-5 w-5"/>}
+                rightIcon={<ArrowUpIcon className="h-5 w-5"/>}
+              />
+            </div>
+            <div className="mt-2 opacity-50 pointer-events-none">
+              Dolly
+              <CameraSlider
+                orientation="horizontal"
+                valueDisplay={dolly}
+                label="Dolly"
+                value={[dolly]}
+                min={-1}
+                max={1}
+                step={0.1}
+                onValueChange={handleDollyChange}
+                showEndIcons
+                leftIcon={<ZoomOut className="h-5 w-5"/>}
+                rightIcon={<ZoomIn className="h-5 w-5"/>}
+                disabled
+              />
+            </div>
+            <div className="mt-2 opacity-50 pointer-events-none">
+              Horizontal Pan
               <CameraSlider
                 orientation="horizontal"
                 valueDisplay={horizontalPan}
-                label="Horizontal"
+                label="Horizontal Pan"
                 value={[horizontalPan]}
                 min={-1}
                 max={1}
@@ -508,28 +571,37 @@ export const CameraControlRightSidebar = ({
                 onValueChange={handleHorizontalPanChange}
                 onValueDisplayChange={(value) => handleHorizontalPanChange([value])}
                 showEndIcons
+                leftIcon={<Rotate3d className="h-5 w-5"/>}
+                rightIcon={<Rotate3d className="h-5 w-5"/>}
+                disabled
+              />
+            </div>
+            <div className="mt-2 opacity-50 pointer-events-none">
+              Vertical Pan
+              <CameraSlider
+                orientation="horizontal"
+                valueDisplay={verticalPan}
+                label="Vertical Pan"
+                value={[verticalPan]}
+                min={-1}
+                max={1}
+                step={0.1}
+                onValueChange={handleVerticalPanChange}
+                onValueDisplayChange={(value) => handleVerticalPanChange([value])}
+                showEndIcons
+                leftIcon={<Rotate3d className="h-5 w-5"/>}
+                rightIcon={<Rotate3d className="h-5 w-5"/>}
+                disabled
               />
             </div>
           </div>
         </div>
       </div>
 
-      {/* Zoom slider stays in original position for now */}
+      {/* Dolly slider stays in original position for now */}
       <div className="px-4 py-2 mt-4">
-        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-          Zoom
-        </label>
-        <Slider
-          defaultValue={[50]}
-          value={[zoom]}
-          min={1}
-          max={100}
-          step={1}
-          onValueChange={handleZoomChange}
-          className="mb-6"
-        />
 
-        {/* Save button right after zoom slider */}
+        {/* Save button right after dolly slider */}
         <button
           className="w-full px-4 py-2 bg-white hover:bg-gray-100 text-gray-900 border border-gray-200 rounded-md transition-colors"
           onClick={() => {}}

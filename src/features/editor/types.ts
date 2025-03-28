@@ -275,6 +275,14 @@ export type BaseVideoModel = {
   name: string;
 };
   
+export type CameraControl = {
+  horizontalTruck: number;
+  verticalTruck: number;
+  dolly: number;
+  horizontalPan: number;
+  verticalPan: number;
+}
+
 export interface Coordinate {
   x: number;
   y: number;

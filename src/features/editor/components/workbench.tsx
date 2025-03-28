@@ -4,7 +4,7 @@ import { fabric } from "fabric";
 import { useEffect, useRef, useState, useCallback, useMemo } from "react";
 import { MessageSquare, Trash2, Video, Film, ArrowRightSquare, ArrowRightCircle, Loader2, CornerUpRight, ChevronDown, X } from "lucide-react";
 import { useEditor } from "@/features/editor/hooks/use-editor";
-import { ActiveSegmentationTool, ActiveTool, ActiveWorkbenchTool, BaseVideoModel, Editor as EditorType, JSON_KEYS, SegmentedMask, SupportedVideoModelId, VideoGeneration, WorkflowMode } from "@/features/editor/types";
+import { ActiveSegmentationTool, ActiveTool, ActiveWorkbenchTool, BaseVideoModel, CameraControl, Editor as EditorType, JSON_KEYS, SegmentedMask, SupportedVideoModelId, VideoGeneration, WorkflowMode } from "@/features/editor/types";
 import { cn } from "@/lib/utils";
 import { RightSidebarItem } from "./right-sidebar-item";
 import { AnimateRightSidebar } from "./right-sidebar/animate-right-sidebar";
@@ -122,7 +122,13 @@ export const Workbench = ({
   const [generalTextPrompt, setGeneralTextPrompt] = useState<string>("");
   const [segmentedMasks, setSegmentedMasks] = useState<SegmentedMask[]>([]);
   const [selectedModel, setSelectedModel] = useState<BaseVideoModel>(videoModels[defaultVideoModelId]);
-  const [cameraControl, setCameraControl] = useState<Record<string, any>>({});
+  const [cameraControl, setCameraControl] = useState<CameraControl>({
+    horizontalTruck: 0,
+    verticalTruck: 0,
+    dolly: 0,
+    horizontalPan: 0,
+    verticalPan: 0,
+  });
 
   const [activeSegmentationTool, setActiveSegmentationTool] = useState<ActiveSegmentationTool>("none");
 
@@ -412,12 +418,19 @@ export const Workbench = ({
         
         const uploadedMaskUrls = await Promise.all(maskUploadPromises);
         
+        const truckVector = {"x": -cameraControl.horizontalTruck, "y": cameraControl.verticalTruck};
+        const panVector = {"x": cameraControl.horizontalPan, "y": cameraControl.verticalPan};
+        const dolly = cameraControl.dolly;
+
+        // TODO: Add pan vector and dolly to the input camera. In the ComfyUI-SubjectBackgroundMotion.
+
         const videoGenData = {
           "input_image": JSON.stringify([workbenchImageUrl]),
           "input_masks": JSON.stringify(uploadedMaskUrls),
           "input_prompt": generalTextPrompt,
           "input_trajectories": JSON.stringify(trajectories),
-          "input_rotations": JSON.stringify(rotations)
+          "input_rotations": JSON.stringify(rotations),
+          "input_camera": JSON.stringify(truckVector),
         };
         
         console.log("videoGenData", videoGenData);
@@ -504,7 +517,6 @@ export const Workbench = ({
     
     // Optional: apply morpohological closing and slight blur for better ui
     bestMaskCanvas = enhanceMaskEdges(bestMaskCanvas, 6, 0); // Reduced blur radius
-    
 
     setMask(bestMaskCanvas);
     setMaskBinary(bestMaskBinary);

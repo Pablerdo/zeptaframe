@@ -1459,7 +1459,7 @@ export const AnimateRightSidebar = ({
                 const hasTrajectory = !!mask.trajectory;
                 
                 return (
-                  <div key={mask.url} className={`flex flex-col p-2 border border-gray-300 dark:border-blue-700 rounded-md space-y-2 dark:bg-[#111530] ${activeSegmentationTool !== "none" ? 'opacity-50' : ''}`}>
+                  <div key={mask.url} className={`flex flex-col p-2 border border-gray-300 dark:border-blue-700 rounded-md space-y-2 dark:bg-[#111530] ${activeSegmentationTool !== "none" ? 'opacity-50' : ''} ${mask.isApplied ? 'border-green-700 dark:border-green-700' : ''}`}>
                     <div className="flex items-center justify-between">
                       <div className="flex items-center space-x-2">
                         <img 
@@ -1505,10 +1505,10 @@ export const AnimateRightSidebar = ({
                       {!isEditingMaskName && (
                         <div className="flex items-center space-x-2">
                           <Button
-                            variant={mask.isApplied ? "default" : "ghost"}
+                            variant="default"
                             size="sm"
                             onClick={() => handleApplyMask(mask.url)}
-                            className={mask.isApplied ? "bg-green-600 hover:bg-green-700 text-white" : ""}
+                            className={mask.isApplied ? "bg-green-600 hover:bg-green-700 text-white" : "bg-blue-700 hover:bg-blue-800 text-white"}
                             disabled={activeSegmentationTool !== "none"}
                           >
                             {mask.isApplied ? 'Applied' : 'Apply'}
@@ -1596,7 +1596,7 @@ export const AnimateRightSidebar = ({
                     ) : hasTrajectory && mask.trajectory ? (
                       <div className="flex space-x-2">
                         <Button
-                          className="flex-1 bg-purple-600 hover:bg-purple-700 text-white"
+                          className="flex-1 bg-purple-700 hover:bg-purple-800 text-white"
                           size="sm"
                           onClick={() => handleRedoTrajectory(mask.url)}
                           disabled={activeSegmentationTool !== "none"}
@@ -1607,7 +1607,7 @@ export const AnimateRightSidebar = ({
                       </div>
                     ) : (
                       <Button
-                        className="w-full bg-purple-600 hover:bg-purple-700 text-white"
+                        className="w-full bg-purple-700 hover:bg-purple-800 text-white"
                         size="sm"
                         disabled={!mask.isApplied || activeSegmentationTool !== "none"}
                         onClick={() => handleControlMotion(mask.id, mask.url)}

@@ -29,7 +29,7 @@ export async function POST(req: NextRequest) {
         },
       })
     } else if (data.workflowData.mode === "animation") {
-      result= await cd.run.deployment.queue({
+      result = await cd.run.deployment.queue({
         deploymentId: data.workflowData.workflow_id,
         webhook: webhookUrl,
         inputs: {
@@ -38,6 +38,7 @@ export async function POST(req: NextRequest) {
           input_prompt: data.videoGenData.input_prompt,
           input_trajectories: data.videoGenData.input_trajectories,
           input_rotations: data.videoGenData.input_rotations,
+          input_camera: data.videoGenData.input_camera,
         },
       })
     }

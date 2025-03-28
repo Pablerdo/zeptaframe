@@ -12,12 +12,14 @@ interface CameraSliderProps extends React.ComponentPropsWithoutRef<typeof Slider
   label?: string;
   showEndIcons?: boolean;
   onValueDisplayChange?: (value: number) => void;
+  leftIcon?: React.ReactNode;
+  rightIcon?: React.ReactNode;
 }
 
 const CameraSlider = React.forwardRef<
   React.ElementRef<typeof SliderPrimitive.Root>,
   CameraSliderProps
->(({ className, valueDisplay, label, showEndIcons = false, onValueDisplayChange, ...props }, ref) => {
+>(({ className, valueDisplay, label, showEndIcons = false, onValueDisplayChange, leftIcon, rightIcon, ...props }, ref) => {
   const [isEditing, setIsEditing] = useState(false);
   const [editValue, setEditValue] = useState('');
 
@@ -52,8 +54,8 @@ const CameraSlider = React.forwardRef<
       <div className="relative flex items-center w-full">
         {/* Start icon */}
         {showEndIcons && (
-          <div className="flex items-center justify-center w-8 h-8 bg-gray-800 rounded-md mr-2">
-            <ArrowLeftIcon className="w-4 h-4" />
+          <div className="flex items-center justify-center w-10 h-8 bg-muted dark:bg-gray-800 rounded-md mr-2">
+            {leftIcon}
           </div>
         )}
         
@@ -67,7 +69,7 @@ const CameraSlider = React.forwardRef<
           {...props}
         >
           <SliderPrimitive.Track 
-            className="relative overflow-hidden rounded-md h-[24px] w-full grow bg-gray-800"
+            className="relative overflow-hidden rounded-md h-[24px] w-full grow bg-muted dark:bg-gray-800"
           >
             <div className="absolute rounded-md h-full w-full" />
             
@@ -75,14 +77,14 @@ const CameraSlider = React.forwardRef<
           </SliderPrimitive.Track>
           
           <SliderPrimitive.Thumb 
-            className="block h-7 w-2 rounded-sm border-2 border-white bg-white shadow-lg ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50"
+            className="block h-7 w-2 rounded-sm border-2 border-primary bg-background dark:bg-white shadow-lg ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50"
           />
         </SliderPrimitive.Root>
         
         {/* End icon */}
         {showEndIcons && (
-          <div className="flex items-center justify-center w-10 h-8 bg-gray-800 rounded-md ml-2">
-            <ArrowRightIcon className="w-4 h-4" />
+          <div className="flex items-center justify-center w-10 h-8 bg-muted dark:bg-gray-800 rounded-md ml-2">
+            {rightIcon}
           </div>
         )}
         {(valueDisplay !== undefined) && (
@@ -94,13 +96,13 @@ const CameraSlider = React.forwardRef<
                 onChange={(e) => setEditValue(e.target.value)}
                 onBlur={handleBlur}
                 onKeyDown={handleKeyDown}
-                className="px-1 py-1 rounded-md bg-gray-800 text-white min-w-[3rem] text-center"
+                className="px-1 py-1 rounded-md bg-muted dark:bg-gray-800 text-foreground dark:text-white min-w-[3rem] text-center"
                 autoFocus
               />
             ) : (
               <span 
                 onClick={handleClick}
-                className="px-1 py-1 rounded-md bg-gray-800 text-white min-w-[3rem] text-center cursor-pointer hover:bg-gray-700"
+                className="px-1 py-1 rounded-md bg-muted dark:bg-gray-800 text-foreground dark:text-white min-w-[3rem] text-center cursor-pointer hover:bg-secondary dark:hover:bg-gray-700"
               >
                 {valueDisplay.toFixed(1)}
               </span>
