@@ -29,6 +29,19 @@ const VideoExportsList = ({ videoExports }: VideoExportsListProps) => {
     );
   };
 
+  // Calculate dynamic max height based on number of exports
+  // Base height of 60px for empty state, then 60px per export with a minimum of 120px
+  // and maximum of 350px to ensure it doesn't grow too large
+  const getMaxHeight = () => {
+    const baseHeight = 60;
+    const heightPerExport = 60;
+    const calculatedHeight = videoExports.length === 0 
+      ? baseHeight 
+      : baseHeight + (videoExports.length * heightPerExport);
+    
+    return Math.max(Math.min(calculatedHeight, 350), 120);
+  };
+
   return (
     <div className="w-full mt-2 bg-black/20 rounded-md p-1">
       <div className="text-sm font-medium text-gray-300 mb-1 flex items-center px-2 py-1.5 bg-black/40 rounded">
@@ -36,7 +49,7 @@ const VideoExportsList = ({ videoExports }: VideoExportsListProps) => {
         <span>Export History</span>
       </div>
       
-      <div className="overflow-y-auto custom-scrollbar" style={{ maxHeight: `${Math.min(videoExports.length * 50, 200)}px` }}>
+      <div className="overflow-y-auto custom-scrollbar" style={{ maxHeight: `${getMaxHeight()}px` }}>
         <div className="space-y-1 p-1">
           {videoExports.length === 0 && (
             <div className="flex items-center justify-center px-3 py-2 rounded bg-gray-700/30 hover:bg-gray-700/40 transition-colors">
