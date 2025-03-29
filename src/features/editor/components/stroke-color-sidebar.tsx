@@ -6,6 +6,7 @@ import { ColorPicker } from "@/features/editor/components/color-picker";
 import { cn } from "@/lib/utils";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { X } from "lucide-react";
+import { useState } from "react";
 
 interface StrokeColorSidebarProps {
   editor: Editor | undefined;
@@ -18,14 +19,15 @@ export const StrokeColorSidebar = ({
   activeTool,
   onChangeActiveTool,
 }: StrokeColorSidebarProps) => {
-  const value = editor?.getActiveStrokeColor() || STROKE_COLOR;
 
+  const [value, setValue] = useState(editor?.getActiveStrokeColor() || STROKE_COLOR);
   const onClose = () => {
     onChangeActiveTool("select");
   };
 
   const onChange = (value: string) => {
     editor?.changeStrokeColor(value);
+    setValue(value)
   };
 
   return (

@@ -25,7 +25,7 @@ const VideoExportsList = ({ videoExports }: VideoExportsListProps) => {
     
     downloadVideo(
       videoUrl, 
-      `video-timeline-${new Date().toISOString().slice(0, 10)}.mp4`
+      `Zeptaframe-${new Date().toISOString().slice(0, 10)}.mp4`
     );
   };
 

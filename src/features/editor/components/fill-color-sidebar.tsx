@@ -1,11 +1,11 @@
 import { ActiveTool, Editor, FILL_COLOR } from "@/features/editor/types";
-import { ToolSidebarClose } from "@/features/editor/components/tool-sidebar-close";
 import { ToolSidebarHeader } from "@/features/editor/components/tool-sidebar-header";
 import { ColorPicker } from "@/features/editor/components/color-picker";
 import { X } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { useState } from "react";
 
 interface FillColorSidebarProps {
   editor: Editor | undefined;
@@ -18,7 +18,9 @@ export const FillColorSidebar = ({
   activeTool,
   onChangeActiveTool,
 }: FillColorSidebarProps) => {
-  const value = editor?.getActiveFillColor() || FILL_COLOR;
+
+
+  const [value, setValue] = useState(editor?.getActiveStrokeColor() || FILL_COLOR);
 
   const onClose = () => {
     onChangeActiveTool("select");
@@ -26,6 +28,7 @@ export const FillColorSidebar = ({
 
   const onChange = (value: string) => {
     editor?.changeFillColor(value);
+    setValue(value)
   };
 
   return (
