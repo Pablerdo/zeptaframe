@@ -137,7 +137,9 @@ export const Workbench = ({
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
-  const [fastMode, setFastMode] = useState(false);
+  type ComputeMode = "ultra" | "normal" | "flash" ;
+
+  const [computeMode, setComputeMode] = useState<ComputeMode>("ultra");
 
   // Add state for BuyCreditsModal
   const [showBuyCreditsModal, setShowBuyCreditsModal] = useState(false);
@@ -396,10 +398,12 @@ export const Workbench = ({
         } else if (selectedModel.id === "hunyuanvideo") {
           workflowData.workflow_id = comfyDeployWorkflows["GWF-ZEPTA-HunyuanVideo"] || "";
         } else if (selectedModel.id === "skyreels") {
-          if (fastMode) {
-            workflowData.workflow_id = comfyDeployWorkflows["GWF-ZEPTA-SkyR-Fast"] || "";
+          if (computeMode === "flash") {
+            workflowData.workflow_id = comfyDeployWorkflows["GWF-ZEPTA-SkyR-Flash"] || "";
+          } else if (computeMode === "ultra") {
+            workflowData.workflow_id = comfyDeployWorkflows["GWF-ZEPTA-SkyR-Ultra"] || "";
           } else {
-            workflowData.workflow_id = comfyDeployWorkflows["GWF-ZEPTA-SkyReels-960x640-2it"] || "";
+            workflowData.workflow_id = comfyDeployWorkflows["GWF-ZEPTA-SkyR-Normal"] || "";
           }
         } 
 
@@ -426,7 +430,6 @@ export const Workbench = ({
         // TODO: Add pan vector and dolly to the input camera. In the ComfyUI-SubjectBackgroundMotion.
 
         const videoGenData = {
-          "input_outpainted_image": JSON.stringify([workbenchImageUrl]),
           "input_image": JSON.stringify([workbenchImageUrl]),
           "input_masks": JSON.stringify(uploadedMaskUrls),
           "input_prompt": generalTextPrompt,
@@ -467,6 +470,7 @@ export const Workbench = ({
               runId: data.runId,
               status: "pending",
               modelId: modelId,
+              computeMode: computeMode,
             }),
           });
           
@@ -476,14 +480,15 @@ export const Workbench = ({
           throw new Error("No video runId received");
         }
       }
-
-      // Increment usage counter
-
-      // TODO: Uncomment this when we have a way to increment the usage counter
-      // incrementVideoUsage();
       
       // When successful, deduct credits
-      deductCredits(videoPrice);
+      if (computeMode === "flash") {
+        deductCredits(generationPrices.flashVideoCredits);
+      } else if (computeMode === "normal") {
+        deductCredits(generationPrices.normalVideoCredits);
+      } else if (computeMode === "ultra") {
+        deductCredits(generationPrices.ultraVideoCredits);
+      }
       
       toast.success("Video generation started successfully. Check timeline for progress.");
       console.log("Video generation started. Please wait...");
@@ -1044,17 +1049,25 @@ export const Workbench = ({
                 <div className="flex flex-col w-full overflow-hidden mb-2">
                   <button 
                     className={`py-2 font-medium text-sm rounded-t-md w-full transition-colors duration-200 ${
-                      !fastMode ? 'bg-blue-600 text-white' : 'bg-gray-700 text-gray-300'
+                      computeMode === "ultra" ? 'bg-blue-600 text-white' : 'bg-gray-700 text-gray-300'
                     }`}
-                    onClick={() => setFastMode(false)}
+                    onClick={() => setComputeMode("ultra")}
+                  >
+                    Ultra
+                  </button>
+                  <button
+                    className={`py-2 font-medium text-sm text-center w-full transition-colors duration-200 ${
+                      computeMode === "normal" ? 'bg-blue-600 text-white' : 'bg-gray-700 text-gray-300'
+                    }`}
+                    onClick={() => setComputeMode("normal")}
                   >
                     Normal
                   </button>
                   <button
                     className={`py-2 font-medium text-sm rounded-b-md w-full transition-colors duration-200 ${
-                      fastMode ? 'bg-blue-600 text-white' : 'bg-gray-700 text-gray-300'
+                      computeMode === "flash" ? 'bg-blue-600 text-white' : 'bg-gray-700 text-gray-300'
                     }`}
-                    onClick={() => setFastMode(true)}
+                    onClick={() => setComputeMode("flash")}
                   >
                     Flash
                   </button>

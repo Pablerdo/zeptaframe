@@ -11,18 +11,20 @@ const cd = new ComfyDeploy({
 // In-memory storage for video URLs (replace with a database in production)
 const videoStore: { [key: string]: string } = {}
 
-function findVideoUrl(outputs: any): string | undefined {
+function findOutputVideoUrl(outputs: any): string | undefined {
   if (!outputs || !Array.isArray(outputs)) return undefined;
   
   for (const output of outputs) {
     if (Array.isArray(output.data?.files) && output.data.files.length > 0) {
-      // Check if any of the files have .gif or .mp4 extension
+      // Check if any of the files have "forDisplay" in filename
       const videoFile = output.data.files.find((file: any) => 
         file.filename?.match(/forDisplay/)
       );
       
-      // Return the URL of the first matching file, or fall back to the first file if no match
-      return videoFile?.url || undefined;
+      // If found a matching file, return its URL
+      if (videoFile) {
+        return videoFile.url;
+      }
     }
   }
   
@@ -47,7 +49,7 @@ export async function POST(request: Request) {
 
     console.log(JSON.stringify(outputs, null, 2))
 
-    const videoUrl = findVideoUrl(outputs)
+    const videoUrl = findOutputVideoUrl(outputs)
 
     const lastFrameUrl = findLastFrameUrl(outputs)
 

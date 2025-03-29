@@ -69,6 +69,7 @@ const app = new Hono()
         runId: z.string(),
         status: z.enum(["pending", "success", "error"]).default("pending"),
         modelId: z.string(),
+        computeMode: z.enum(["flash", "normal", "ultra"]).optional(),
       })
     ),
     async (c) => {
@@ -88,6 +89,7 @@ const app = new Hono()
           runId: data.runId,
           status: data.status,
           modelId: data.modelId,
+          computeMode: data.computeMode,
           startTime: new Date(),
         }).returning();
         

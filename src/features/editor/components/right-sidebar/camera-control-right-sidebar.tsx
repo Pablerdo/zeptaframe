@@ -230,7 +230,7 @@ export const CameraControlRightSidebar = ({
       dotsRef.current = dots;
       lastCameraOffsetRef.current = {...cameraOffset};
       
-      console.log(`Updated dots: ${dots.length} total after camera movement`);
+      // console.log(`Updated dots: ${dots.length} total after camera movement`);
     }
   }, [generateDotsInArea]);
   

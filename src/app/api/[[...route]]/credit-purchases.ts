@@ -214,7 +214,7 @@ const app = new Hono()
               name: `${creditsAmount} Credits`,
               description: `Credits for Zeptaframe`,
             },
-            unit_amount: generationPrices.fiveHundredCreditsPrice * 100, // Convert to cents
+            unit_amount: generationPrices.fiveHundredCreditsDollarPrice * 100, // Convert to cents
           },
           quantity: 1,
         },

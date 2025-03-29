@@ -250,6 +250,7 @@ export interface VideoGeneration {
   videoUrl?: string | null;
   lastFrameUrl?: string | null;
   modelId?: string;
+  computeMode?: string;
   createdAt: string | Date;
   updatedAt?: string | Date;
 }

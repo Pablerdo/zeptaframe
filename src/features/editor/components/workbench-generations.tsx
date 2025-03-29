@@ -124,7 +124,10 @@ const WorkbenchGenerations = ({
           </div>
           
           <div className="space-y-1">
-            {workbenchVideoGenerations.map((gen) => (
+            {workbenchVideoGenerations.map((gen) => {
+              const computeModeString = gen.computeMode ? `${gen.computeMode[0].toUpperCase() + gen.computeMode.slice(1)} Mode` : `Text-Only Mode`;
+            
+              return  (
               <div 
                 key={gen.id}
                 onClick={() => setSelectedGeneration(gen.id)}
@@ -149,14 +152,15 @@ const WorkbenchGenerations = ({
                     "font-medium",
                     gen.id === selectedGeneration ? "text-blue-200" : "text-gray-300"
                   )}>
-                    {gen.status === 'pending' ? 'Processing...' : videoModels[gen.modelId as SupportedVideoModelId].name}
+                    {gen.status === 'pending' ? `Processing... (${computeModeString})` : computeModeString}
                   </span>
                 </div>
                 <div className="text-gray-400">
                   {formatTimestamp(gen.createdAt)}
                 </div>
-              </div>
-            ))}
+                </div>
+              )
+            })}
           </div>
         </div>
       </div>

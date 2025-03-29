@@ -1,0 +1,1 @@
+ALTER TABLE "video_generation" ADD COLUMN "computeMode" text;
