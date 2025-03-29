@@ -17,7 +17,6 @@ const app = new Hono()
       return c.json({ error: "Unauthorized" }, 401);
     }
 
-    // Get user's uploaded unsplashImages
     const uploadedSegmentedObjects = await db
       .select()
       .from(segmentedObjects)

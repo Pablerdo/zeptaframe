@@ -1,8 +1,6 @@
 import { Hono } from "hono";
 import { verifyAuth } from "@hono/auth-js";
 
-import { unsplash } from "@/lib/unsplash";
-
 import { desc, eq } from "drizzle-orm";
 
 import { db } from "@/db/drizzle";

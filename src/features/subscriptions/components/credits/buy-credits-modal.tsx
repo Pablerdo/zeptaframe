@@ -73,7 +73,12 @@ export const BuyCreditsModal = ({
           <li className="flex items-center">
             <CheckCircle2 className="size-5 mr-2 fill-blue-500 text-white" />
             <p className="text-sm text-muted-foreground">
-              Create videos: {generationPrices.video} credits per video
+              Create videos based on compute mode: 
+              <ul className="ml-1 list-disc list-inside">
+                <li>{generationPrices.flashVideoCredits} credits (Flash)</li>
+                <li>{generationPrices.normalVideoCredits} credits (Normal)</li>
+                <li>{generationPrices.ultraVideoCredits} credits (Ultra)</li>
+              </ul>
             </p>
           </li>
           <li className="flex items-center">
