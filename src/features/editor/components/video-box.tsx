@@ -6,6 +6,7 @@ import { SupportedVideoModelId } from "../types";
 interface VideoBoxProps {
   videoUrl: string | null;
   videoStatus: string | null;
+  computeMode: string | null;
   isLoading?: boolean;
   model?: string;
   progress?: number;
@@ -14,6 +15,7 @@ interface VideoBoxProps {
 export const VideoBox = ({ 
   videoUrl, 
   videoStatus,
+  computeMode,
   isLoading = false,
   progress = 0,
   model = "cogvideox"
@@ -48,7 +50,7 @@ export const VideoBox = ({
         <div className="w-full h-full bg-gray-800/30 flex flex-col items-center justify-center">
           <Loader2 className="h-10 w-10 animate-spin text-blue-500 mb-4" />
           <span className="text-gray-300 text-sm font-medium tracking-wide mb-2">
-            Generating video with {videoModels[model as SupportedVideoModelId]?.name || "AI"}...
+            Generating video with {computeMode ? computeMode.charAt(0).toUpperCase() + computeMode.slice(1) + " Mode" : "AI"}...
           </span>
         </div>
       )}

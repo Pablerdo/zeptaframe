@@ -88,6 +88,7 @@ const WorkbenchGenerations = ({
         <VideoBox 
           videoStatus={null}
           videoUrl={null}
+          computeMode={null}
           isLoading={false}
           model="cogvideox"
         />
@@ -117,13 +118,14 @@ const WorkbenchGenerations = ({
         <VideoBox 
           videoStatus={displayedGeneration?.status || null}
           videoUrl={displayedGeneration?.status === 'success' ? displayedGeneration?.videoUrl || null : null}
+          computeMode={displayedGeneration?.computeMode || null}
           isLoading={displayedGeneration?.status === 'pending'}
           model={displayedGeneration?.modelId || "cogvideox"}
         />
         
         {/* Generation history (same scrollable context as VideoBox) */}
         <div className="w-full mt-2 bg-black/20 rounded-md p-1">
-          <div className="text-xs font-medium text-gray-400 mb-1 flex items-center px-1 py-1 bg-black/40 sticky top-0 z-10">
+          <div className="text-xs font-medium text-gray-100 dark:text-gray-400 mb-1 flex items-center px-1 py-1 bg-black/40 sticky top-0 z-10">
             <Calendar className="w-3 h-3 mr-1" />
             <span>Generation History</span>
           </div>
