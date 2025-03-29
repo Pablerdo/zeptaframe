@@ -27,16 +27,27 @@ function findOutputVideoUrl(outputs: any): string | undefined {
       }
     }
   }
-  
   return undefined;
 }
 
 function findLastFrameUrl(outputs: any): string | undefined {
-  const outputWithLastFrame = outputs.find((output: any) => 
-    Array.isArray(output.data?.images) && output.data.images.length > 0
-  );
+  if (!outputs || !Array.isArray(outputs)) return undefined;
 
-  return outputWithLastFrame?.data.images[0]?.url;
+  for (const output of outputs) {
+    if (Array.isArray(output.data?.images) && output.data.images.length > 0) {
+      // Check if any of the images have "lastFrame" in filename
+      const lastFrame = output.data.images.find((image: any) => 
+        image.filename?.match(/lastFrame/)
+      );
+      
+      // If found a matching file, return its URL
+      if (lastFrame) {
+        return lastFrame.url;
+      }
+    }
+  }
+
+  return undefined;
 }
 
 export async function POST(request: Request) {
