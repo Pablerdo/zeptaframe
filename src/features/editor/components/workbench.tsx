@@ -1045,13 +1045,14 @@ export const Workbench = ({
               </div>
 
               {/* Fast Mode Toggle */}
-              <div className="mt-auto">
+              <div className={`mt-auto ${textOnlyMode ? 'opacity-50 pointer-events-none' : ''}`}>
                 <div className="flex flex-col w-full overflow-hidden mb-2">
                   <button 
                     className={`py-2 font-medium text-sm rounded-t-md w-full transition-colors duration-200 ${
                       computeMode === "ultra" ? 'bg-blue-600 text-white' : 'bg-gray-700 text-gray-300'
                     }`}
                     onClick={() => setComputeMode("ultra")}
+                    disabled={textOnlyMode}
                   >
                     Ultra
                   </button>
@@ -1060,6 +1061,7 @@ export const Workbench = ({
                       computeMode === "normal" ? 'bg-blue-600 text-white' : 'bg-gray-700 text-gray-300'
                     }`}
                     onClick={() => setComputeMode("normal")}
+                    disabled={textOnlyMode}
                   >
                     Normal
                   </button>
@@ -1068,6 +1070,7 @@ export const Workbench = ({
                       computeMode === "flash" ? 'bg-blue-600 text-white' : 'bg-gray-700 text-gray-300'
                     }`}
                     onClick={() => setComputeMode("flash")}
+                    disabled={textOnlyMode}
                   >
                     Flash
                   </button>
