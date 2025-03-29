@@ -13,6 +13,7 @@ import { Label } from "@/components/ui/label";
 import { Slider } from "@/components/ui/slider";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { X } from "lucide-react";
+import { useEffect, useState } from "react";
 
 interface DrawSidebarProps {
   editor: Editor | undefined;
@@ -25,8 +26,9 @@ export const DrawSidebar = ({
   activeTool,
   onChangeActiveTool,
 }: DrawSidebarProps) => {
-  const colorValue = editor?.getActiveStrokeColor() || STROKE_COLOR;
-  const widthValue = editor?.getActiveStrokeWidth() || STROKE_WIDTH;
+
+  const [colorValue, setColorValue] = useState(editor?.getActiveStrokeColor() || STROKE_COLOR);
+  const [widthValue, setWidthValue] = useState(editor?.getActiveStrokeWidth() || STROKE_WIDTH);
 
   const onClose = () => {
     editor?.disableDrawingMode();
@@ -35,10 +37,12 @@ export const DrawSidebar = ({
 
   const onColorChange = (value: string) => {
     editor?.changeStrokeColor(value);
+    setColorValue(value);
   };
 
   const onWidthChange = (value: number) => {
     editor?.changeStrokeWidth(value);
+    setWidthValue(value);
   };
 
   return (
