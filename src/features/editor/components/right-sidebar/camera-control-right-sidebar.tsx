@@ -130,7 +130,6 @@ export const CameraControlRightSidebar = ({
     // Generate initial dots
     const dots = generateDotsInArea(viewportMinX, viewportMaxX, viewportMinY, viewportMaxY);
     
-    console.log(`Initialized ${dots.length} dots`);
     dotsRef.current = dots;
     lastCameraOffsetRef.current = {...cameraOffset};
   }, [generateDotsInArea]);
@@ -229,8 +228,6 @@ export const CameraControlRightSidebar = ({
       // Update dots reference and last camera position
       dotsRef.current = dots;
       lastCameraOffsetRef.current = {...cameraOffset};
-      
-      // console.log(`Updated dots: ${dots.length} total after camera movement`);
     }
   }, [generateDotsInArea]);
   
@@ -276,10 +273,6 @@ export const CameraControlRightSidebar = ({
       ctx.arc(drawX, drawY, dot.size * cameraScale, 0, Math.PI * 2);
       ctx.fill();
     });
-    
-    if (canvasInitialized && visibleDots === 0) {
-      console.log(`No visible dots. Camera: ${JSON.stringify(cameraOffset)}, Scale: ${cameraScale}, Total dots: ${dotsRef.current.length}`);
-    }
     
     ctx.globalAlpha = 1;
   }, [canvasInitialized]);
@@ -338,9 +331,7 @@ export const CameraControlRightSidebar = ({
     // Set canvas dimensions - the visual size is set via CSS
     canvas.width = canvas.clientWidth || 300;
     canvas.height = canvas.clientHeight || 200;
-    
-    console.log(`Canvas initialized: ${canvas.width}x${canvas.height}`);
-    
+        
     // Set initial camera position
     cameraOffsetRef.current = { x: 400, y: 300 };
     
@@ -366,9 +357,7 @@ export const CameraControlRightSidebar = ({
       // Update canvas dimensions
       canvas.width = canvas.clientWidth || 300;
       canvas.height = canvas.clientHeight || 200;
-      
-      console.log(`Canvas resized: ${canvas.width}x${canvas.height}`);
-      
+            
       // Redraw
       drawDots();
     };

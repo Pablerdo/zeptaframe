@@ -351,7 +351,7 @@ export const Workbench = ({
           "input_prompt": generalTextPrompt,
         };
         
-        console.log("videoGenData", videoGenData);
+        // console.log("videoGenData", videoGenData);
         
         const comfyDeployData = {
           workflowData,
@@ -438,7 +438,7 @@ export const Workbench = ({
           "input_camera": JSON.stringify(truckVector),
         };
         
-        console.log("videoGenData", videoGenData);
+        // console.log("videoGenData", videoGenData);
         workflowData.mode = "animation" as WorkflowMode;
 
         const comfyDeployData = {
@@ -475,7 +475,7 @@ export const Workbench = ({
           });
           
           const dbData = await dbResponse.json();
-          console.log("dbData", dbData);
+          // ("dbData", dbData);
         } else {
           throw new Error("No video runId received");
         }
@@ -491,11 +491,11 @@ export const Workbench = ({
       }
       
       toast.success("Video generation started successfully. Check timeline for progress.");
-      console.log("Video generation started. Please wait...");
+      // console.log("Video generation started. Please wait...");
 
     } catch (error) {
       console.error("Error:", error);
-      console.log("Error generating video");
+      //console.log("Error generating video");
       toast.error("Error generating video. Please try again.");
     } finally {
       setIsGenerating(false);
@@ -682,7 +682,7 @@ export const Workbench = ({
   useEffect(() => {
     if (editor?.canvas) {
       const handleCanvasChange = () => {
-        console.log("/////------Canvas changed------/////");
+        // console.log("/////------Canvas changed------/////");
         setIsCurrentWorkbenchEncoded(false);
       };
       
@@ -723,7 +723,7 @@ export const Workbench = ({
       !samWorkerLoading &&
       (!isCurrentWorkbenchEncoded || lastEncodedWorkbenchId !== workbenchId)
     ) {
-      console.log("Setting up periodic encoding for workbench");
+      // console.log("Setting up periodic encoding for workbench");
       
       // Run encoding immediately when effect initializes
       encodeWorkbenchImage();
@@ -732,13 +732,13 @@ export const Workbench = ({
       const encodingInterval = setInterval(() => {
         if (!isCurrentWorkbenchEncoded) {
           encodeWorkbenchImage();
-          console.log("/////------Encoding workbench image------/////");
+          // console.log("/////------Encoding workbench image------/////");
         }
       }, 2000);
       
       // Clean up function to clear the interval when component unmounts or dependencies change
       return () => {
-        console.log("Cleaning up encoding interval");
+        // console.log("Cleaning up encoding interval");
         clearInterval(encodingInterval);
       };
     }

@@ -47,7 +47,7 @@ export async function exportVideoTimeline(
     //   throw new Error(errorData.error || 'Failed to export video timeline');
     // }
     
-    console.log('data', data);
+    // console.log('data', data);
 
     // Return the export ID for status tracking
     // return data.exportId;

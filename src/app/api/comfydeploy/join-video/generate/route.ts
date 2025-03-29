@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { ComfyDeploy } from "comfydeploy"
 import { db } from "@/db/drizzle";
 import { videoExports } from "@/db/schema";
+import { videoGenUtils } from "@/features/editor/utils/video-gen-utils";
 
 const cd = new ComfyDeploy({
   bearer: process.env.COMFY_DEPLOY_API_KEY!,
@@ -18,14 +19,14 @@ export async function POST(req: NextRequest) {
     const workflowId = data.workflowData.workflow_id;
 
     // Log the received data for debugging
-    console.log("Video URLs:", videoUrls)
+    // console.log("Video URLs:", videoUrls)
 
     const webhookUrl = process.env.DEPLOYMENT_MODE === 'production' 
     ? `${process.env.NEXT_PUBLIC_WEBHOOK_URL_PROD}/api/comfydeploy/join-video/webhook`
     : `${process.env.NEXT_PUBLIC_WEBHOOK_URL_NGROK}/api/comfydeploy/join-video/webhook`;
 
     // Calculate the total number of frames to join
-    const input_number = videoUrls.length * 49
+    const input_number = videoUrls.length * videoGenUtils.totalFrames
 
     const result = await cd.run.deployment.queue({
       deploymentId: workflowId,
@@ -41,7 +42,7 @@ export async function POST(req: NextRequest) {
 
     if (result) {
       const runId = result.runId
-      console.log("Run ID:", runId)
+      // console.log("Run ID:", runId)
 
       // Create a record in our database to track this export
       await db.insert(videoExports)

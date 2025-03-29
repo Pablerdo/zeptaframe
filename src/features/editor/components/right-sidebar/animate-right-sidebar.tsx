@@ -746,7 +746,6 @@ export const AnimateRightSidebar = ({
   // Update effect for sidebar open/close
   useEffect(() => {
     if (activeWorkbenchTool !== "animate" && editor?.canvas) {
-      console.log("animate right bar closed");
 
       // Clear masks from canvas
       const existingMasks = editor.canvas.getObjects().filter(obj => obj.data?.isMask);
@@ -764,7 +763,6 @@ export const AnimateRightSidebar = ({
       // Re-enable all interactions
       editor.canvas.skipTargetFind = false;
     } else if (activeWorkbenchTool === "animate" && editor?.canvas) {
-      console.log("animate right bar open");
       editor.canvas.skipTargetFind = true; // This prevents objects from being targets for mouse events
     }
 

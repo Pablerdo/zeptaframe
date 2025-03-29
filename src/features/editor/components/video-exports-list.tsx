@@ -51,6 +51,11 @@ const VideoExportsList = ({ videoExports }: VideoExportsListProps) => {
       {isExpanded && (
         <div className="max-h-[200px] overflow-y-auto custom-scrollbar">
           <div className="space-y-1 p-1">
+            {videoExports.length === 0 && (
+              <div className="flex items-center justify-center px-3 py-2 rounded bg-gray-700/30 hover:bg-gray-700/40 transition-colors">
+                <span className="text-xs text-gray-400">No exports yet</span>
+              </div>
+            )}
             {videoExports.map((export_: VideoExport) => (
               <div 
                 key={export_.id}

@@ -54,7 +54,7 @@ export async function POST(request: Request) {
         })
         .where(eq(imageGenerations.runId, runId))
       
-      console.log(`Updated image generation ${runId} to success with URL ${imageUrl}`)
+      // console.log(`Updated image generation ${runId} to success with URL ${imageUrl}`)
     } else if (status === "failed") {
       await db.update(imageGenerations)
         .set({ 
@@ -63,7 +63,7 @@ export async function POST(request: Request) {
         })
         .where(eq(imageGenerations.runId, runId))
       
-      console.log(`Updated image generation ${runId} to error status`)
+      // console.log(`Updated image generation ${runId} to error status`)
     }
 
     // Return success to ComfyDeploy

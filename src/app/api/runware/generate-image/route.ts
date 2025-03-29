@@ -32,9 +32,7 @@ export async function POST(request: Request) {
       );
     }
 
-    console.log("images", images);
-
-    // TODO: Deduct credits from user
+    // console.log("images", images);
 
 
     return NextResponse.json({ images });

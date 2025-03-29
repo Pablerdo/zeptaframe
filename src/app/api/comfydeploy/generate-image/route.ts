@@ -9,7 +9,7 @@ export async function POST(req: NextRequest) {
   const data = await req.json()
  
   // Log the received data for debugging
-  console.log("Received data:", data)
+  // console.log("Received data:", data)
 
   const webhookUrl = process.env.DEPLOYMENT_MODE === 'production' 
   ? `${process.env.NEXT_PUBLIC_WEBHOOK_URL_PROD}/api/comfydeploy/webhook-image`
@@ -27,7 +27,7 @@ export async function POST(req: NextRequest) {
 
     if (result) {
       const runId = result.runId
-      console.log("Run ID:", runId)
+      // console.log("Run ID:", runId)
 
       return NextResponse.json({
         message: "Image generation started",

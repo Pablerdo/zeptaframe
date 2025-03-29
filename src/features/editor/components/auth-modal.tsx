@@ -159,8 +159,6 @@ export function AuthModal({
         onSuccess: async (response) => {
           try {
             if (isTrial) {
-              console.log("Converting unauthed to authed user");
-              console.log(response);
               // Type assertion for the response structure
               const userResponse = response as { id: string, email: string, name: string };
               const userId = userResponse.id;

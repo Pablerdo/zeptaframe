@@ -84,7 +84,7 @@ const VideoTimeline = ({
 
     const selectedVideos = Object.values(selectedVideoUrls).filter(Boolean);
 
-    console.log('selectedVideos', selectedVideos);
+    // console.log('selectedVideos', selectedVideos);
     
     if (selectedVideos.length === 0) {
       alert('No videos selected to export');
@@ -100,7 +100,7 @@ const VideoTimeline = ({
       // Use our service to export the video timeline
       const newExportId = await exportVideoTimeline(selectedVideos, projectId);
       
-      console.log('newExportId', newExportId);
+      // console.log('newExportId', newExportId);
       // Update the export context
       setIsExporting(false);
       

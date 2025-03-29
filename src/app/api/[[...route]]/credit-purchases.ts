@@ -98,9 +98,6 @@ const app = new Hono()
       const body = await c.req.text();
       const signature = c.req.header("Stripe-Signature") as string;
 
-      console.log("inside stripe webhook")
-      console.log(body)
-
       let event: Stripe.Event;
 
       try {
@@ -114,10 +111,6 @@ const app = new Hono()
       }
 
       const session = event.data.object as Stripe.Checkout.Session;
-
-      console.log("session", session)
-
-      console.log("credits amount", session?.metadata?.creditsAmount)
 
       if (event.type === "checkout.session.completed") {
         // Check if this is a credits purchase
@@ -151,9 +144,9 @@ const app = new Hono()
               .where(eq(users.id, userId));
 
             // Log success
-            console.log(`Added ${creditsAmount} credits to user ${userId}, new balance: ${newCredits}`);
+            // console.log(`Added ${creditsAmount} credits to user ${userId}, new balance: ${newCredits}`);
           } catch (error) {
-            console.error("Error processing credits:", error);
+            // console.error("Error processing credits:", error);
             return c.json({ error: "Failed to process credits" }, 500);
           }
           

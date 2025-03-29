@@ -221,12 +221,6 @@ export class SAM2 {
       return point.label;
     });
 
-    console.log({
-      flatPoints,
-      flatLabels,
-      masks
-    });
-
     let mask_input, has_mask_input
     if (masks) {
       mask_input = masks

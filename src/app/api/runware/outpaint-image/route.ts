@@ -31,7 +31,7 @@ export async function POST(request: Request) {
       );
     }
 
-    console.log("images", images);
+    // console.log("images", images);
 
     return NextResponse.json({ images });
   } catch (error) {

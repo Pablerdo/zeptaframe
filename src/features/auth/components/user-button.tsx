@@ -33,7 +33,6 @@ export const UserButton = () => {
     //   setShowCreditsModal(true);
     //   return;
     // }
-    console.log("clicked");
     setIsBuyCreditsModalOpen(true);
     // mutation.mutate();
   };

@@ -54,7 +54,7 @@ export async function POST(request: Request) {
         })
         .where(eq(videoExports.runId, runId))
       
-      console.log(`Updated video generation ${runId} to success with URL ${videoUrl}`)
+      // console.log(`Updated video generation ${runId} to success with URL ${videoUrl}`)
     } else if (status === "failed") {
       await db.update(videoExports)
         .set({ 
@@ -63,7 +63,7 @@ export async function POST(request: Request) {
         })
         .where(eq(videoExports.runId, runId))
       
-      console.log(`Updated video generation ${runId} to error status`)
+      // console.log(`Updated video generation ${runId} to error status`)
     }
 
     // Return success to ComfyDeploy

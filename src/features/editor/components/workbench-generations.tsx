@@ -55,7 +55,12 @@ const WorkbenchGenerations = ({
   // Format timestamp for display
   const formatTimestamp = (timestamp: string | Date) => {
     const date = new Date(timestamp);
-    return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    return date.toLocaleString([], { 
+      day: 'numeric', 
+      month: 'short', 
+      hour: '2-digit', 
+      minute: '2-digit' 
+    });
   };
 
   // Update the parent's selectedVideoUrls when selectedGeneration or its status changes

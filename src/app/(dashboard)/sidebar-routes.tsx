@@ -23,8 +23,6 @@ export const SidebarRoutes = () => {
 
   const [isBuyCreditsModalOpen, setIsBuyCreditsModalOpen] = useState(false);
   const onClick = () => {
-    console.log("clicked");
-
     setIsBuyCreditsModalOpen(true);
     // if (shouldBlock) {
     //   triggerPaywall();
