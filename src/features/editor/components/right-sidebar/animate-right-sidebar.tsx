@@ -1333,7 +1333,7 @@ export const AnimateRightSidebar = ({
           {/* Segmented masks list */}
           <div className="space-y-2">
             {/* Always show the "New Object" stub at the top */}
-            <div className="flex items-center bg-gray-100 dark:bg-[#111530] p-2 border border-blue-600 dark:border-blue-800 rounded-md">
+            <div className="flex items-center bg-gray-100 dark:bg-[#111530] p-2 border border-gray-300 dark:border-blue-800 rounded-md">
               <div className="flex items-center justify-between w-full">
                 {activeSegmentationTool !== "auto" ? (
                   /* Add loading and status indicator */
