@@ -38,7 +38,8 @@ export const CameraControlRightSidebar = ({
   setCameraControl,
 }: CameraControlRightSidebarProps) => {
 
-  const cameraVelocityConstant = 0.2;
+  const dotVelocityConstant = 0.2;
+  const cameraVelocityConstant = 0.25;
 
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const animationRef = useRef<number>(0);
@@ -82,9 +83,9 @@ export const CameraControlRightSidebar = ({
       initialY: y + offsetY,
       size: 2, // Math.random() * 1.8 + 1.2, // Slightly larger dots: Size between 1.2-3
       color: '#b3d9ff', // Light muted blue color
-      opacity: 1,// Math.random() * 0.5 + 0.5, // Higher opacity 0.5-1.0
-      velocityX: (Math.random() - 0.5) * cameraVelocityConstant,
-      velocityY: (Math.random() - 0.5) * cameraVelocityConstant
+      opacity: 0.8, // Math.random() * 0.5 + 0.5, // Higher opacity 0.5-1.0
+      velocityX: (Math.random() - 0.5) * dotVelocityConstant,
+      velocityY: (Math.random() - 0.5) * dotVelocityConstant
     };
   }, []);
   
@@ -317,8 +318,8 @@ export const CameraControlRightSidebar = ({
       
       // Occasionally change velocity slightly
       if (Math.random() < 0.02) {
-        dot.velocityX = (Math.random() - 0.5) * cameraVelocityConstant;
-        dot.velocityY = (Math.random() - 0.5) * cameraVelocityConstant;
+        dot.velocityX = (Math.random() - 0.5) * dotVelocityConstant;
+        dot.velocityY = (Math.random() - 0.5) * dotVelocityConstant;
       }
     });
     
@@ -402,7 +403,7 @@ export const CameraControlRightSidebar = ({
     const newValue = value[0];
     setHorizontalTruck(newValue);
     // Reduce multiplier from 2.0 to 1.0 for slower movement
-    targetVelocityRef.current.x = newValue * 0.5;
+    targetVelocityRef.current.x = newValue * cameraVelocityConstant;
     const updatedCameraControl = { ...cameraControl, horizontalTruck: newValue };
     setCameraControl(updatedCameraControl);
   }, [cameraControl, setCameraControl]);
@@ -411,7 +412,7 @@ export const CameraControlRightSidebar = ({
     const newValue = value[0];
     setVerticalTruck(newValue);
     // Reduce multiplier from 2.0 to 1.0 for slower movement
-    targetVelocityRef.current.y = newValue * -0.5;
+    targetVelocityRef.current.y = newValue * -cameraVelocityConstant;
     const updatedCameraControl = { ...cameraControl, verticalTruck: newValue };
     setCameraControl(updatedCameraControl);
   }, [cameraControl, setCameraControl]);
@@ -458,8 +459,8 @@ export const CameraControlRightSidebar = ({
       setVerticalPan(cameraControl.verticalPan || 0);
       
       // Update target velocity refs with reduced multiplier
-      targetVelocityRef.current.x = hPan * 0.5;
-      targetVelocityRef.current.y = vPan * -0.5;
+      targetVelocityRef.current.x = hPan * cameraVelocityConstant;
+      targetVelocityRef.current.y = vPan * -cameraVelocityConstant;
     }
   }, [cameraControl, setCameraControl]);
 

@@ -33,6 +33,7 @@ export async function POST(req: NextRequest) {
         deploymentId: data.workflowData.workflow_id,
         webhook: webhookUrl,
         inputs: {
+          input_outpainted_image: data.videoGenData.input_outpainted_image,
           input_image: data.videoGenData.input_image,
           input_masks: data.videoGenData.input_masks,
           input_prompt: data.videoGenData.input_prompt,

@@ -403,6 +403,7 @@ export const Workbench = ({
           }
         } 
 
+
         const validMasks = segmentedMasks.filter(mask => mask.id && mask.id.trim() !== '');
         
         const trajectories = validMasks.map(mask => mask.trajectory?.points || []);
@@ -425,6 +426,7 @@ export const Workbench = ({
         // TODO: Add pan vector and dolly to the input camera. In the ComfyUI-SubjectBackgroundMotion.
 
         const videoGenData = {
+          "input_outpainted_image": JSON.stringify([workbenchImageUrl]),
           "input_image": JSON.stringify([workbenchImageUrl]),
           "input_masks": JSON.stringify(uploadedMaskUrls),
           "input_prompt": generalTextPrompt,
@@ -1054,7 +1056,7 @@ export const Workbench = ({
                     }`}
                     onClick={() => setFastMode(true)}
                   >
-                    Fast
+                    Flash
                   </button>
                 </div>
               </div>
