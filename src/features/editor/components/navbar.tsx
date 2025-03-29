@@ -287,7 +287,7 @@ export const Navbar = ({
               }}
             >
               <p className="text-sm">
-                This is part of <a href="https://x.com/realPSalamanca" target="_blank" rel="noopener noreferrer" className="font-bold hover:cursor-pointer underline">Pablo Salamanca&apos;s</a> thesis project, which 
+                This is part of <a href="https://x.com/pablosalamancal" target="_blank" rel="noopener noreferrer" className="font-bold hover:cursor-pointer underline">Pablo Salamanca&apos;s</a> thesis project, which 
                 aims to build the first fully visual based AI video editor. 
                 <br />
                 <br />
