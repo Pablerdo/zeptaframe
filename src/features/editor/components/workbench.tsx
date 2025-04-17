@@ -444,12 +444,12 @@ export const Workbench = ({
         // const degradation = 0.50;
 
         // Further trials
-        const boundaryDegradation = 1.0
-        const annulusDegradation = 1.0;
-        const degradation = 1.0;
+        const boundaryDegradation = 0.9;
+        const annulusDegradation = 0.8;
+        const degradation = 0.6;
 
-        const boundaryPx1 = 35;
-        const boundaryPx2 = 65;
+        const boundaryPx1 = 30;
+        const boundaryPx2 = 50;
 
         const videoGenData = {
           "input_num_frames": JSON.stringify(videoGenUtils.totalFrames),
