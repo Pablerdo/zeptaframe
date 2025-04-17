@@ -141,6 +141,7 @@ export const Workbench = ({
   type ComputeMode = "ultra" | "normal" | "flash" ;
 
   const [computeMode, setComputeMode] = useState<ComputeMode>("ultra");
+  const [degradation, setDegradation] = useState<number>(0.6);
 
   // Add state for BuyCreditsModal
   const [showBuyCreditsModal, setShowBuyCreditsModal] = useState(false);
@@ -455,10 +456,12 @@ export const Workbench = ({
         // Further trials
         const boundaryDegradation = 0.9;
         const annulusDegradation = 0.8;
-        const degradation = 0.6;
 
         const boundaryPx1 = 30;
         const boundaryPx2 = 50;
+
+        // Replace hardcoded value with state variable
+        // const degradation = 0.6;
 
         const videoGenData = {
           "input_num_frames": JSON.stringify(videoGenUtils.totalFrames),
@@ -988,6 +991,8 @@ export const Workbench = ({
               setMask={setMask}
               maskBinary={maskBinary}
               setMaskBinary={setMaskBinary}
+              degradation={degradation}
+              setDegradation={setDegradation}
             />
             <CameraControlRightSidebar 
               editor={editor}

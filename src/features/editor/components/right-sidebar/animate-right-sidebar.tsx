@@ -18,6 +18,8 @@ import { X, Check, Loader2, Trash2, Pencil, Plus, ChevronRight, ChevronDown, Mov
 import { Input } from "@/components/ui/input";
 import { interpolatePoints, interpolatePosition, smoothTrajectory } from "@/features/editor/utils";
 import { videoGenUtils } from "../../utils/video-gen-utils";
+import { Card } from "@/components/ui/card";
+import { Slider } from "@/components/ui/slider";
 
 interface AnimateRightSidebarProps {
   editor: Editor | undefined;
@@ -36,6 +38,8 @@ interface AnimateRightSidebarProps {
   setSegmentedMasks: (masks: SegmentedMask[]) => void;
   activeSegmentationTool: ActiveSegmentationTool;
   setActiveSegmentationTool: (tool: ActiveSegmentationTool) => void;
+  degradation: number;
+  setDegradation: (value: number) => void;
 }
 
 export const AnimateRightSidebar = ({
@@ -55,6 +59,8 @@ export const AnimateRightSidebar = ({
   setSegmentedMasks,
   activeSegmentationTool,
   setActiveSegmentationTool,
+  degradation,
+  setDegradation,
 }: AnimateRightSidebarProps) => {
 
   const [imageSize, setImageSize] = useState({ w: 1024, h: 1024 });
@@ -1473,9 +1479,31 @@ export const AnimateRightSidebar = ({
               </div>
             </div>
 
+
+
+            {/* Degradation Slider */}
+            <div className="bg-gray-100 dark:bg-[#111530] p-3 border border-gray-300 dark:border-blue-800 rounded-md mb-2">
+              <div className="flex items-center justify-between mb-2">
+                <Label htmlFor="degradation-slider" className="text-sm font-medium">
+                  Mask Degradation: {degradation.toFixed(2)}
+                </Label>
+              </div>
+              <Slider
+                id="degradation-slider"
+                min={0}
+                max={1}
+                step={0.05}
+                value={[degradation]}
+                onValueChange={(values) => setDegradation(values[0])}
+                className="w-full"
+              />
+              <div className="flex justify-between text-xs text-muted-foreground mt-1">
+                <span>0</span>
+                <span>1</span>
+              </div>
+            </div>
             {/* add a separator */}
             <div className="h-px bg-gray-300 dark:bg-gray-700 w-full my-2" />
-
             {/* Empty state message */}
             {segmentedMasks.length === 0 && (
               <div className="p-6 text-center border border-dashed border-gray-300 dark:border-gray-700 rounded-md mt-3 bg-gradient-to-b from-background to-muted/30 flex flex-col items-center justify-center space-y-3">
