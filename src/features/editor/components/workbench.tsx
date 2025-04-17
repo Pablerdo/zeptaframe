@@ -1041,7 +1041,7 @@ export const Workbench = ({
               {/* Generation Mode Selection - Vertical Toggle with Gooey Animation */}
               <div className="mb-3 relative">
                 {/* Info tooltip */}
-                <div className="absolute -top-8 right-1 group z-50">
+                {/* <div className="absolute -top-8 right-1 group z-50">
                   <div className="w-5 h-5 bg-gray-600 rounded-full flex items-center justify-center cursor-help text-xs text-blue-200 font-semibold">
                     i
                   </div>
@@ -1049,7 +1049,7 @@ export const Workbench = ({
                     opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none z-50">
                     Text prompt is required when in <span className="font-bold">Text Only</span> mode
                   </div>
-                </div>
+                </div> */}
               
                 {/* <div className="flex flex-col w-full overflow-hidden">
                   <button
