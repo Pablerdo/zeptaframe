@@ -39,7 +39,7 @@ export const CameraControlRightSidebar = ({
 }: CameraControlRightSidebarProps) => {
 
   const dotVelocityConstant = 0.2;
-  const cameraVelocityConstant = 0.45;
+  const cameraVelocityConstant = 0.35;
   const expansionVelocityConstant = 0.0008; // Controls the speed of expansion/contraction
 
   const canvasRef = useRef<HTMLCanvasElement>(null);

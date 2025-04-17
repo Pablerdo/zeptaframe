@@ -41,11 +41,11 @@ export async function POST(req: NextRequest) {
           input_trajectories: data.videoGenData.input_trajectories,
           input_rotations: data.videoGenData.input_rotations,
           input_camera: data.videoGenData.input_camera,
-          input_boundary_degradation: data.videoGenData.input_boundary_degradation,
-          input_annulus_degradation: data.videoGenData.input_annulus_degradation,
-          input_degradation: data.videoGenData.input_degradation,
-          input_boundary_px1: data.videoGenData.input_boundary_px1,
-          input_boundary_px2: data.videoGenData.input_boundary_px2,
+          // input_boundary_degradation: data.videoGenData.input_boundary_degradation,
+          // input_annulus_degradation: data.videoGenData.input_annulus_degradation,
+          // input_degradation: data.videoGenData.input_degradation,
+          // input_boundary_px1: data.videoGenData.input_boundary_px1,
+          // input_boundary_px2: data.videoGenData.input_boundary_px2,
         },
       })
     }
