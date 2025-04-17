@@ -17,6 +17,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { X, Check, Loader2, Trash2, Pencil, Plus, ChevronRight, ChevronDown, Move, Hand } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { interpolatePoints, interpolatePosition, smoothTrajectory } from "@/features/editor/utils";
+import { videoGenUtils } from "../../utils/video-gen-utils";
 
 interface AnimateRightSidebarProps {
   editor: Editor | undefined;
@@ -70,7 +71,10 @@ export const AnimateRightSidebar = ({
   const [tempMaskName, setTempMaskName] = useState<string>("");
 
   const [hasFinishedDragging, setHasFinishedDragging] = useState(false);
-
+  const [trajectoryLimitReached, setTrajectoryLimitReached] = useState(false);
+  
+  // Add ref for trajectory length tracking
+  const trajectoryLengthRef = useRef(0);
 
   const onClose = () => {
     setActiveSegmentationTool("none");
@@ -94,6 +98,9 @@ export const AnimateRightSidebar = ({
       // Enable drawing mode, so that we can draw a manual mask
       editor.enableSegmentationMode(true);
       
+      editor.changeStrokeColor("rgba(0, 255, 0, 0.95)");
+      editor.changeStrokeWidth(3);
+
       // Remove any previous path:created listeners to avoid duplicates
       editor.canvas.off('path:created');
       
@@ -683,15 +690,6 @@ export const AnimateRightSidebar = ({
     }
   }, [activeWorkbenchTool, editor?.canvas]);
 
-  // const handleRenameMask = (index: number, newName: string) => {
-  //   if (editor) {
-  //     const updatedMasks = segmentedMasks.map((mask, i) => 
-  //       i === index ? { ...mask, name: newName } : mask
-  //     );
-  //     setSegmentedMasks(updatedMasks);
-  //   }
-  // };
-
   const handleDeleteMask = (index: number) => {
     if (!editor) return;
     
@@ -775,6 +773,9 @@ export const AnimateRightSidebar = ({
     }
 
     setRecordingMotion(maskUrl);
+    setTrajectoryLimitReached(false);
+    setHasFinishedDragging(false);
+    trajectoryLengthRef.current = 0;
 
     editor.canvas.skipTargetFind = false; // This prevents objects from being targets for mouse events
 
@@ -790,6 +791,16 @@ export const AnimateRightSidebar = ({
       setRecordingMotion(null);
       return;
     }
+
+    // Calculate maximum trajectory length (3/4 of the diagonal of the canvas)
+    const workspace = editor.getWorkspace();
+    if (!workspace) return;
+    
+    const workspaceWidth = workspace.width as number || 960;
+    const workspaceHeight = workspace.height as number || 640;
+    const maxTrajectoryLength = Math.sqrt(workspaceWidth * workspaceWidth + workspaceHeight * workspaceHeight) * 0.35;
+    
+    let lastPoint: {x: number, y: number} | null = null;
 
     // Disable all objects
     editor.canvas.forEachObject(obj => {
@@ -818,23 +829,61 @@ export const AnimateRightSidebar = ({
     const handleMouseDown = (e: fabric.IEvent) => {
       if (!maskObject) return;
       isDragging = true;
+      trajectoryLengthRef.current = 0;
+      lastPoint = null;
       const pointer = editor.canvas.getPointer(e.e);
       // Record initial point
-      trajectoryPoints.push({
+      const initialPoint = {
         x: maskObject.left! + (maskObject.width! * (maskObject.scaleX || 1)) / 2,
         y: maskObject.top! + (maskObject.height! * (maskObject.scaleY || 1)) / 2
-      });
+      };
+      trajectoryPoints.push(initialPoint);
+      lastPoint = initialPoint;
     };
 
     // Add mouse move handler
     const handleMouseMove = (e: fabric.IEvent) => {
       if (!isDragging || !maskObject) return;
       const pointer = editor.canvas.getPointer(e.e);
-      // Record point during movement
-      trajectoryPoints.push({
+      // Calculate current position
+      const currentPoint = {
         x: maskObject.left! + (maskObject.width! * (maskObject.scaleX || 1)) / 2,
         y: maskObject.top! + (maskObject.height! * (maskObject.scaleY || 1)) / 2
-      });
+      };
+      
+      // Calculate distance from last point
+      if (lastPoint) {
+        const dx = currentPoint.x - lastPoint.x;
+        const dy = currentPoint.y - lastPoint.y;
+        const segmentLength = Math.sqrt(dx * dx + dy * dy);
+        
+        // Update trajectory length in ref (mutable and immediately accessible)
+        trajectoryLengthRef.current += segmentLength;
+
+        // Check if we've exceeded the maximum trajectory length
+        if (trajectoryLengthRef.current > maxTrajectoryLength) {
+          setHasFinishedDragging(true);
+          isDragging = false;
+          setTrajectoryLimitReached(true);
+          
+          // Store the trajectory points in the mask's data
+          maskObject.data = {
+            ...maskObject.data,
+            trajectoryPoints
+          };
+          
+          // Simulate mouse up to stop dragging
+          editor.canvas.off('mouse:move', handleMouseMove);
+          editor.canvas.off('mouse:up', handleMouseUp);
+          
+          return;
+        }
+      }
+      
+      lastPoint = currentPoint;
+      
+      // Record point during movement
+      trajectoryPoints.push(currentPoint);
 
       // I need to also draw the mask object on the canvas, so as to see the movement
       
@@ -894,6 +943,8 @@ export const AnimateRightSidebar = ({
         x: maskObject.left! + (maskObject.width! * (maskObject.scaleX || 1)) / 2,
         y: maskObject.top! + (maskObject.height! * (maskObject.scaleY || 1)) / 2
       });
+
+      setTrajectoryLimitReached(false);
       
       // Store the trajectory points in the mask's data
       maskObject.data = {
@@ -1025,6 +1076,7 @@ export const AnimateRightSidebar = ({
   const handleSaveMotion = () => {
     if (!recordingMotion || !editor?.canvas) return;
     
+    setTrajectoryLimitReached(false);
     setHasFinishedDragging(false);
 
     editor.canvas.skipTargetFind = true;
@@ -1053,7 +1105,7 @@ export const AnimateRightSidebar = ({
     // Smooth and interpolate the trajectory
     if (points.length > 1) {
       points = smoothTrajectory(points); // First smooth the trajectory
-      points = interpolatePoints(points, 49); // Then interpolate to exactly 49 points
+      points = interpolatePoints(points, videoGenUtils.totalFrames); // Then interpolate to exactly videoGenUtils.totalFrames points
     }
 
     // Update mask state with trajectory (visible by default when saving)
@@ -1355,7 +1407,7 @@ export const AnimateRightSidebar = ({
                   </>
                 ) : (
                   <div className="flex flex-col gap-2 w-full">
-                    <div className="w-full text-md font-bold text-center pl-1 animate-[pulse_1s_ease-in-out_infinite]">Click an object to animate</div>
+                    <div className="w-full text-md text-center pl-1 animate-[pulse_1s_ease-in-out_infinite]">Select the object to animate</div>
                     <div className="flex gap-2 w-full">
                       <Button
                         variant="default"
@@ -1403,7 +1455,7 @@ export const AnimateRightSidebar = ({
                 ) : (
                   <>   
                     <div className="flex flex-col gap-2 w-full">
-                      <div className="text-md text-center pl-1 text-white animate-[pulse_1s_ease-in-out_infinite] font-bold ">
+                      <div className="text-md text-center pl-1 text-white animate-[pulse_1s_ease-in-out_infinite]">
                         Encircle the object to create a mask. 
                       </div>
                       <Button
@@ -1613,6 +1665,13 @@ export const AnimateRightSidebar = ({
                         <Hand className="w-4 h-4 mr-1" />
                         Trace Trajectory
                       </Button>
+                    )}
+                    
+                    {/* Show trajectory limit reached message */}
+                    {isRetracing && trajectoryLimitReached && (
+                      <div className="mt-2 text-sm text-amber-500 font-medium">
+                        Trajectory length limit reached
+                      </div>
                     )}
                   </div>
                 );

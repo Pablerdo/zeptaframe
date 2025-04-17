@@ -195,6 +195,7 @@ const app = new Hono()
     const session = await stripe.checkout.sessions.create({
       success_url,
       cancel_url,
+      allow_promotion_codes: true,
       payment_method_types: ["card"],
       mode: "payment",
       billing_address_collection: "auto",

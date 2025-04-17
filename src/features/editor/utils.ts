@@ -143,7 +143,7 @@ export const createFilter = (value: string) => {
 };
 
 // Add these utility functions at the top of the component
-export const interpolatePoints = (points: Array<{x: number, y: number}>, numPoints: number = 49): Array<{x: number, y: number}> => {
+export const interpolatePoints = (points: Array<{x: number, y: number}>, numPoints: number): Array<{x: number, y: number}> => {
   if (points.length <= 1) return points;
   if (points.length === 2) {
     // Linear interpolation for just two points

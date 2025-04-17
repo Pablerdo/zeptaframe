@@ -33,6 +33,7 @@ import { comfyDeployWorkflows } from "../utils/comfy-deploy-workflows";
 import { Toolbar } from "./toolbar";
 import { BuyCreditsModal } from "@/features/subscriptions/components/credits/buy-credits-modal";
 import { generationPrices } from "@/features/subscriptions/utils";
+import { videoGenUtils } from "../utils/video-gen-utils";
 
 interface WorkbenchProps {
   projectId: string;
@@ -347,6 +348,7 @@ export const Workbench = ({
         workflowData.mode = "text-only" as WorkflowMode;
 
         const videoGenData = {
+          "input_num_frames": JSON.stringify(videoGenUtils.totalFrames),
           "input_image": JSON.stringify([workbenchImageUrl]),
           "input_prompt": generalTextPrompt,
         };
@@ -399,7 +401,8 @@ export const Workbench = ({
           workflowData.workflow_id = comfyDeployWorkflows["GWF-ZEPTA-HunyuanVideo"] || "";
         } else if (selectedModel.id === "skyreels") {
           if (computeMode === "flash") {
-            workflowData.workflow_id = comfyDeployWorkflows["GWF-ZEPTA-SkyR-Flash"] || "";
+            workflowData.workflow_id = comfyDeployWorkflows["GWF-ZEPTA-SkyR-Research"] || "";
+            // workflowData.workflow_id = comfyDeployWorkflows["GWF-ZEPTA-SkyR-Flash"] || "";
           } else if (computeMode === "ultra") {
             workflowData.workflow_id = comfyDeployWorkflows["GWF-ZEPTA-SkyR-Ultra"] || "";
           } else {
@@ -427,18 +430,43 @@ export const Workbench = ({
         const panVector = {"x": cameraControl.horizontalPan, "y": cameraControl.verticalPan};
         const dolly = cameraControl.dolly;
 
+        const cameraControlPayload = {
+          "truck_vector": truckVector,
+          "pan_vector": panVector,
+          "dolly": dolly,
+        }
+
         // TODO: Add pan vector and dolly to the input camera. In the ComfyUI-SubjectBackgroundMotion.
 
+        // GOOD TUNING VALUES
+        // const boundaryDegradation = 0.75;
+        // const secondaryBoundaryDegradation = 0.7;
+        // const degradation = 0.50;
+
+        // Further trials
+        const boundaryDegradation = 1.0
+        const annulusDegradation = 1.0;
+        const degradation = 1.0;
+
+        const boundaryPx1 = 35;
+        const boundaryPx2 = 65;
+
         const videoGenData = {
+          "input_num_frames": JSON.stringify(videoGenUtils.totalFrames),
           "input_image": JSON.stringify([workbenchImageUrl]),
           "input_masks": JSON.stringify(uploadedMaskUrls),
           "input_prompt": generalTextPrompt,
           "input_trajectories": JSON.stringify(trajectories),
           "input_rotations": JSON.stringify(rotations),
-          "input_camera": JSON.stringify(truckVector),
+          "input_camera": JSON.stringify(cameraControlPayload),
+          "input_boundary_degradation": JSON.stringify(boundaryDegradation),
+          "input_annulus_degradation": JSON.stringify(annulusDegradation),
+          "input_degradation": JSON.stringify(degradation),
+          "input_boundary_px1": JSON.stringify(boundaryPx1),
+          "input_boundary_px2": JSON.stringify(boundaryPx2),
         };
         
-        // console.log("videoGenData", videoGenData);
+        console.log("videoGenData", videoGenData);
         workflowData.mode = "animation" as WorkflowMode;
 
         const comfyDeployData = {
@@ -1023,7 +1051,7 @@ export const Workbench = ({
                   </div>
                 </div>
               
-                <div className="flex flex-col w-full overflow-hidden">
+                {/* <div className="flex flex-col w-full overflow-hidden">
                   <button
                     className={`py-2 font-medium text-sm rounded-t-md w-full transition-colors duration-200 ${
                       !textOnlyMode ? 'bg-blue-600 text-white' : 'bg-gray-700 text-gray-300'
@@ -1041,7 +1069,7 @@ export const Workbench = ({
                   >
                     Text Only
                   </button>
-                </div>
+                </div> */}
               </div>
 
               {/* Fast Mode Toggle */}

@@ -12,6 +12,7 @@ export const comfyDeployWorkflows = {
   "GWF-ZEPTA-SkyR-Flash": "4d087814-bcac-4f8f-8716-c9f1184b9a05",
   "MP4VideoJoiner": "45e11f37-feaf-4d25-a39f-687321e9f94d",
   "NOGWF-ZEPTA-SkyReels": "d426c214-2d9d-4999-b25c-c0ad75007042",
+  "GWF-ZEPTA-SkyR-Research":"7f78c518-93ac-4a33-857b-1e92bfb9fd32"
 };
 
 
