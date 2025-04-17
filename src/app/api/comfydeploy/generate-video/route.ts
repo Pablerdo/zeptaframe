@@ -13,7 +13,7 @@ export async function POST(req: NextRequest) {
 
   const webhookUrl = process.env.DEPLOYMENT_MODE === 'production' 
   ? `${process.env.NEXT_PUBLIC_WEBHOOK_URL_PROD}/api/comfydeploy/webhook-video`
-  : `${process.env.NEXT_PUBLIC_WEBHOOK_URL_NGROK}/api/comfydeploy/webhook-video`;
+  : `${process.env.NEXT_PUBLIC_WEBHOOK_URL_NGROK}api/comfydeploy/webhook-video`;
 
   
   try {
