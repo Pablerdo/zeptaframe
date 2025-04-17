@@ -16,8 +16,8 @@ export const comfyDeployWorkflows = {
 
   // PROD
   "PROD-ZEPTA-Normal": "8465eaa2-bd1f-4e4f-81a1-8976521a771f",
-  "PROD-ZEPTA-Flash": null,
-  "PROD-ZEPTA-Ultra": null,
+  "PROD-ZEPTA-Flash": "4ecf0ca7-a168-4a76-8b7d-16a442991391",
+  "PROD-ZEPTA-Ultra": "172ea476-c6f0-461b-8793-84e2768e3a2c",
 };
 
 
