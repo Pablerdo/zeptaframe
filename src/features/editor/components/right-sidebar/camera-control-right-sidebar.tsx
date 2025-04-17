@@ -39,7 +39,7 @@ export const CameraControlRightSidebar = ({
 }: CameraControlRightSidebarProps) => {
 
   const dotVelocityConstant = 0.2;
-  const cameraVelocityConstant = 0.25;
+  const cameraVelocityConstant = 0.45;
   const expansionVelocityConstant = 0.0008; // Controls the speed of expansion/contraction
 
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -405,7 +405,7 @@ export const CameraControlRightSidebar = ({
             });
             
             // Remove dots up to the calculated adjustment number
-            // const dotsToRemove = Math.min(dots, visibleDots.length);
+            /* const dotsToRemove = Math.min(dots, visibleDots.length); */
             
             for (let i = 0; i < dotsToRemove; i++) {
               // Get a dot to remove (prefer center dots during contraction)
@@ -772,8 +772,8 @@ export const CameraControlRightSidebar = ({
                 rightIcon={<ArrowUpIcon className="h-5 w-5"/>}
               />
             </div>
-            <div className="mt-2">
-              Expansion/Contraction: {dolly.toFixed(1)}
+            <div className="mt-2 opacity-50 pointer-events-none">
+              Zoom: {dolly.toFixed(1)}
               <CameraSlider
                 orientation="horizontal"
                 valueDisplay={Number(dolly.toFixed(1))}
@@ -789,6 +789,7 @@ export const CameraControlRightSidebar = ({
                 rightIcon={<ZoomIn className="h-5 w-5"/>}
               />
             </div>
+          
             <div className="mt-2 opacity-50 pointer-events-none">
               Horizontal Pan
               <CameraSlider
@@ -831,7 +832,7 @@ export const CameraControlRightSidebar = ({
 
       {/* Dolly slider stays in original position for now */}
       <div className="px-4 py-2 mt-4">
-        {/* Max Dot Rate Slider */}
+        {/* Commented out Max Dot Rate Slider 
         <div className="mb-3">
           <div className="flex justify-between items-center mb-1">
             <label className="block text-sm">Max Dots per Frame</label>
@@ -857,6 +858,7 @@ export const CameraControlRightSidebar = ({
             </span>
           </div>
         </div>
+        */}
 
         {/* Save button right after dot rate slider */}
         <button
