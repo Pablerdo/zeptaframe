@@ -395,7 +395,7 @@ export const Workbench = ({
         // ANIMATION MODE: Handle animation and text prompt
         // ==========================================
 
-        if (process.env.DEPLOYMENT_MODE === 'production') {
+        // if (process.env.DEPLOYMENT_MODE === 'production') {
           if (computeMode === "flash") {
             workflowData.workflow_id = comfyDeployWorkflows["PROD-ZEPTA-Flash"] || "";
           } else if (computeMode === "ultra") {
@@ -403,21 +403,21 @@ export const Workbench = ({
           } else {
             workflowData.workflow_id = comfyDeployWorkflows["PROD-ZEPTA-Normal"] || "";
           }
-        } else {
-          if (selectedModel.id === "cogvideox") {
-            workflowData.workflow_id = comfyDeployWorkflows["GWF-ZEPTA-CogVideoX"];
-          } else if (selectedModel.id === "hunyuanvideo") {
-            workflowData.workflow_id = comfyDeployWorkflows["GWF-ZEPTA-HunyuanVideo"] || "";
-          } else if (selectedModel.id === "skyreels") {
-            if (computeMode === "flash") {
-              workflowData.workflow_id = comfyDeployWorkflows["GWF-ZEPTA-SkyR-Flash"] || "";
-            } else if (computeMode === "ultra") {
-              workflowData.workflow_id = comfyDeployWorkflows["GWF-ZEPTA-SkyR-Ultra"] || "";
-            } else {
-              workflowData.workflow_id = comfyDeployWorkflows["GWF-ZEPTA-SkyR-Normal"] || "";
-            }
-          } 
-        }
+        // } else {
+        //   if (selectedModel.id === "cogvideox") {
+        //     workflowData.workflow_id = comfyDeployWorkflows["GWF-ZEPTA-CogVideoX"];
+        //   } else if (selectedModel.id === "hunyuanvideo") {
+        //     workflowData.workflow_id = comfyDeployWorkflows["GWF-ZEPTA-HunyuanVideo"] || "";
+        //   } else if (selectedModel.id === "skyreels") {
+        //     if (computeMode === "flash") {
+        //       workflowData.workflow_id = comfyDeployWorkflows["GWF-ZEPTA-SkyR-Flash"] || "";
+        //     } else if (computeMode === "ultra") {
+        //       workflowData.workflow_id = comfyDeployWorkflows["GWF-ZEPTA-SkyR-Ultra"] || "";
+        //     } else {
+        //       workflowData.workflow_id = comfyDeployWorkflows["GWF-ZEPTA-SkyR-Normal"] || "";
+        //     }
+        //   } 
+        // }
 
 
         const validMasks = segmentedMasks.filter(mask => mask.id && mask.id.trim() !== '');
