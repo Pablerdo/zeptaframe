@@ -1,36 +1,74 @@
-This is a [Next.js](https://nextjs.org/) project bootstrapped with [`create-next-app`](https://github.com/vercel/next.js/tree/canary/packages/create-next-app).
 
-## Getting Started
+![Alt text](./public/FullZeptaLogo.png)
 
-First, run the development server:
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+# Zeptaframe
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Zeptaframe is an AI-native video editor that allows you to create precise AI-generated movies with a visual-first approach, minimizing the need for text prompts.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Overview
 
-This project uses [`next/font`](https://nextjs.org/docs/basic-features/font-optimization) to automatically optimize and load Inter, a custom Google Font.
+Zeptaframe is a open-source web-based platform that enables users to create AI-generated videos through an intuitive visual interface. Unlike traditional video editors or AI video generators that rely heavily on text prompts, Zeptaframe allows you to upload images and directly manipulate objects on a canvas to create animations.
 
-## Learn More
+## Key Features
 
-To learn more about Next.js, take a look at the following resources:
+### Visual-First Video Creation
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+* Upload or generate images and animate any object on the canvas
+* Segment objects automatically and instantly using the Segment Anything Model (SAM)
+* Define object trajectories visually rather than through text descriptions
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js/) - your feedback and contributions are welcome!
+### Multi-Workbench Environment
 
-## Deploy on Vercel
+* Create complex videos using multiple workbenches (canvases)
+* Seamlessly navigate between workbenches
+* Each workbench has it own context and controls
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+### AI-Powered Generation
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/deployment) for more details.
+* Generate videos from your visual compositions
+* Multiple quality modes: Flash, Normal, and Ultra
+* Support for various video models
+
+### Rich Editing Tools
+
+* Shape creation and manipulation
+* Text editing with font customization
+* Image import and filtering
+* Drawing tools
+* Object animation controls
+* Camera movement controls
+
+### The bottom panel displays:
+
+* Generated videos
+* Export options
+* Video playback controls
+
+## Technical Implementation
+
+### Frontend Framework
+
+* Next.js and React for the UI
+* Tailwind CSS for styling
+* Fabric.js for canvas manipulation
+
+### Backend Services
+
+* NextAuth.js for authentication
+* Drizzle ORM for database operations
+* Hono for API routes
+* Stripe for payment processing
+
+### AI Components
+
+* Segment Anything Model (SAMv2) for object segmentation
+* ComfyDeploy for GPU instances loaded with ComfyUI.
+* The back-end is using a finetuned version of SkyreelsV1 with Go-with-the-flow. This allows the model to generate videos of the 
+subject traveling as per the users delineation through the interface.
+
+
+## Notes
+
+This README was generated with Deepwiki from Devin. 
+
