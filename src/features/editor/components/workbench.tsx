@@ -346,8 +346,6 @@ export const Workbench = ({
 
         if (selectedModel.id === "cogvideox") {
           workflowData.workflow_id = "";
-        } else if (selectedModel.id === "hunyuanvideo") {
-          workflowData.workflow_id = "";
         } else if (selectedModel.id === "skyreels") {
           workflowData.workflow_id = comfyDeployWorkflows["NOGWF-ZEPTA-SkyReels"] || "";
         }
@@ -402,29 +400,25 @@ export const Workbench = ({
         // ==========================================
 
         // if (process.env.DEPLOYMENT_MODE === 'production') {
-          if (computeMode === "flash") {
-            workflowData.workflow_id = comfyDeployWorkflows["PROD-ZEPTA-Flash"] || "";
-          } else if (computeMode === "ultra") {
-            workflowData.workflow_id = comfyDeployWorkflows["PROD-ZEPTA-Ultra"] || "";
-          } else {
-            workflowData.workflow_id = comfyDeployWorkflows["PROD-ZEPTA-Normal"] || "";
-          }
-        // } else {
-        //   if (selectedModel.id === "cogvideox") {
-        //     workflowData.workflow_id = comfyDeployWorkflows["GWF-ZEPTA-CogVideoX"];
-        //   } else if (selectedModel.id === "hunyuanvideo") {
-        //     workflowData.workflow_id = comfyDeployWorkflows["GWF-ZEPTA-HunyuanVideo"] || "";
-        //   } else if (selectedModel.id === "skyreels") {
-        //     if (computeMode === "flash") {
-        //       workflowData.workflow_id = comfyDeployWorkflows["GWF-ZEPTA-SkyR-Flash"] || "";
-        //     } else if (computeMode === "ultra") {
-        //       workflowData.workflow_id = comfyDeployWorkflows["GWF-ZEPTA-SkyR-Ultra"] || "";
-        //     } else {
-        //       workflowData.workflow_id = comfyDeployWorkflows["GWF-ZEPTA-SkyR-Normal"] || "";
-        //     }
-        //   } 
-        // }
 
+        switch (selectedModel.id) {
+          case "cogvideox":
+            workflowData.workflow_id = comfyDeployWorkflows["PROD-ZEPTA-CogVideoX"] || "";
+            break;
+          case "skyreels":
+            if (computeMode === "flash") {
+              workflowData.workflow_id = comfyDeployWorkflows["GWF-ZEPTA-SkyR-Flash"] || "";
+            } else if (computeMode === "ultra") {
+              workflowData.workflow_id = comfyDeployWorkflows["GWF-ZEPTA-SkyR-Ultra"] || "";
+            } else {
+              workflowData.workflow_id = comfyDeployWorkflows["GWF-ZEPTA-SkyR-Normal"] || "";
+            }
+            break;
+          default:
+            throw new Error("Invalid model ID");
+        }
+
+        workflowData.mode = "animation" as WorkflowMode;
 
         const validMasks = segmentedMasks.filter(mask => mask.id && mask.id.trim() !== '');
         
@@ -1169,12 +1163,12 @@ export const Workbench = ({
                 isActive={activeWorkbenchTool === "prompt"}
                 onClick={() => setActiveWorkbenchTool("prompt")}
               />
-              {/* <RightSidebarItem
+              <RightSidebarItem
                 icon={Film}
                 label="Model"
                 isActive={activeWorkbenchTool === "model"}
                 onClick={() => setActiveWorkbenchTool("model")}
-              /> */}
+              /> 
             </ul>
             
             {/* Generate Video Submit Button */}

@@ -89,6 +89,40 @@ export const AnimateRightSidebar = ({
   // Add ref for trajectory length tracking
   const trajectoryLengthRef = useRef(0);
 
+  // Helper function to calculate centroid from binary mask
+  const calculateCentroidFromBinaryMask = (binaryCanvas: HTMLCanvasElement): { x: number; y: number } | null => {
+    const ctx = binaryCanvas.getContext('2d');
+    if (!ctx) return null;
+    
+    const imageData = ctx.getImageData(0, 0, binaryCanvas.width, binaryCanvas.height);
+    const data = imageData.data;
+    
+    let sumX = 0;
+    let sumY = 0;
+    let count = 0;
+    
+    // Iterate through all pixels
+    for (let y = 0; y < binaryCanvas.height; y++) {
+      for (let x = 0; x < binaryCanvas.width; x++) {
+        const idx = (y * binaryCanvas.width + x) * 4;
+        // Check if pixel is white (R, G, B all 255)
+        if (data[idx] === 255 && data[idx + 1] === 255 && data[idx + 2] === 255) {
+          sumX += x;
+          sumY += y;
+          count++;
+        }
+      }
+    }
+    
+    if (count === 0) return null;
+    
+    // Calculate average position (centroid)
+    return {
+      x: sumX / count,
+      y: sumY / count
+    };
+  };
+
   // Helper function to generate rotation array from keyframes
   const generateRotationTrajectory = (keyframes: RotationKeyframe[], frameCount: number): number[] => {
     if (keyframes.length === 0) {
@@ -416,6 +450,9 @@ export const AnimateRightSidebar = ({
         // Turn off path:created listener
         fabricCanvas.off('path:created');
         
+        // Calculate centroid from the binary mask
+        const calculatedCentroid = calculateCentroidFromBinaryMask(binaryCanvas);
+        
         // Add the new mask to segmentedMasks
         const newMaskId = `mask-${Date.now()}`;
         const newMask: SegmentedMask = {
@@ -425,7 +462,8 @@ export const AnimateRightSidebar = ({
           binaryUrl: binaryCanvas.toDataURL(),
           isApplied: true,
           trajectory: undefined,
-          rotation: 0
+          rotation: 0,
+          centroid: calculatedCentroid || undefined // Add the calculated centroid
         };
         
         // Remove the 'in progress' mask and add the new one
@@ -1809,6 +1847,34 @@ export const AnimateRightSidebar = ({
                                       } : m
                                     );
                                     setSegmentedMasks(updatedMasks);
+                                    
+                                    // If mask is applied and has a trajectory, restart the animation with new values
+                                    if (mask.isApplied && mask.trajectory) {
+                                      // Stop existing animation if any
+                                      if (activeAnimations[mask.url]) {
+                                        activeAnimations[mask.url].stop();
+                                      }
+                                      
+                                      // Create and start new animation with updated values
+                                      const animation = createTrajectoryAnimation(
+                                        editor,
+                                        mask.url,
+                                        mask.trajectory.points,
+                                        rotationTrajectory,
+                                        mask.scaleTrajectory
+                                      );
+                                      
+                                      if (animation) {
+                                        animation.start();
+                                        setActiveAnimations(prev => ({
+                                          ...prev,
+                                          [mask.url]: {
+                                            stop: animation.stop,
+                                            isPlaying: true
+                                          }
+                                        }));
+                                      }
+                                    }
                                   }
                                 }}
                                 disabled={activeSegmentationTool !== "none"}
@@ -1849,6 +1915,34 @@ export const AnimateRightSidebar = ({
                                       } : m
                                     );
                                     setSegmentedMasks(updatedMasks);
+                                    
+                                    // If mask is applied and has a trajectory, restart the animation with new values
+                                    if (mask.isApplied && mask.trajectory) {
+                                      // Stop existing animation if any
+                                      if (activeAnimations[mask.url]) {
+                                        activeAnimations[mask.url].stop();
+                                      }
+                                      
+                                      // Create and start new animation with updated values
+                                      const animation = createTrajectoryAnimation(
+                                        editor,
+                                        mask.url,
+                                        mask.trajectory.points,
+                                        mask.rotationTrajectory,
+                                        scaleTrajectory
+                                      );
+                                      
+                                      if (animation) {
+                                        animation.start();
+                                        setActiveAnimations(prev => ({
+                                          ...prev,
+                                          [mask.url]: {
+                                            stop: animation.stop,
+                                            isPlaying: true
+                                          }
+                                        }));
+                                      }
+                                    }
                                   }
                                 }}
                                 disabled={activeSegmentationTool !== "none"}

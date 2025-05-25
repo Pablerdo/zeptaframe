@@ -268,7 +268,6 @@ export type WorkflowMode = "text-only" | "animation";
 
 export type SupportedVideoModelId = 
   | "cogvideox"
-  | "hunyuanvideo"
   | "skyreels"
 
 export type BaseVideoModel = {
