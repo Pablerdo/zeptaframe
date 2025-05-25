@@ -31,6 +31,8 @@ interface ScrollableWorkbenchViewerProps {
   setMask: (mask: HTMLCanvasElement | null) => void;
   maskBinary: HTMLCanvasElement | null;
   setMaskBinary: (maskBinary: HTMLCanvasElement | null) => void;
+  maskCentroid: { x: number; y: number } | null;
+  setMaskCentroid: (centroid: { x: number; y: number } | null) => void;
   projectData: ProjectJSON;
   fadingWorkbenchIndex?: number | null;
   setAllowEncodeWorkbenchImage: (allowEncodeWorkbenchImage: boolean) => void;
@@ -61,6 +63,8 @@ export const ScrollableWorkbenchViewer = ({
   setMask,
   maskBinary,
   setMaskBinary,
+  maskCentroid,
+  setMaskCentroid,
   projectData,
   fadingWorkbenchIndex,
   setAllowEncodeWorkbenchImage,
@@ -144,6 +148,8 @@ export const ScrollableWorkbenchViewer = ({
               setShowAuthModal={setShowAuthModal}
               lastEncodedWorkbenchId={lastEncodedWorkbenchId}
               setLastEncodedWorkbenchId={setLastEncodedWorkbenchId}
+              maskCentroid={maskCentroid}
+              setMaskCentroid={setMaskCentroid}
             />
           </div>
         );

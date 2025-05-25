@@ -293,6 +293,16 @@ export interface CoordinatePath {
   coordinates: Coordinate[];
 }
 
+export interface RotationKeyframe {
+  trajectoryProgress: number; // 0.0 to 1.0
+  rotation: number; // -180 to 180 degrees
+}
+
+export interface ScaleKeyframe {
+  trajectoryProgress: number; // 0.0 to 1.0
+  scale: number; // 0.1 to 3.0 (10% to 300%)
+}
+
 export interface SegmentedObject {
   id: string;
   url: string;
@@ -307,6 +317,7 @@ export interface SegmentedMask {
   isEditingName?: boolean;
   inProgress?: boolean;
   isApplied?: boolean;
+  centroid?: { x: number; y: number };
   trajectory?: {
     points: Array<{x: number, y: number}>;
     isVisible: boolean;
@@ -316,6 +327,10 @@ export interface SegmentedMask {
     isVisible: boolean;
   };
   rotation?: number;
+  rotationKeyframes?: RotationKeyframe[];
+  scaleKeyframes?: ScaleKeyframe[];
+  rotationTrajectory?: number[]; // Generated from keyframes
+  scaleTrajectory?: number[]; // Generated from keyframes
   isTextDetailsOpen?: boolean;
   textDetails?: string;
 }

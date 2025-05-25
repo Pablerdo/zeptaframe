@@ -4,7 +4,7 @@ import { fabric } from "fabric";
 import { useEffect, useRef, useState, useCallback, useMemo } from "react";
 import { MessageSquare, Trash2, Video, Film, ArrowRightSquare, ArrowRightCircle, Loader2, CornerUpRight, ChevronDown, X } from "lucide-react";
 import { useEditor } from "@/features/editor/hooks/use-editor";
-import { ActiveSegmentationTool, ActiveTool, ActiveWorkbenchTool, BaseVideoModel, CameraControl, Editor as EditorType, JSON_KEYS, SegmentedMask, SupportedVideoModelId, VideoGeneration, WorkflowMode } from "@/features/editor/types";
+import { ActiveSegmentationTool, ActiveTool, ActiveWorkbenchTool, BaseVideoModel, CameraControl, Editor as EditorType, JSON_KEYS, SegmentedMask, SupportedVideoModelId, VideoGeneration, WorkflowMode, RotationKeyframe, ScaleKeyframe } from "@/features/editor/types";
 import { cn } from "@/lib/utils";
 import { RightSidebarItem } from "./right-sidebar-item";
 import { AnimateRightSidebar } from "./right-sidebar/animate-right-sidebar";
@@ -21,6 +21,7 @@ import {
   canvasToFloat32Array,
   resizeAndPadBox,
   enhanceMaskEdges,
+  getCentroid,
 } from "@/app/sam/lib/imageutils";
 import debounce from "lodash/debounce";
 import { defaultVideoModelId, videoModels } from "../utils/video-models";
@@ -65,6 +66,8 @@ interface WorkbenchProps {
   setMask: (mask: HTMLCanvasElement | null) => void;
   maskBinary: HTMLCanvasElement | null;
   setMaskBinary: (maskBinary: HTMLCanvasElement | null) => void;
+  maskCentroid: { x: number; y: number } | null;
+  setMaskCentroid: (centroid: { x: number; y: number } | null) => void;
   setAllowEncodeWorkbenchImage: (allowEncodeWorkbenchImage: boolean) => void;
   samWorkerInitialized: boolean;
   isTrial: boolean;
@@ -98,6 +101,8 @@ export const Workbench = ({
   setMask,
   maskBinary,
   setMaskBinary,
+  maskCentroid,
+  setMaskCentroid,
   setAllowEncodeWorkbenchImage,
   samWorkerInitialized,
   isTrial,
@@ -423,8 +428,116 @@ export const Workbench = ({
 
         const validMasks = segmentedMasks.filter(mask => mask.id && mask.id.trim() !== '');
         
+        // Helper function to generate rotation array from keyframes
+        const generateRotationTrajectory = (keyframes: RotationKeyframe[], frameCount: number): number[] => {
+          if (keyframes.length === 0) {
+            return new Array(frameCount).fill(0);
+          }
+          
+          if (keyframes.length === 1) {
+            return new Array(frameCount).fill(Math.round(keyframes[0].rotation));
+          }
+          
+          const rotationTrajectory: number[] = [];
+          
+          for (let i = 0; i < frameCount; i++) {
+            const progress = frameCount > 1 ? i / (frameCount - 1) : 0;
+            
+            // Find the two keyframes to interpolate between
+            let prevKeyframe = keyframes[0];
+            let nextKeyframe = keyframes[keyframes.length - 1];
+            
+            for (let j = 0; j < keyframes.length - 1; j++) {
+              if (progress >= keyframes[j].trajectoryProgress && progress <= keyframes[j + 1].trajectoryProgress) {
+                prevKeyframe = keyframes[j];
+                nextKeyframe = keyframes[j + 1];
+                break;
+              }
+            }
+            
+            // Linear interpolation between keyframes
+            if (prevKeyframe === nextKeyframe) {
+              rotationTrajectory.push(Math.round(prevKeyframe.rotation));
+            } else {
+              const localProgress = (progress - prevKeyframe.trajectoryProgress) / 
+                (nextKeyframe.trajectoryProgress - prevKeyframe.trajectoryProgress);
+              const interpolatedRotation = prevKeyframe.rotation + 
+                (nextKeyframe.rotation - prevKeyframe.rotation) * localProgress;
+              rotationTrajectory.push(Math.round(interpolatedRotation));
+            }
+          }
+          
+          return rotationTrajectory;
+        };
+
+        // Helper function to generate scale array from keyframes
+        const generateScaleTrajectory = (keyframes: ScaleKeyframe[], frameCount: number): number[] => {
+          if (keyframes.length === 0) {
+            return new Array(frameCount).fill(1.0);
+          }
+          
+          if (keyframes.length === 1) {
+            return new Array(frameCount).fill(Math.round(keyframes[0].scale * 100) / 100);
+          }
+          
+          const scaleTrajectory: number[] = [];
+          
+          for (let i = 0; i < frameCount; i++) {
+            const progress = frameCount > 1 ? i / (frameCount - 1) : 0;
+            
+            // Find the two keyframes to interpolate between
+            let prevKeyframe = keyframes[0];
+            let nextKeyframe = keyframes[keyframes.length - 1];
+            
+            for (let j = 0; j < keyframes.length - 1; j++) {
+              if (progress >= keyframes[j].trajectoryProgress && progress <= keyframes[j + 1].trajectoryProgress) {
+                prevKeyframe = keyframes[j];
+                nextKeyframe = keyframes[j + 1];
+                break;
+              }
+            }
+            
+            // Linear interpolation between keyframes
+            if (prevKeyframe === nextKeyframe) {
+              scaleTrajectory.push(Math.round(prevKeyframe.scale * 100) / 100);
+            } else {
+              const localProgress = (progress - prevKeyframe.trajectoryProgress) / 
+                (nextKeyframe.trajectoryProgress - prevKeyframe.trajectoryProgress);
+              const interpolatedScale = prevKeyframe.scale + 
+                (nextKeyframe.scale - prevKeyframe.scale) * localProgress;
+              scaleTrajectory.push(Math.round(interpolatedScale * 100) / 100);
+            }
+          }
+          
+          return scaleTrajectory;
+        };
+        
         const trajectories = validMasks.map(mask => mask.trajectory?.points || []);
-        const rotations = validMasks.map(mask => mask.rotation || 0);
+
+        // Generate frame-by-frame rotation and scale arrays from keyframes
+        const rotations = validMasks.map(mask => {
+          if (mask.rotationKeyframes && mask.rotationKeyframes.length > 0) {
+            return generateRotationTrajectory(mask.rotationKeyframes, videoGenUtils.totalFrames);
+          } else {
+            // Fallback to single value if no keyframes (rounded to integer)
+            return new Array(videoGenUtils.totalFrames).fill(0);
+          }
+        });
+        // Generate frame-by-frame rotation and scale arrays from keyframes
+        const scalings = validMasks.map(mask => {
+          if (mask.scaleKeyframes && mask.scaleKeyframes.length > 0) {
+            return generateScaleTrajectory(mask.scaleKeyframes, videoGenUtils.totalFrames);
+          } else {
+            // Fallback to single value if no keyframes (rounded to 2 decimal places)
+            return new Array(videoGenUtils.totalFrames).fill(1.00);
+          }
+        });
+        
+        // Generate centroids array - each mask gets its centroid repeated for all frames
+        const centroids = validMasks.map(mask => {
+          const centroid = mask.centroid || { x: 480, y: 320 }; // Default to center if no centroid
+          return new Array(videoGenUtils.totalFrames).fill(centroid);
+        });
         
         // Upload all mask images to UploadThing
         const maskUploadPromises = validMasks.map(async (mask, index) => {
@@ -435,7 +548,7 @@ export const Workbench = ({
         });
         
         const uploadedMaskUrls = await Promise.all(maskUploadPromises);
-        
+
         const truckVector = {"x": -cameraControl.horizontalTruck, "y": cameraControl.verticalTruck};
         const panVector = {"x": cameraControl.horizontalPan, "y": cameraControl.verticalPan};
         const dolly = cameraControl.dolly;
@@ -470,6 +583,8 @@ export const Workbench = ({
           "input_prompt": generalTextPrompt,
           "input_trajectories": JSON.stringify(trajectories),
           "input_rotations": JSON.stringify(rotations),
+          "input_scalings": JSON.stringify(scalings),
+          "input_centroids": JSON.stringify(centroids),
           "input_camera": JSON.stringify(cameraControlPayload),
           "input_boundary_degradation": JSON.stringify(boundaryDegradation),
           "input_annulus_degradation": JSON.stringify(annulusDegradation),
@@ -557,10 +672,19 @@ export const Workbench = ({
     // Create initial mask canvases
     let bestMaskCanvas = float32ArrayToCanvas(bestMaskArray, width, height)
     let bestMaskBinary = float32ArrayToBinaryMask(bestMaskArray, width, height)
-
+    let centroid = getCentroid(bestMaskArray, width, height) as { x: number; y: number }
+    
     // Resize both canvases
     bestMaskCanvas = resizeCanvas(bestMaskCanvas, { w: 960, h: 640 });
     bestMaskBinary = resizeCanvas(bestMaskBinary, { w: 960, h: 640 });
+    
+    // Scale the centroid coordinates to match the resized canvas
+    const scaleX = 960 / width;
+    const scaleY = 640 / height;
+    centroid = {
+      x: centroid.x * scaleX,
+      y: centroid.y * scaleY
+    };
     
     // Optional: apply morpohological closing and slight blur for better ui
     bestMaskCanvas = enhanceMaskEdges(bestMaskCanvas, 6, 0); // Reduced blur radius
@@ -568,6 +692,7 @@ export const Workbench = ({
     setMask(bestMaskCanvas);
     setMaskBinary(bestMaskBinary);
     setPrevMaskArray(bestMaskArray);
+    setMaskCentroid(centroid);
 
     // We have direct access to activeWorkbenchTool and editor within the workbench component
     
@@ -991,6 +1116,8 @@ export const Workbench = ({
               setMask={setMask}
               maskBinary={maskBinary}
               setMaskBinary={setMaskBinary}
+              maskCentroid={maskCentroid}
+              setMaskCentroid={setMaskCentroid}
               degradation={degradation}
               setDegradation={setDegradation}
             />

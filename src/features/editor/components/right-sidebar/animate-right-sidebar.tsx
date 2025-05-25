@@ -7,8 +7,11 @@ import {
   SegmentedMask,
   ActiveSegmentationTool,
   ActiveTool,
+  RotationKeyframe,
+  ScaleKeyframe,
 } from "@/features/editor/types";
 import { ToolSidebarHeader } from "@/features/editor/components/tool-sidebar-header";
+import { RotationTimeline, ScaleTimeline } from "./animate-right-sidebar-utils";
 
 import { cn } from "@/lib/utils";
 import { Label } from "@/components/ui/label";
@@ -34,6 +37,8 @@ interface AnimateRightSidebarProps {
   setMask: (mask: HTMLCanvasElement | null) => void;
   maskBinary: HTMLCanvasElement | null;
   setMaskBinary: (maskBinary: HTMLCanvasElement | null) => void;
+  maskCentroid: { x: number; y: number } | null;
+  setMaskCentroid: (centroid: { x: number; y: number } | null) => void;
   segmentedMasks: SegmentedMask[];
   setSegmentedMasks: (masks: SegmentedMask[]) => void;
   activeSegmentationTool: ActiveSegmentationTool;
@@ -55,6 +60,8 @@ export const AnimateRightSidebar = ({
   setMask,
   maskBinary,
   setMaskBinary,
+  maskCentroid,
+  setMaskCentroid,
   segmentedMasks,
   setSegmentedMasks,
   activeSegmentationTool,
@@ -81,6 +88,90 @@ export const AnimateRightSidebar = ({
   
   // Add ref for trajectory length tracking
   const trajectoryLengthRef = useRef(0);
+
+  // Helper function to generate rotation array from keyframes
+  const generateRotationTrajectory = (keyframes: RotationKeyframe[], frameCount: number): number[] => {
+    if (keyframes.length === 0) {
+      return new Array(frameCount).fill(0);
+    }
+    
+    if (keyframes.length === 1) {
+      return new Array(frameCount).fill(keyframes[0].rotation);
+    }
+    
+    const rotationTrajectory: number[] = [];
+    
+    for (let i = 0; i < frameCount; i++) {
+      const progress = frameCount > 1 ? i / (frameCount - 1) : 0;
+      
+      // Find the two keyframes to interpolate between
+      let prevKeyframe = keyframes[0];
+      let nextKeyframe = keyframes[keyframes.length - 1];
+      
+      for (let j = 0; j < keyframes.length - 1; j++) {
+        if (progress >= keyframes[j].trajectoryProgress && progress <= keyframes[j + 1].trajectoryProgress) {
+          prevKeyframe = keyframes[j];
+          nextKeyframe = keyframes[j + 1];
+          break;
+        }
+      }
+      
+      // Linear interpolation between keyframes
+      if (prevKeyframe === nextKeyframe) {
+        rotationTrajectory.push(prevKeyframe.rotation);
+      } else {
+        const localProgress = (progress - prevKeyframe.trajectoryProgress) / 
+          (nextKeyframe.trajectoryProgress - prevKeyframe.trajectoryProgress);
+        const interpolatedRotation = prevKeyframe.rotation + 
+          (nextKeyframe.rotation - prevKeyframe.rotation) * localProgress;
+        rotationTrajectory.push(interpolatedRotation);
+      }
+    }
+    
+    return rotationTrajectory;
+  };
+
+  // Helper function to generate scale array from keyframes
+  const generateScaleTrajectory = (keyframes: ScaleKeyframe[], frameCount: number): number[] => {
+    if (keyframes.length === 0) {
+      return new Array(frameCount).fill(1.0);
+    }
+    
+    if (keyframes.length === 1) {
+      return new Array(frameCount).fill(keyframes[0].scale);
+    }
+    
+    const scaleTrajectory: number[] = [];
+    
+    for (let i = 0; i < frameCount; i++) {
+      const progress = frameCount > 1 ? i / (frameCount - 1) : 0;
+      
+      // Find the two keyframes to interpolate between
+      let prevKeyframe = keyframes[0];
+      let nextKeyframe = keyframes[keyframes.length - 1];
+      
+      for (let j = 0; j < keyframes.length - 1; j++) {
+        if (progress >= keyframes[j].trajectoryProgress && progress <= keyframes[j + 1].trajectoryProgress) {
+          prevKeyframe = keyframes[j];
+          nextKeyframe = keyframes[j + 1];
+          break;
+        }
+      }
+      
+      // Linear interpolation between keyframes
+      if (prevKeyframe === nextKeyframe) {
+        scaleTrajectory.push(prevKeyframe.scale);
+      } else {
+        const localProgress = (progress - prevKeyframe.trajectoryProgress) / 
+          (nextKeyframe.trajectoryProgress - prevKeyframe.trajectoryProgress);
+        const interpolatedScale = prevKeyframe.scale + 
+          (nextKeyframe.scale - prevKeyframe.scale) * localProgress;
+        scaleTrajectory.push(interpolatedScale);
+      }
+    }
+    
+    return scaleTrajectory;
+  };
 
   const onClose = () => {
     setActiveSegmentationTool("none");
@@ -453,7 +544,8 @@ export const AnimateRightSidebar = ({
             binaryUrl: maskBinaryDataUrl,
             inProgress: false, 
             isApplied: true,
-            name: `Object ${savedMasksCount + 1}` 
+            name: `Object ${savedMasksCount + 1}`,
+            centroid: maskCentroid || undefined // Save the centroid from the mask detection
           } : {
             ...mask,
             isApplied: false
@@ -999,7 +1091,13 @@ export const AnimateRightSidebar = ({
 
       const mask = segmentedMasks.find(m => m.url === maskUrl);
 
-      const animation = createTrajectoryAnimation(editor, maskUrl, mask?.trajectory?.points || []);
+      const animation = createTrajectoryAnimation(
+        editor, 
+        maskUrl, 
+        mask?.trajectory?.points || [],
+        mask?.rotationTrajectory,
+        mask?.scaleTrajectory
+      );
       if (animation) {
         animation.start();
         setActiveAnimations(prev => ({
@@ -1129,7 +1227,13 @@ export const AnimateRightSidebar = ({
     setSegmentedMasks(updatedMasks);
 
     // Create and start the animation with the current points
-    const animation = createTrajectoryAnimation(editor, recordingMotion, points);
+    const animation = createTrajectoryAnimation(
+      editor, 
+      recordingMotion, 
+      points,
+      updatedMasks.find(m => m.url === recordingMotion)?.rotationTrajectory,
+      updatedMasks.find(m => m.url === recordingMotion)?.scaleTrajectory
+    );
     if (animation) {
       animation.start();
       setActiveAnimations(prev => ({
@@ -1211,7 +1315,9 @@ export const AnimateRightSidebar = ({
   const createTrajectoryAnimation = (
     editor: Editor, 
     maskUrl: string, 
-    trajectoryPoints: Array<{x: number, y: number}>
+    trajectoryPoints: Array<{x: number, y: number}>,
+    rotationValues?: number[],
+    scaleValues?: number[]
   ) => {
 
     if (!editor?.canvas) {
@@ -1224,6 +1330,10 @@ export const AnimateRightSidebar = ({
     
     const workspaceWidth = workspace.width || 960;
     const workspaceHeight = workspace.height || 640;
+
+    // Find the mask in segmentedMasks to get its centroid
+    const maskData = segmentedMasks.find(mask => mask.url === maskUrl);
+    const maskCentroid = maskData?.centroid;
 
     // Create animation canvas
     const animationCanvas = document.createElement('canvas');
@@ -1281,6 +1391,28 @@ export const AnimateRightSidebar = ({
         pointProgress
       );
 
+      // Calculate current rotation
+      let currentRotation = 0;
+      if (rotationValues && rotationValues.length > 0) {
+        const rotationIndex = Math.floor(progress * (rotationValues.length - 1));
+        const nextRotationIndex = Math.min(rotationIndex + 1, rotationValues.length - 1);
+        const rotationProgress = (progress * (rotationValues.length - 1)) % 1;
+        
+        currentRotation = rotationValues[rotationIndex] + 
+          (rotationValues[nextRotationIndex] - rotationValues[rotationIndex]) * rotationProgress;
+      }
+
+      // Calculate current scale
+      let currentScale = 1.0;
+      if (scaleValues && scaleValues.length > 0) {
+        const scaleIndex = Math.floor(progress * (scaleValues.length - 1));
+        const nextScaleIndex = Math.min(scaleIndex + 1, scaleValues.length - 1);
+        const scaleProgress = (progress * (scaleValues.length - 1)) % 1;
+        
+        currentScale = scaleValues[scaleIndex] + 
+          (scaleValues[nextScaleIndex] - scaleValues[scaleIndex]) * scaleProgress;
+      }
+
       // Get current viewport transform and zoom
       const vpt = editor.canvas.viewportTransform || [1, 0, 0, 1, 0, 0];
       const zoom = editor.canvas.getZoom();
@@ -1289,15 +1421,39 @@ export const AnimateRightSidebar = ({
       const screenX = currentPos.x * vpt[0] + vpt[4];
       const screenY = currentPos.y * vpt[3] + vpt[5];
 
-      // Draw mask centered at the transformed position
+      // Apply transformations and draw mask
+      ctx.save();
       ctx.globalAlpha = 0.8;
+      
+      // Move to the trajectory position
+      ctx.translate(screenX, screenY);
+      
+      // If we have a centroid, use it as the rotation/scale center
+      if (maskCentroid) {
+        // Transform centroid to screen space
+        const centroidScreenX = (maskCentroid.x - workspaceWidth / 2) * zoom;
+        const centroidScreenY = (maskCentroid.y - workspaceHeight / 2) * zoom;
+        
+        // Translate to centroid, apply rotation and scale, then translate back
+        ctx.translate(centroidScreenX, centroidScreenY);
+        ctx.rotate(-currentRotation * Math.PI / 180); // Negate rotation for counter-clockwise
+        ctx.scale(currentScale, currentScale);
+        ctx.translate(-centroidScreenX, -centroidScreenY);
+      } else {
+        // Fallback to center-based rotation/scaling
+        ctx.rotate(-currentRotation * Math.PI / 180); // Negate rotation for counter-clockwise
+        ctx.scale(currentScale, currentScale);
+      }
+      
       ctx.drawImage(
         maskImage,
-        screenX - (workspaceWidth * zoom / 2),
-        screenY - (workspaceHeight * zoom / 2),
+        -(workspaceWidth * zoom / 2),
+        -(workspaceHeight * zoom / 2),
         workspaceWidth * zoom,
         workspaceHeight * zoom
       );
+      
+      ctx.restore();
 
       animationFrame = requestAnimationFrame(animate);
     };
@@ -1481,7 +1637,7 @@ export const AnimateRightSidebar = ({
 
 
 
-            {/* Degradation Slider */}
+            {/* Degradation Slider
             <div className="bg-gray-100 dark:bg-[#111530] p-3 border border-gray-300 dark:border-blue-800 rounded-md mb-2">
               <div className="flex items-center justify-between mb-2">
                 <Label htmlFor="degradation-slider" className="text-sm font-medium">
@@ -1501,7 +1657,7 @@ export const AnimateRightSidebar = ({
                 <span>0</span>
                 <span>1</span>
               </div>
-            </div>
+            </div> */}
             {/* add a separator */}
             <div className="h-px bg-gray-300 dark:bg-gray-700 w-full my-2" />
             {/* Empty state message */}
@@ -1616,26 +1772,111 @@ export const AnimateRightSidebar = ({
                         <ChevronRight
                           className={`w-4 h-4 transition-transform ${mask.isTextDetailsOpen ? 'rotate-90' : ''}`}
                         />
-                        <span className="text-sm font-medium">Text Details</span>
-                        <span className="text-sm text-muted-foreground">(optional)</span>
+                        <span className="text-sm font-medium">Advanced Options</span>
                       </div>
                       {mask.isTextDetailsOpen && (
-                        <div className="mt-2">
-                          <textarea
-                            className="w-full p-2 text-sm border rounded-md min-h-[60px] resize-y"
-                            placeholder="Add specific object motion details to help with generation"
-                            value={mask.textDetails || ""}
-                            onChange={(e) => {
-                              if (editor && activeSegmentationTool === "none") {
-                                const updatedMasks = segmentedMasks.map((m, i) => 
-                                  m.url === mask.url ? { ...m, textDetails: e.target.value } : m
-                                );
-                                setSegmentedMasks(updatedMasks);
-                              }
-                            }}
-                            rows={2}
-                            disabled={activeSegmentationTool !== "none"}
-                          />
+                        <div className="mt-2 space-y-4">
+                          {/* Rotation Timeline Section */}
+                          <div className="flex flex-col bg-gray-100 dark:bg-gray-800 p-1 border border-gray-300 dark:border-gray-500 rounded-md">
+                            <div className="flex items-center justify-between">
+                              <Label className="text-sm font-medium text-gray-800 dark:text-gray-100 pl-1">
+                                Rotation Timeline
+                              </Label>
+                              {mask.rotationKeyframes && mask.rotationKeyframes.length > 0 && (
+                                <span className="text-xs bg-purple-100 dark:bg-purple-900 text-purple-700 dark:text-purple-300 px-2 py-1 mt-1 mr-1 rounded">
+                                  {mask.rotationKeyframes.length} keyframes
+                                </span>
+                              )}
+                            </div>
+                            {!mask.trajectory ? (
+                              <div className="text-xs text-muted-foreground p-2 border rounded border-dashed">
+                                Create a trajectory first to enable rotation timeline
+                              </div>
+                            ) : (
+                              <RotationTimeline
+                                mask={mask}
+                                onRotationChange={(rotationKeyframes) => {
+                                  if (editor && activeSegmentationTool === "none") {
+                                    // Generate rotation trajectory from keyframes
+                                    const frameCount = mask.trajectory?.points.length || videoGenUtils.totalFrames;
+                                    const rotationTrajectory = generateRotationTrajectory(rotationKeyframes, frameCount);
+                                    
+                                    const updatedMasks = segmentedMasks.map((m, i) => 
+                                      m.url === mask.url ? { 
+                                        ...m, 
+                                        rotationKeyframes,
+                                        rotationTrajectory 
+                                      } : m
+                                    );
+                                    setSegmentedMasks(updatedMasks);
+                                  }
+                                }}
+                                disabled={activeSegmentationTool !== "none"}
+                              />
+                            )}
+                          </div>
+
+                          {/* Scale Timeline Section */}
+                          <div className="flex flex-col bg-gray-100 dark:bg-gray-800 p-1 border border-gray-300 dark:border-gray-600 rounded-md">
+                            <div className="flex items-center justify-between">
+                              <Label className="text-sm font-medium text-gray-800 dark:text-gray-100 pl-1">
+                                Scale Timeline
+                              </Label>
+                              {mask.scaleKeyframes && mask.scaleKeyframes.length > 0 && (
+                                <span className="text-xs bg-emerald-100 dark:bg-emerald-900 text-emerald-700 dark:text-emerald-300 px-2 py-1 rounded">
+                                  {mask.scaleKeyframes.length} keyframes
+                                </span>
+                              )}
+                            </div>
+                            {!mask.trajectory ? (
+                              <div className="text-xs text-muted-foreground border rounded border-dashed">
+                                Create a trajectory first to enable scale timeline
+                              </div>
+                            ) : (
+                              <ScaleTimeline
+                                mask={mask}
+                                onScaleChange={(scaleKeyframes) => {
+                                  if (editor && activeSegmentationTool === "none") {
+                                    // Generate scale trajectory from keyframes
+                                    const frameCount = mask.trajectory?.points.length || videoGenUtils.totalFrames;
+                                    const scaleTrajectory = generateScaleTrajectory(scaleKeyframes, frameCount);
+                                    
+                                    const updatedMasks = segmentedMasks.map((m, i) => 
+                                      m.url === mask.url ? { 
+                                        ...m, 
+                                        scaleKeyframes,
+                                        scaleTrajectory 
+                                      } : m
+                                    );
+                                    setSegmentedMasks(updatedMasks);
+                                  }
+                                }}
+                                disabled={activeSegmentationTool !== "none"}
+                              />
+                            )}
+                          </div>
+
+                          {/* Text Details Section */}
+                          <div className="flex flex-col bg-gray-100 dark:bg-gray-800 p-1 border border-gray-300 dark:border-gray-600 rounded-md">
+                            <Label className="text-sm font-medium text-gray-800 dark:text-gray-100 pl-1 my-1">
+                                Text Details
+                            </Label>
+                            <textarea
+                              className="w-full p-2 text-sm border rounded-md min-h-[60px] resize-y"
+                              placeholder="Add specific object motion details to help with generation"
+                              value={mask.textDetails || ""}
+                              onChange={(e) => {
+                                if (editor && activeSegmentationTool === "none") {
+                                  const updatedMasks = segmentedMasks.map((m, i) => 
+                                    m.url === mask.url ? { ...m, textDetails: e.target.value } : m
+                                  );
+                                  setSegmentedMasks(updatedMasks);
+                                }
+                              }}
+                              rows={2}
+                              disabled={activeSegmentationTool !== "none"}
+                            />
+                          </div>
                         </div>
                       )}
                     </div>

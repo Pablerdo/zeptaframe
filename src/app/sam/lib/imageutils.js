@@ -421,3 +421,38 @@ export function float32ArrayToBinaryMask(array, width, height) {
   
   return canvas;
 }
+
+/**
+ * Outputs the centroid of the mask
+ * 
+ * @param {Float32Array} array - The mask data from the segmentation model
+ * @param {number} width - Width of the mask
+ * @param {number} height - Height of the mask
+ * @returns {Object} - The centroid of the mask
+ * @returns {number} x - The x-coordinate of the centroid
+ * @returns {number} y - The y-coordinate of the centroid
+ */
+export function getCentroid(array, width, height) {
+  const centroid = { x: 0, y: 0 };
+  let totalWeight = 0;
+  
+  for (let y = 0; y < height; y++) {
+    for (let x = 0; x < width; x++) {
+      const pixelIdx = y * width + x;
+      const weight = array[pixelIdx];
+      
+      if (weight > 0) {
+        centroid.x += x * weight;
+        centroid.y += y * weight;
+        totalWeight += weight;
+      }
+    }
+  }
+  
+  if (totalWeight > 0) {
+    centroid.x /= totalWeight;
+    centroid.y /= totalWeight;
+  }
+  
+  return centroid;
+}

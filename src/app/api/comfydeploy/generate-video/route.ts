@@ -40,6 +40,8 @@ export async function POST(req: NextRequest) {
           input_prompt: data.videoGenData.input_prompt,
           input_trajectories: data.videoGenData.input_trajectories,
           input_rotations: data.videoGenData.input_rotations,
+          input_scalings: data.videoGenData.input_scalings,
+          input_centroids: data.videoGenData.input_centroids,
           input_camera: data.videoGenData.input_camera,
           input_degradation: data.videoGenData.input_degradation,
           // input_boundary_degradation: data.videoGenData.input_boundary_degradation,

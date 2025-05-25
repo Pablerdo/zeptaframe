@@ -144,6 +144,7 @@ export const CompositionStudio = ({ initialData, isTrial }: CompositionStudioPro
   const [prevMaskArray, setPrevMaskArray] = useState<Float32Array | null>(null);
   const [mask, setMask] = useState<HTMLCanvasElement | null>(null);
   const [maskBinary, setMaskBinary] = useState<HTMLCanvasElement | null>(null);
+  const [maskCentroid, setMaskCentroid] = useState<{ x: number; y: number } | null>(null);
 
   const [lastEncodedWorkbenchId, setLastEncodedWorkbenchId] = useState<string>("");
 
@@ -972,6 +973,8 @@ export const CompositionStudio = ({ initialData, isTrial }: CompositionStudioPro
                     setMask={setMask}
                     maskBinary={maskBinary}
                     setMaskBinary={setMaskBinary}
+                    maskCentroid={maskCentroid}
+                    setMaskCentroid={setMaskCentroid}
                     projectData={projectData}
                     fadingWorkbenchIndex={fadingWorkbenchIndex}
                     setAllowEncodeWorkbenchImage={setAllowEncodeWorkbenchImage}
