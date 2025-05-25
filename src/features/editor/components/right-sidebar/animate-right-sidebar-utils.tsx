@@ -86,14 +86,7 @@ export const RotationTimeline = ({ mask, onRotationChange, disabled }: RotationT
           viewBox="0 0 280 80"
           className="border rounded bg-white dark:bg-gray-900"
         >
-          {/* Grid lines */}
-          <defs>
-            <pattern id="grid" width="28" height="20" patternUnits="userSpaceOnUse">
-              <path d="M 28 0 L 0 0 0 20" fill="none" stroke="#e5e7eb" strokeWidth="0.5"/>
-            </pattern>
-          </defs>
-          <rect width="280" height="80" fill="url(#grid)" />
-          
+
           {/* Rotation value lines */}
           <line x1="20" y1="10" x2="260" y2="10" stroke="#ef4444" strokeWidth="1" strokeDasharray="2,2" />
           <line x1="20" y1="40" x2="260" y2="40" stroke="#6b7280" strokeWidth="1" />
@@ -104,12 +97,131 @@ export const RotationTimeline = ({ mask, onRotationChange, disabled }: RotationT
           <text x="12" y="45" fontSize="10" fill="currentColor">0°</text>
           <text x="0" y="75" fontSize="10" fill="currentColor">-180°</text>
           
-          {/* Progress markers */}
-          <text x="20" y="95" fontSize="8" fill="currentColor">0%</text>
-          <text x="85" y="95" fontSize="8" fill="currentColor">25%</text>
-          <text x="140" y="95" fontSize="8" fill="currentColor">50%</text>
-          <text x="195" y="95" fontSize="8" fill="currentColor">75%</text>
-          <text x="250" y="95" fontSize="8" fill="currentColor">100%</text>
+
+          {/* Interpolated spline line connecting keyframes */}
+          {(() => {
+            if (keyframes.length === 0) {
+              // Default horizontal line at 0 degrees
+              return (
+                <line 
+                  x1="20" 
+                  y1="40" 
+                  x2="260" 
+                  y2="40" 
+                  stroke="#8b5cf6" 
+                  strokeWidth="2" 
+                  opacity="0.3"
+                />
+              );
+            }
+            
+            // Sort keyframes by trajectory progress to ensure proper ordering
+            const sortedKeyframes = [...keyframes].sort((a, b) => a.trajectoryProgress - b.trajectoryProgress);
+            
+            if (sortedKeyframes.length === 1) {
+              // Single horizontal line at the keyframe's rotation value
+              const y = 40 - (sortedKeyframes[0].rotation / 180) * 30;
+              const clampedY = Math.max(0, Math.min(80, y));
+              return (
+                <line 
+                  x1="20" 
+                  y1={clampedY} 
+                  x2="260" 
+                  y2={clampedY} 
+                  stroke="#8b5cf6" 
+                  strokeWidth="2" 
+                  opacity="0.3"
+                />
+              );
+            }
+            
+            // Create interpolated points for the spline
+            const splinePoints: Array<{x: number, y: number}> = [];
+            
+            // Add starting point if first keyframe isn't at progress 0
+            if (sortedKeyframes[0].trajectoryProgress > 0) {
+              const startY = 40 - (sortedKeyframes[0].rotation / 180) * 30;
+              splinePoints.push({
+                x: 20,
+                y: Math.max(0, Math.min(80, startY))
+              });
+            }
+            
+            // Add all sorted keyframes
+            sortedKeyframes.forEach(keyframe => {
+              const x = 20 + (keyframe.trajectoryProgress * 240);
+              const y = 40 - (keyframe.rotation / 180) * 30;
+              splinePoints.push({
+                x,
+                y: Math.max(0, Math.min(80, y))
+              });
+            });
+            
+            // Add ending point if last keyframe isn't at progress 1
+            if (sortedKeyframes[sortedKeyframes.length - 1].trajectoryProgress < 1) {
+              const endY = 40 - (sortedKeyframes[sortedKeyframes.length - 1].rotation / 180) * 30;
+              splinePoints.push({
+                x: 260,
+                y: Math.max(0, Math.min(80, endY))
+              });
+            }
+            
+            // Helper function for Catmull-Rom spline interpolation
+            const catmullRom = (p0: number, p1: number, p2: number, p3: number, t: number) => {
+              const t2 = t * t;
+              const t3 = t2 * t;
+              return 0.5 * (
+                2 * p1 +
+                (-p0 + p2) * t +
+                (2 * p0 - 5 * p1 + 4 * p2 - p3) * t2 +
+                (-p0 + 3 * p1 - 3 * p2 + p3) * t3
+              );
+            };
+            
+            // Create path from points using Catmull-Rom spline
+            if (splinePoints.length >= 2) {
+              let pathData = `M ${splinePoints[0].x} ${splinePoints[0].y}`;
+              
+              if (splinePoints.length === 2) {
+                // Just a line for two points
+                pathData += ` L ${splinePoints[1].x} ${splinePoints[1].y}`;
+              } else {
+                // Create smooth Catmull-Rom spline through all points
+                for (let i = 0; i < splinePoints.length - 1; i++) {
+                  // Get the four control points for this segment
+                  const p0 = splinePoints[Math.max(0, i - 1)];
+                  const p1 = splinePoints[i];
+                  const p2 = splinePoints[i + 1];
+                  const p3 = splinePoints[Math.min(splinePoints.length - 1, i + 2)];
+                  
+                  // If at the start or end, duplicate points for continuity
+                  const cp0 = i === 0 ? p1 : p0;
+                  const cp3 = i === splinePoints.length - 2 ? p2 : p3;
+                  
+                  // Generate intermediate points along the curve
+                  const steps = 20; // Number of intermediate points
+                  for (let step = 1; step <= steps; step++) {
+                    const t = step / steps;
+                    const x = catmullRom(cp0.x, p1.x, p2.x, cp3.x, t);
+                    const y = catmullRom(cp0.y, p1.y, p2.y, cp3.y, t);
+                    pathData += ` L ${x} ${Math.max(0, Math.min(80, y))}`;
+                  }
+                }
+              }
+              
+              return (
+                <path
+                  d={pathData}
+                  stroke="#8b5cf6"
+                  strokeWidth="3"
+                  fill="none"
+                  opacity="0.5"
+                />
+              );
+            }
+            
+            return null;
+          })()}
           
           {/* Keyframes */}
           {keyframes.map((keyframe, index) => {
@@ -326,14 +438,7 @@ export const ScaleTimeline = ({ mask, onScaleChange, disabled }: ScaleTimelinePr
           viewBox="0 0 280 80"
           className="border rounded bg-white dark:bg-gray-900"
         >
-          {/* Grid lines */}
-          <defs>
-            <pattern id="scaleGrid" width="28" height="20" patternUnits="userSpaceOnUse">
-              <path d="M 28 0 L 0 0 0 20" fill="none" stroke="#e5e7eb" strokeWidth="0.5"/>
-            </pattern>
-          </defs>
-          <rect width="280" height="80" fill="url(#scaleGrid)" />
-          
+
           {/* Scale value lines */}
           <line x1="20" y1="10" x2="260" y2="10" stroke="#10b981" strokeWidth="1" strokeDasharray="2,2" />
           <line x1="20" y1="40" x2="260" y2="40" stroke="#6b7280" strokeWidth="1" />
@@ -344,12 +449,130 @@ export const ScaleTimeline = ({ mask, onScaleChange, disabled }: ScaleTimelinePr
           <text x="0" y="45" fontSize="10" fill="currentColor">100%</text>
           <text x="5" y="75" fontSize="10" fill="currentColor">20%</text>
           
-          {/* Progress markers */}
-          <text x="20" y="95" fontSize="8" fill="currentColor">0%</text>
-          <text x="85" y="95" fontSize="8" fill="currentColor">25%</text>
-          <text x="140" y="95" fontSize="8" fill="currentColor">50%</text>
-          <text x="195" y="95" fontSize="8" fill="currentColor">75%</text>
-          <text x="250" y="95" fontSize="8" fill="currentColor">100%</text>
+          {/* Interpolated spline line connecting keyframes */}
+          {(() => {
+            if (keyframes.length === 0) {
+              // Default horizontal line at 100% scale (1.0)
+              return (
+                <line 
+                  x1="20" 
+                  y1="40" 
+                  x2="260" 
+                  y2="40" 
+                  stroke="#10b981" 
+                  strokeWidth="2" 
+                  opacity="0.3"
+                />
+              );
+            }
+            
+            // Sort keyframes by trajectory progress to ensure proper ordering
+            const sortedKeyframes = [...keyframes].sort((a, b) => a.trajectoryProgress - b.trajectoryProgress);
+            
+            if (sortedKeyframes.length === 1) {
+              // Single horizontal line at the keyframe's scale value
+              const y = 70 - ((sortedKeyframes[0].scale - 0.2) / 2.1) * 60;
+              const clampedY = Math.max(10, Math.min(70, y));
+              return (
+                <line 
+                  x1="20" 
+                  y1={clampedY} 
+                  x2="260" 
+                  y2={clampedY} 
+                  stroke="#10b981" 
+                  strokeWidth="4" 
+                  opacity="0.4"
+                />
+              );
+            }
+            
+            // Create interpolated points for the spline
+            const splinePoints: Array<{x: number, y: number}> = [];
+            
+            // Add starting point if first keyframe isn't at progress 0
+            if (sortedKeyframes[0].trajectoryProgress > 0) {
+              const startY = 70 - ((sortedKeyframes[0].scale - 0.2) / 2.1) * 60;
+              splinePoints.push({
+                x: 20,
+                y: Math.max(10, Math.min(70, startY))
+              });
+            }
+            
+            // Add all sorted keyframes
+            sortedKeyframes.forEach(keyframe => {
+              const x = 20 + (keyframe.trajectoryProgress * 240);
+              const y = 70 - ((keyframe.scale - 0.2) / 2.1) * 60;
+              splinePoints.push({
+                x,
+                y: Math.max(10, Math.min(70, y))
+              });
+            });
+            
+            // Add ending point if last keyframe isn't at progress 1
+            if (sortedKeyframes[sortedKeyframes.length - 1].trajectoryProgress < 1) {
+              const endY = 70 - ((sortedKeyframes[sortedKeyframes.length - 1].scale - 0.2) / 2.1) * 60;
+              splinePoints.push({
+                x: 260,
+                y: Math.max(10, Math.min(70, endY))
+              });
+            }
+            
+            // Helper function for Catmull-Rom spline interpolation
+            const catmullRom = (p0: number, p1: number, p2: number, p3: number, t: number) => {
+              const t2 = t * t;
+              const t3 = t2 * t;
+              return 0.5 * (
+                2 * p1 +
+                (-p0 + p2) * t +
+                (2 * p0 - 5 * p1 + 4 * p2 - p3) * t2 +
+                (-p0 + 3 * p1 - 3 * p2 + p3) * t3
+              );
+            };
+            
+            // Create path from points using Catmull-Rom spline
+            if (splinePoints.length >= 2) {
+              let pathData = `M ${splinePoints[0].x} ${splinePoints[0].y}`;
+              
+              if (splinePoints.length === 2) {
+                // Just a line for two points
+                pathData += ` L ${splinePoints[1].x} ${splinePoints[1].y}`;
+              } else {
+                // Create smooth Catmull-Rom spline through all points
+                for (let i = 0; i < splinePoints.length - 1; i++) {
+                  // Get the four control points for this segment
+                  const p0 = splinePoints[Math.max(0, i - 1)];
+                  const p1 = splinePoints[i];
+                  const p2 = splinePoints[i + 1];
+                  const p3 = splinePoints[Math.min(splinePoints.length - 1, i + 2)];
+                  
+                  // If at the start or end, duplicate points for continuity
+                  const cp0 = i === 0 ? p1 : p0;
+                  const cp3 = i === splinePoints.length - 2 ? p2 : p3;
+                  
+                  // Generate intermediate points along the curve
+                  const steps = 20; // Number of intermediate points
+                  for (let step = 1; step <= steps; step++) {
+                    const t = step / steps;
+                    const x = catmullRom(cp0.x, p1.x, p2.x, cp3.x, t);
+                    const y = catmullRom(cp0.y, p1.y, p2.y, cp3.y, t);
+                    pathData += ` L ${x} ${Math.max(10, Math.min(70, y))}`;
+                  }
+                }
+              }
+              
+              return (
+                <path
+                  d={pathData}
+                  stroke="#10b981"
+                  strokeWidth="3"
+                  fill="none"
+                  opacity="0.5"
+                />
+              );
+            }
+            
+            return null;
+          })()}
           
           {/* Keyframes */}
           {keyframes.map((keyframe, index) => {
