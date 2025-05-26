@@ -407,11 +407,11 @@ export const Workbench = ({
             break;
           case "skyreels":
             if (computeMode === "flash") {
-              workflowData.workflow_id = comfyDeployWorkflows["GWF-ZEPTA-SkyR-Flash"] || "";
+              workflowData.workflow_id = comfyDeployWorkflows["PROD-ZEPTA-Flash"] || "";
             } else if (computeMode === "ultra") {
-              workflowData.workflow_id = comfyDeployWorkflows["GWF-ZEPTA-SkyR-Ultra"] || "";
+              workflowData.workflow_id = comfyDeployWorkflows["PROD-ZEPTA-Ultra"] || "";
             } else {
-              workflowData.workflow_id = comfyDeployWorkflows["GWF-ZEPTA-SkyR-Normal"] || "";
+              workflowData.workflow_id = comfyDeployWorkflows["PROD-ZEPTA-Normal"] || "";
             }
             break;
           default:
