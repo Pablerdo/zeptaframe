@@ -963,7 +963,7 @@ export const Workbench = ({
         activeTool={activeTool}
         onChangeActiveTool={onChangeActiveTool}
       />
-      <div className="grid h-full" style={{
+      <div className="grid h-full overflow-hidden" style={{
         gridTemplateColumns: activeWorkbenchTool !== "select" 
           ? "minmax(0, 1fr) 300px 75px" 
           : "minmax(0, 1fr) 0px 75px",
@@ -1091,7 +1091,7 @@ export const Workbench = ({
         </div>
 
         {/* Middle sidebar content column - with overflow hidden */}
-        <div className="h-full overflow-hidden">
+        <div className="h-full overflow-hidden min-h-0">
           <div className="h-full w-[300px]"> {/* Fixed width container */}
             <AnimateRightSidebar 
               editor={editor}
