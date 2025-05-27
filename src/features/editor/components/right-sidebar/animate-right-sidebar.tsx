@@ -1555,6 +1555,47 @@ export const AnimateRightSidebar = ({
     }
   }, [activeWorkbenchTool]);
 
+  // Add function to handle preview all animations (toggle)
+  const handlePreviewAll = () => {
+    if (!editor?.canvas) return;
+    
+    // Check if any animations are currently playing
+    const hasActiveAnimations = Object.keys(activeAnimations).length > 0;
+    
+    if (hasActiveAnimations) {
+      // Stop all existing animations
+      Object.values(activeAnimations).forEach(animation => {
+        animation.stop();
+      });
+      setActiveAnimations({});
+    } else {
+      // Start animations for all masks that have trajectories
+      const newActiveAnimations: {[key: string]: {stop: () => void; isPlaying: boolean}} = {};
+      
+      segmentedMasks
+        .filter(mask => !mask.inProgress && mask.url && mask.trajectory?.points && mask.trajectory.points.length > 0)
+        .forEach(mask => {
+          const animation = createTrajectoryAnimation(
+            editor,
+            mask.url,
+            mask.trajectory!.points,
+            mask.rotationTrajectory,
+            mask.scaleTrajectory
+          );
+          
+          if (animation) {
+            animation.start();
+            newActiveAnimations[mask.url] = {
+              stop: animation.stop,
+              isPlaying: true
+            };
+          }
+        });
+      
+      setActiveAnimations(newActiveAnimations);
+    }
+  };
+
   return (
     <aside
       className={cn(
@@ -1578,9 +1619,22 @@ export const AnimateRightSidebar = ({
 
       <ScrollArea className="flex-1 overflow-hidden">
         <div className="p-4 space-y-4 border-b">
-          <Label className="text-sm">
-            Animation Type
-          </Label>
+          <div className="flex items-center justify-between">
+            <Label className="text-sm">
+              Animation Type
+            </Label>
+            {segmentedMasks.filter(mask => !mask.inProgress && mask.url).length > 0 && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handlePreviewAll}
+                disabled={activeSegmentationTool !== "none"}
+                className="h-7 px-3 text-xs"
+              >
+                {Object.keys(activeAnimations).length > 0 ? "Stop All" : "Preview All"}
+              </Button>
+            )}
+          </div>
         
           {/* Segmented masks list */}
           <div className="space-y-2">
@@ -1820,9 +1874,9 @@ export const AnimateRightSidebar = ({
                               <Label className="text-sm font-medium text-gray-800 dark:text-gray-100 pl-1">
                                 Rotation Timeline
                               </Label>
-                              {mask.rotationKeyframes && mask.rotationKeyframes.length > 0 && (
+                              {mask.rotationKeyframes && mask.rotationKeyframes.length > 1 && (
                                 <span className="text-xs bg-purple-100 dark:bg-purple-900 text-purple-700 dark:text-purple-300 px-2 py-1 mt-1 mr-1 rounded">
-                                  {mask.rotationKeyframes.length} keyframes
+                                  {mask.rotationKeyframes.length - 1} keyframes
                                 </span>
                               )}
                             </div>
@@ -1888,9 +1942,9 @@ export const AnimateRightSidebar = ({
                               <Label className="text-sm font-medium text-gray-800 dark:text-gray-100 pl-1">
                                 Scale Timeline
                               </Label>
-                              {mask.scaleKeyframes && mask.scaleKeyframes.length > 0 && (
+                              {mask.scaleKeyframes && mask.scaleKeyframes.length > 1 && (
                                 <span className="text-xs bg-emerald-100 dark:bg-emerald-900 text-emerald-700 dark:text-emerald-300 px-2 py-1 rounded">
-                                  {mask.scaleKeyframes.length} keyframes
+                                  {mask.scaleKeyframes.length - 1} keyframes
                                 </span>
                               )}
                             </div>

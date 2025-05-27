@@ -16,34 +16,42 @@ export interface RotationTimelineProps {
 export const RotationTimeline = ({ mask, onRotationChange, disabled }: RotationTimelineProps) => {
   const [selectedKeyframeIndex, setSelectedKeyframeIndex] = useState<number>(-1);
   
-  const keyframes = mask.rotationKeyframes || [];
+  // Always ensure there's an initial keyframe at 0% progress with 0° rotation
+  const ensureInitialKeyframe = (keyframes: RotationKeyframe[]): RotationKeyframe[] => {
+    const initialKeyframe: RotationKeyframe = { trajectoryProgress: 0, rotation: 0 };
+    const existingKeyframes = keyframes.filter(kf => kf.trajectoryProgress > 0);
+    return [initialKeyframe, ...existingKeyframes].sort((a, b) => a.trajectoryProgress - b.trajectoryProgress);
+  };
+  
+  const keyframes = ensureInitialKeyframe(mask.rotationKeyframes || []);
   
   const addKeyframe = (progress: number) => {
-    if (disabled) return;
+    if (disabled || progress === 0) return; // Prevent adding keyframe at 0% progress
     
     const newKeyframe: RotationKeyframe = {
       trajectoryProgress: progress,
       rotation: 0
     };
     
-    const updatedKeyframes = [...keyframes, newKeyframe].sort((a, b) => a.trajectoryProgress - b.trajectoryProgress);
+    const updatedKeyframes = ensureInitialKeyframe([...keyframes, newKeyframe]);
     onRotationChange(updatedKeyframes);
   };
   
   const updateKeyframe = (index: number, progress: number, rotation: number) => {
-    if (disabled) return;
+    if (disabled || index === 0) return; // Prevent modifying the initial keyframe
     
     const updatedKeyframes = [...keyframes];
     updatedKeyframes[index] = { trajectoryProgress: progress, rotation };
-    updatedKeyframes.sort((a, b) => a.trajectoryProgress - b.trajectoryProgress);
-    onRotationChange(updatedKeyframes);
+    const finalKeyframes = ensureInitialKeyframe(updatedKeyframes);
+    onRotationChange(finalKeyframes);
   };
   
   const deleteKeyframe = (index: number) => {
-    if (disabled) return;
+    if (disabled || index === 0) return; // Prevent deleting the initial keyframe
     
     const updatedKeyframes = keyframes.filter((_, i) => i !== index);
-    onRotationChange(updatedKeyframes);
+    const finalKeyframes = ensureInitialKeyframe(updatedKeyframes);
+    onRotationChange(finalKeyframes);
     setSelectedKeyframeIndex(-1);
   };
   
@@ -51,28 +59,30 @@ export const RotationTimeline = ({ mask, onRotationChange, disabled }: RotationT
     if (disabled) return;
     
     const spinKeyframes: RotationKeyframe[] = [
-      { trajectoryProgress: 0, rotation: 0 },
       { trajectoryProgress: 1, rotation: 360 }
     ];
-    onRotationChange(spinKeyframes);
+    const finalKeyframes = ensureInitialKeyframe(spinKeyframes);
+    onRotationChange(finalKeyframes);
   };
   
   const addPresetWobble = () => {
     if (disabled) return;
     
     const wobbleKeyframes: RotationKeyframe[] = [
-      { trajectoryProgress: 0, rotation: 0 },
       { trajectoryProgress: 0.25, rotation: 30 },
       { trajectoryProgress: 0.5, rotation: 0 },
       { trajectoryProgress: 0.75, rotation: -30 },
       { trajectoryProgress: 1, rotation: 0 }
     ];
-    onRotationChange(wobbleKeyframes);
+    const finalKeyframes = ensureInitialKeyframe(wobbleKeyframes);
+    onRotationChange(finalKeyframes);
   };
   
   const resetRotation = () => {
     if (disabled) return;
-    onRotationChange([]);
+    // Reset only keeps the initial keyframe
+    const finalKeyframes = ensureInitialKeyframe([]);
+    onRotationChange(finalKeyframes);
     setSelectedKeyframeIndex(-1);
   };
   
@@ -227,6 +237,12 @@ export const RotationTimeline = ({ mask, onRotationChange, disabled }: RotationT
           {keyframes.map((keyframe, index) => {
             const x = 20 + (keyframe.trajectoryProgress * 240);
             const y = 40 - (keyframe.rotation / 180) * 30; // Map -180:180 to 70:10
+            const isInitialKeyframe = index === 0;
+            
+            // Don't render the initial keyframe visually
+            if (isInitialKeyframe) {
+              return null;
+            }
             
             return (
               <g key={index}>
@@ -238,7 +254,9 @@ export const RotationTimeline = ({ mask, onRotationChange, disabled }: RotationT
                   stroke="white"
                   strokeWidth="2"
                   className="cursor-pointer hover:r-5"
-                  onClick={() => setSelectedKeyframeIndex(selectedKeyframeIndex === index ? -1 : index)}
+                  onClick={() => {
+                    setSelectedKeyframeIndex(selectedKeyframeIndex === index ? -1 : index);
+                  }}
                 />
                 {selectedKeyframeIndex === index && (
                   <text x={x} y={Math.max(0, Math.min(80, y))} fontSize="8" textAnchor="middle" fill="currentColor">
@@ -301,7 +319,7 @@ export const RotationTimeline = ({ mask, onRotationChange, disabled }: RotationT
       
       {/* Controls */}
       <div className="space-y-2">
-        {selectedKeyframeIndex >= 0 && (
+        {selectedKeyframeIndex >= 0 && selectedKeyframeIndex !== 0 && (
           <div className="flex items-center justify-between text-xs">
             <span>Selected: {Math.round(keyframes[selectedKeyframeIndex].trajectoryProgress * 100)}% → {Math.round(keyframes[selectedKeyframeIndex].rotation)}°</span>
             <Button
@@ -360,34 +378,42 @@ export interface ScaleTimelineProps {
 export const ScaleTimeline = ({ mask, onScaleChange, disabled }: ScaleTimelineProps) => {
   const [selectedKeyframeIndex, setSelectedKeyframeIndex] = useState<number>(-1);
   
-  const keyframes = mask.scaleKeyframes || [];
+  // Always ensure there's an initial keyframe at 0% progress with 100% scale (1.0)
+  const ensureInitialKeyframe = (keyframes: ScaleKeyframe[]): ScaleKeyframe[] => {
+    const initialKeyframe: ScaleKeyframe = { trajectoryProgress: 0, scale: 1.0 };
+    const existingKeyframes = keyframes.filter(kf => kf.trajectoryProgress > 0);
+    return [initialKeyframe, ...existingKeyframes].sort((a, b) => a.trajectoryProgress - b.trajectoryProgress);
+  };
+  
+  const keyframes = ensureInitialKeyframe(mask.scaleKeyframes || []);
   
   const addKeyframe = (progress: number) => {
-    if (disabled) return;
+    if (disabled || progress === 0) return; // Prevent adding keyframe at 0% progress
     
     const newKeyframe: ScaleKeyframe = {
       trajectoryProgress: progress,
       scale: 1.0
     };
     
-    const updatedKeyframes = [...keyframes, newKeyframe].sort((a, b) => a.trajectoryProgress - b.trajectoryProgress);
+    const updatedKeyframes = ensureInitialKeyframe([...keyframes, newKeyframe]);
     onScaleChange(updatedKeyframes);
   };
   
   const updateKeyframe = (index: number, progress: number, scale: number) => {
-    if (disabled) return;
+    if (disabled || index === 0) return; // Prevent modifying the initial keyframe
     
     const updatedKeyframes = [...keyframes];
     updatedKeyframes[index] = { trajectoryProgress: progress, scale };
-    updatedKeyframes.sort((a, b) => a.trajectoryProgress - b.trajectoryProgress);
-    onScaleChange(updatedKeyframes);
+    const finalKeyframes = ensureInitialKeyframe(updatedKeyframes);
+    onScaleChange(finalKeyframes);
   };
   
   const deleteKeyframe = (index: number) => {
-    if (disabled) return;
+    if (disabled || index === 0) return; // Prevent deleting the initial keyframe
     
     const updatedKeyframes = keyframes.filter((_, i) => i !== index);
-    onScaleChange(updatedKeyframes);
+    const finalKeyframes = ensureInitialKeyframe(updatedKeyframes);
+    onScaleChange(finalKeyframes);
     setSelectedKeyframeIndex(-1);
   };
   
@@ -395,36 +421,38 @@ export const ScaleTimeline = ({ mask, onScaleChange, disabled }: ScaleTimelinePr
     if (disabled) return;
     
     const growKeyframes: ScaleKeyframe[] = [
-      { trajectoryProgress: 0, scale: 1.0 },
       { trajectoryProgress: 1, scale: 2.0 }
     ];
-    onScaleChange(growKeyframes);
+    const finalKeyframes = ensureInitialKeyframe(growKeyframes);
+    onScaleChange(finalKeyframes);
   };
   
   const addPresetShrink = () => {
     if (disabled) return;
     
     const shrinkKeyframes: ScaleKeyframe[] = [
-      { trajectoryProgress: 0, scale: 1.0 },
       { trajectoryProgress: 1, scale: 0.3 }
     ];
-    onScaleChange(shrinkKeyframes);
+    const finalKeyframes = ensureInitialKeyframe(shrinkKeyframes);
+    onScaleChange(finalKeyframes);
   };
   
   const addPresetPulse = () => {
     if (disabled) return;
     
     const pulseKeyframes: ScaleKeyframe[] = [
-      { trajectoryProgress: 0, scale: 1.0 },
       { trajectoryProgress: 0.5, scale: 1.5 },
       { trajectoryProgress: 1, scale: 1.0 }
     ];
-    onScaleChange(pulseKeyframes);
+    const finalKeyframes = ensureInitialKeyframe(pulseKeyframes);
+    onScaleChange(finalKeyframes);
   };
   
   const resetScale = () => {
     if (disabled) return;
-    onScaleChange([]);
+    // Reset only keeps the initial keyframe
+    const finalKeyframes = ensureInitialKeyframe([]);
+    onScaleChange(finalKeyframes);
     setSelectedKeyframeIndex(-1);
   };
   
@@ -445,43 +473,31 @@ export const ScaleTimeline = ({ mask, onScaleChange, disabled }: ScaleTimelinePr
           <line x1="20" y1="70" x2="260" y2="70" stroke="#f59e0b" strokeWidth="1" strokeDasharray="2,2" />
           
           {/* Labels */}
-          <text x="0" y="15" fontSize="10" fill="currentColor">230%</text>
+          <text x="0" y="15" fontSize="10" fill="currentColor">180%</text>
           <text x="0" y="45" fontSize="10" fill="currentColor">100%</text>
-          <text x="5" y="75" fontSize="10" fill="currentColor">20%</text>
+          <text x="5" y="70" fontSize="10" fill="currentColor">20%</text>
           
           {/* Interpolated spline line connecting keyframes */}
           {(() => {
             if (keyframes.length === 0) {
-              // Default horizontal line at 100% scale (1.0)
-              return (
-                <line 
-                  x1="20" 
-                  y1="40" 
-                  x2="260" 
-                  y2="40" 
-                  stroke="#10b981" 
-                  strokeWidth="2" 
-                  opacity="0.3"
-                />
-              );
+              // Default horizontal line at 100% scale (1.0) - should never show since we always have initial keyframe
+              return null;
             }
             
             // Sort keyframes by trajectory progress to ensure proper ordering
             const sortedKeyframes = [...keyframes].sort((a, b) => a.trajectoryProgress - b.trajectoryProgress);
             
             if (sortedKeyframes.length === 1) {
-              // Single horizontal line at the keyframe's scale value
-              const y = 70 - ((sortedKeyframes[0].scale - 0.2) / 2.1) * 60;
-              const clampedY = Math.max(10, Math.min(70, y));
+              // Single horizontal line at the keyframe's scale value (this will be the initial 100% keyframe)
               return (
                 <line 
                   x1="20" 
-                  y1={clampedY} 
+                  y1={40} 
                   x2="260" 
-                  y2={clampedY} 
+                  y2={40} 
                   stroke="#10b981" 
-                  strokeWidth="4" 
-                  opacity="0.4"
+                  strokeWidth="2" 
+                  opacity="0.3"
                 />
               );
             }
@@ -491,21 +507,27 @@ export const ScaleTimeline = ({ mask, onScaleChange, disabled }: ScaleTimelinePr
             
             // Add starting point if first keyframe isn't at progress 0
             if (sortedKeyframes[0].trajectoryProgress > 0) {
-              const startY = 70 - ((sortedKeyframes[0].scale - 0.2) / 2.1) * 60;
               splinePoints.push({
                 x: 20,
-                y: Math.max(10, Math.min(70, startY))
+                y: 40
               });
             }
             
             // Add all sorted keyframes
-            sortedKeyframes.forEach(keyframe => {
-              const x = 20 + (keyframe.trajectoryProgress * 240);
-              const y = 70 - ((keyframe.scale - 0.2) / 2.1) * 60;
-              splinePoints.push({
-                x,
-                y: Math.max(10, Math.min(70, y))
-              });
+            sortedKeyframes.forEach((keyframe, index) => {
+              if (index === 0) {
+                splinePoints.push({
+                  x: 20,
+                  y: 40
+                });
+              } else {
+                const x = 20 + (keyframe.trajectoryProgress * 240);
+                const y = 70 - ((keyframe.scale - 0.2) / 2.1) * 60;
+                splinePoints.push({
+                  x,
+                  y: Math.max(10, Math.min(70, y))
+                });
+              }
             });
             
             // Add ending point if last keyframe isn't at progress 1
@@ -516,6 +538,8 @@ export const ScaleTimeline = ({ mask, onScaleChange, disabled }: ScaleTimelinePr
                 y: Math.max(10, Math.min(70, endY))
               });
             }
+
+            console.log("spline", splinePoints);
             
             // Helper function for Catmull-Rom spline interpolation
             const catmullRom = (p0: number, p1: number, p2: number, p3: number, t: number) => {
@@ -579,6 +603,12 @@ export const ScaleTimeline = ({ mask, onScaleChange, disabled }: ScaleTimelinePr
             const x = 20 + (keyframe.trajectoryProgress * 240);
             // Map scale 0.2:2.3 to y 70:10
             const y = 70 - ((keyframe.scale - 0.2) / 2.1) * 60;
+            const isInitialKeyframe = index === 0;
+            
+            // Don't render the initial keyframe visually
+            if (isInitialKeyframe) {
+              return null;
+            }
             
             return (
               <g key={index}>
@@ -590,7 +620,9 @@ export const ScaleTimeline = ({ mask, onScaleChange, disabled }: ScaleTimelinePr
                   stroke="white"
                   strokeWidth="2"
                   className="cursor-pointer hover:r-5"
-                  onClick={() => setSelectedKeyframeIndex(selectedKeyframeIndex === index ? -1 : index)}
+                  onClick={() => {
+                    setSelectedKeyframeIndex(selectedKeyframeIndex === index ? -1 : index);
+                  }}
                 />
                 {selectedKeyframeIndex === index && (
                   <text x={x} y={Math.max(10, Math.min(70, y)) - 10} fontSize="8" textAnchor="middle" fill="currentColor">
@@ -653,7 +685,7 @@ export const ScaleTimeline = ({ mask, onScaleChange, disabled }: ScaleTimelinePr
       
       {/* Controls */}
       <div className="space-y-2">
-        {selectedKeyframeIndex >= 0 && (
+        {selectedKeyframeIndex >= 0 && selectedKeyframeIndex !== 0 && (
           <div className="flex items-center justify-between text-xs">
             <span>Selected: {Math.round(keyframes[selectedKeyframeIndex].trajectoryProgress * 100)}% → {Math.round(keyframes[selectedKeyframeIndex].scale * 100)}%</span>
             <Button
