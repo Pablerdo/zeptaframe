@@ -10,7 +10,6 @@ export const comfyDeployWorkflows = {
   // "GWF-ZEPTA-SkyR-Ultra": "42107b45-ede7-4440-b544-bd69fd77ae79",
   // "GWF-ZEPTA-SkyR-Normal": "5a2a646f-7912-417a-b4f9-e3ab60e9d7b0",
   // "GWF-ZEPTA-SkyR-Flash": "4d087814-bcac-4f8f-8716-c9f1184b9a05",
-  // "MP4VideoJoiner": "45e11f37-feaf-4d25-a39f-687321e9f94d",
   // "NOGWF-ZEPTA-SkyReels": "d426c214-2d9d-4999-b25c-c0ad75007042",
   // "GWF-ZEPTA-SkyR-Research":"7f78c518-93ac-4a33-857b-1e92bfb9fd32",
 
@@ -20,6 +19,7 @@ export const comfyDeployWorkflows = {
 
   "PROD-ZEPTA-Skyreels": "8465eaa2-bd1f-4e4f-81a1-8976521a771f",
   "PROD-ZEPTA-CogVideoX": "dd030bb3-4bf9-4991-8669-530ab1d88e50", 
+  "MP4VideoJoiner": "45e11f37-feaf-4d25-a39f-687321e9f94d",
 };
 
 
