@@ -422,6 +422,9 @@ export const Workbench = ({
 
         const validMasks = segmentedMasks.filter(mask => mask.id && mask.id.trim() !== '');
         
+        // Sort masks by z-index (lower z-index = bottom layer, higher = top layer)
+        const sortedMasks = [...validMasks].sort((a, b) => (a.zIndex ?? 0) - (b.zIndex ?? 0));
+        
         // Helper function to generate rotation array from keyframes
         const generateRotationTrajectory = (keyframes: RotationKeyframe[], frameCount: number): number[] => {
           if (keyframes.length === 0) {
@@ -506,10 +509,10 @@ export const Workbench = ({
           return scaleTrajectory;
         };
         
-        const trajectories = validMasks.map(mask => mask.trajectory?.points || []);
+        const trajectories = sortedMasks.map(mask => mask.trajectory?.points || []);
 
         // Generate frame-by-frame rotation and scale arrays from keyframes
-        const rotations = validMasks.map(mask => {
+        const rotations = sortedMasks.map(mask => {
           if (mask.rotationKeyframes && mask.rotationKeyframes.length > 0) {
             return generateRotationTrajectory(mask.rotationKeyframes, videoGenUtils.totalFrames);
           } else {
@@ -518,7 +521,7 @@ export const Workbench = ({
           }
         });
         // Generate frame-by-frame rotation and scale arrays from keyframes
-        const scalings = validMasks.map(mask => {
+        const scalings = sortedMasks.map(mask => {
           if (mask.scaleKeyframes && mask.scaleKeyframes.length > 0) {
             return generateScaleTrajectory(mask.scaleKeyframes, videoGenUtils.totalFrames);
           } else {
@@ -528,13 +531,13 @@ export const Workbench = ({
         });
         
         // Generate centroids array - each mask gets its centroid repeated for all frames
-        const centroids = validMasks.map(mask => {
+        const centroids = sortedMasks.map(mask => {
           const centroid = mask.centroid || { x: 480, y: 320 }; // Default to center if no centroid
           return new Array(videoGenUtils.totalFrames).fill(centroid);
         });
         
         // Upload all mask images to UploadThing
-        const maskUploadPromises = validMasks.map(async (mask, index) => {
+        const maskUploadPromises = sortedMasks.map(async (mask, index) => {
           if (!mask.binaryUrl) return "";
           
           const maskFile = await dataUrlToFile(mask.binaryUrl, `mask-${index}.png`);
@@ -1173,40 +1176,6 @@ export const Workbench = ({
             
             {/* Generate Video Submit Button */}
             <div className="mt-auto">
-              {/* Generation Mode Selection - Vertical Toggle with Gooey Animation */}
-              <div className="mb-3 relative">
-                {/* Info tooltip */}
-                {/* <div className="absolute -top-8 right-1 group z-50">
-                  <div className="w-5 h-5 bg-gray-600 rounded-full flex items-center justify-center cursor-help text-xs text-blue-200 font-semibold">
-                    i
-                  </div>
-                  <div className="absolute bottom-full mb-2 right-0 w-[60px] bg-gray-800 text-white text-xs p-2 rounded shadow-lg 
-                    opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none z-50">
-                    Text prompt is required when in <span className="font-bold">Text Only</span> mode
-                  </div>
-                </div> */}
-              
-                {/* <div className="flex flex-col w-full overflow-hidden">
-                  <button
-                    className={`py-2 font-medium text-sm rounded-t-md w-full transition-colors duration-200 ${
-                      !textOnlyMode ? 'bg-blue-600 text-white' : 'bg-gray-700 text-gray-300'
-                    }`}
-                    onClick={() => setTextOnlyMode(false)}
-                  >
-                    Animation
-                  </button>
-                  
-                  <button
-                    className={`py-2 font-medium text-sm rounded-b-md w-full transition-colors duration-200 ${
-                      textOnlyMode ? 'bg-blue-600 text-white' : 'bg-gray-700 text-gray-300'
-                    }`}
-                    onClick={() => setTextOnlyMode(true)}
-                  >
-                    Text Only
-                  </button>
-                </div> */}
-              </div>
-
               {/* Fast Mode Toggle */}
               <div className={`mt-auto ${textOnlyMode ? 'opacity-50 pointer-events-none' : ''}`}>
                 <div className="flex flex-col w-full overflow-hidden mb-2">
@@ -1254,7 +1223,7 @@ export const Workbench = ({
                   <div className="flex flex-col items-center">
                     <ArrowRightSquare className="h-6 w-6" />
                     <span className="text-xs font-medium mt-1">Submit</span>
-                    {/* <span className="text-[10px] text-blue-200/80 mt-0.5">{selectedModel.name}</span> */}
+                    <span className="text-[8px] text-blue-200/80 mt-0.5">{selectedModel.name}</span>
                   </div>
                 )}
               </button>

@@ -634,7 +634,7 @@ const buildEditor = ({
       canvas.renderAll();
       canvas.isDrawingMode = drawMode;
       canvas.freeDrawingBrush.width = 2;
-      canvas.freeDrawingBrush.color = "#000000";
+      canvas.freeDrawingBrush.color = "#4abe00";
     },
     disableSegmentationMode: () => {
       canvas.isDrawingMode = false;

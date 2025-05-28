@@ -17,7 +17,7 @@ import { cn } from "@/lib/utils";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { X, Check, Loader2, Trash2, Pencil, Plus, ChevronRight, ChevronDown, Move, Hand } from "lucide-react";
+import { X, Check, Loader2, Trash2, Pencil, Plus, ChevronRight, ChevronDown, Move, Hand, ChevronUp } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { interpolatePoints, interpolatePosition, smoothTrajectory } from "@/features/editor/utils";
 import { videoGenUtils } from "../../utils/video-gen-utils";
@@ -315,6 +315,71 @@ export const AnimateRightSidebar = ({
     }
   };
 
+  // Helper function to handle z-index changes
+  const handleZIndexChange = (maskIndex: number, direction: 'up' | 'down') => {
+    const currentMask = segmentedMasks[maskIndex];
+    const currentZIndex = currentMask.zIndex ?? maskIndex;
+    
+    // Filter out masks that are in progress or don't have URLs
+    const validMasks = segmentedMasks.filter(mask => !mask.inProgress && mask.url);
+    const validMaskIndices = segmentedMasks
+      .map((mask, idx) => ({ mask, idx }))
+      .filter(({ mask }) => !mask.inProgress && mask.url)
+      .map(({ idx }) => idx);
+    
+    if (direction === 'up' && currentZIndex < validMasks.length - 1) {
+      // Find the mask with the next higher z-index
+      const targetMaskIndex = segmentedMasks.findIndex(
+        mask => mask.zIndex === currentZIndex + 1
+      );
+      
+      if (targetMaskIndex !== -1) {
+        // Swap z-indices
+        const updatedMasks = [...segmentedMasks];
+        updatedMasks[maskIndex] = { ...updatedMasks[maskIndex], zIndex: currentZIndex + 1 };
+        updatedMasks[targetMaskIndex] = { ...updatedMasks[targetMaskIndex], zIndex: currentZIndex };
+        setSegmentedMasks(updatedMasks);
+        
+        // Restart preview animations if any are active with the updated masks
+        restartPreviewAnimations(updatedMasks);
+      }
+    } else if (direction === 'down' && currentZIndex > 0) {
+      // Find the mask with the next lower z-index
+      const targetMaskIndex = segmentedMasks.findIndex(
+        mask => mask.zIndex === currentZIndex - 1
+      );
+      
+      if (targetMaskIndex !== -1) {
+        // Swap z-indices
+        const updatedMasks = [...segmentedMasks];
+        updatedMasks[maskIndex] = { ...updatedMasks[maskIndex], zIndex: currentZIndex - 1 };
+        updatedMasks[targetMaskIndex] = { ...updatedMasks[targetMaskIndex], zIndex: currentZIndex };
+        setSegmentedMasks(updatedMasks);
+        
+        // Restart preview animations if any are active with the updated masks
+        restartPreviewAnimations(updatedMasks);
+      }
+    }
+  };
+
+  // Helper function to ensure all masks have proper z-indices
+  const ensureZIndices = (masks: SegmentedMask[]): SegmentedMask[] => {
+    // Get all valid masks (not in progress and have URLs)
+    const validMaskIndices = masks
+      .map((mask, idx) => ({ mask, idx }))
+      .filter(({ mask }) => !mask.inProgress && mask.url)
+      .map(({ idx }) => idx);
+    
+    // Assign z-indices based on position in array
+    let zIndex = 0;
+    return masks.map((mask, idx) => {
+      if (!mask.inProgress && mask.url) {
+        return { ...mask, zIndex: mask.zIndex ?? zIndex++ };
+      }
+      return mask;
+    });
+  };
+
   const handleSaveInProgressManualMask = () => {
     if (editor?.canvas) {
       editor.enableSegmentationMode(false);
@@ -401,7 +466,7 @@ export const AnimateRightSidebar = ({
         tempCtx.clearRect(0, 0, tempCanvas.width, tempCanvas.height);
         
         // Draw a semi-transparent overlay
-        tempCtx.fillStyle = 'rgba(128, 128, 255, 0.6)'; // Semi-transparent blue
+        tempCtx.fillStyle = 'rgba(170, 170, 170, 0.8)'; // Semi-transparent blue
         
         // Recreate the same path for the visual representation
         tempCtx.beginPath();
@@ -436,7 +501,7 @@ export const AnimateRightSidebar = ({
         tempCtx.fill();
         
         // Add a border to make it more visible
-        tempCtx.strokeStyle = 'rgba(0, 0, 255, 0.8)';
+        tempCtx.strokeStyle = 'rgba(102, 102, 102, 0.9)';
         tempCtx.lineWidth = 2;
         tempCtx.stroke();
         
@@ -453,6 +518,9 @@ export const AnimateRightSidebar = ({
         // Calculate centroid from the binary mask
         const calculatedCentroid = calculateCentroidFromBinaryMask(binaryCanvas);
         
+        // Get count of actual saved masks (excluding the stub)
+        const savedMasksCount = segmentedMasks.filter(mask => !mask.inProgress && mask.url).length;
+        
         // Add the new mask to segmentedMasks
         const newMaskId = `mask-${Date.now()}`;
         const newMask: SegmentedMask = {
@@ -463,7 +531,8 @@ export const AnimateRightSidebar = ({
           isApplied: true,
           trajectory: undefined,
           rotation: 0,
-          centroid: calculatedCentroid || undefined // Add the calculated centroid
+          centroid: calculatedCentroid || undefined, // Add the calculated centroid
+          zIndex: savedMasksCount // Assign z-index based on count of saved masks
         };
         
         // Remove the 'in progress' mask and add the new one
@@ -583,7 +652,8 @@ export const AnimateRightSidebar = ({
             inProgress: false, 
             isApplied: true,
             name: `Object ${savedMasksCount + 1}`,
-            centroid: maskCentroid || undefined // Save the centroid from the mask detection
+            centroid: maskCentroid || undefined, // Save the centroid from the mask detection
+            zIndex: savedMasksCount // Assign z-index based on count of saved masks
           } : {
             ...mask,
             isApplied: false
@@ -844,7 +914,17 @@ export const AnimateRightSidebar = ({
     
     // Continue with deletion
     const updatedMasks = segmentedMasks.filter((_, i) => i !== index);
-    setSegmentedMasks(updatedMasks);
+    
+    // Reassign z-indices to remaining masks
+    let zIndex = 0;
+    const reindexedMasks = updatedMasks.map(mask => {
+      if (!mask.inProgress && mask.url) {
+        return { ...mask, zIndex: zIndex++ };
+      }
+      return mask;
+    });
+    
+    setSegmentedMasks(reindexedMasks);
     
     if (editor.canvas) {
       const existingMasks = editor.canvas.getObjects().filter(obj => obj.data?.isMask);
@@ -1134,7 +1214,8 @@ export const AnimateRightSidebar = ({
         maskUrl, 
         mask?.trajectory?.points || [],
         mask?.rotationTrajectory,
-        mask?.scaleTrajectory
+        mask?.scaleTrajectory,
+        mask?.zIndex
       );
       if (animation) {
         animation.start();
@@ -1270,7 +1351,8 @@ export const AnimateRightSidebar = ({
       recordingMotion, 
       points,
       updatedMasks.find(m => m.url === recordingMotion)?.rotationTrajectory,
-      updatedMasks.find(m => m.url === recordingMotion)?.scaleTrajectory
+      updatedMasks.find(m => m.url === recordingMotion)?.scaleTrajectory,
+      updatedMasks.find(m => m.url === recordingMotion)?.zIndex
     );
     if (animation) {
       animation.start();
@@ -1355,7 +1437,8 @@ export const AnimateRightSidebar = ({
     maskUrl: string, 
     trajectoryPoints: Array<{x: number, y: number}>,
     rotationValues?: number[],
-    scaleValues?: number[]
+    scaleValues?: number[],
+    zIndex?: number
   ) => {
 
     if (!editor?.canvas) {
@@ -1388,7 +1471,8 @@ export const AnimateRightSidebar = ({
     animationCanvas.style.width = '100%';
     animationCanvas.style.height = '100%';
     animationCanvas.style.pointerEvents = 'none';
-    animationCanvas.style.zIndex = '1000';
+    // Use z-index to ensure proper layering (add 1000 as base to be above canvas)
+    animationCanvas.style.zIndex = String(1000 + (zIndex ?? 0));
     
     const ctx = animationCanvas.getContext('2d');
     if (!ctx) {
@@ -1572,25 +1656,76 @@ export const AnimateRightSidebar = ({
       // Start animations for all masks that have trajectories
       const newActiveAnimations: {[key: string]: {stop: () => void; isPlaying: boolean}} = {};
       
-      segmentedMasks
+      // Sort masks by z-index before creating animations
+      const masksWithTrajectories = segmentedMasks
         .filter(mask => !mask.inProgress && mask.url && mask.trajectory?.points && mask.trajectory.points.length > 0)
-        .forEach(mask => {
-          const animation = createTrajectoryAnimation(
-            editor,
-            mask.url,
-            mask.trajectory!.points,
-            mask.rotationTrajectory,
-            mask.scaleTrajectory
-          );
-          
-          if (animation) {
-            animation.start();
-            newActiveAnimations[mask.url] = {
-              stop: animation.stop,
-              isPlaying: true
-            };
-          }
-        });
+        .sort((a, b) => (a.zIndex ?? 0) - (b.zIndex ?? 0));
+      
+      masksWithTrajectories.forEach(mask => {
+        const animation = createTrajectoryAnimation(
+          editor,
+          mask.url,
+          mask.trajectory!.points,
+          mask.rotationTrajectory,
+          mask.scaleTrajectory,
+          mask.zIndex
+        );
+        
+        if (animation) {
+          animation.start();
+          newActiveAnimations[mask.url] = {
+            stop: animation.stop,
+            isPlaying: true
+          };
+        }
+      });
+      
+      setActiveAnimations(newActiveAnimations);
+    }
+  };
+
+  // Helper function to restart preview animations with updated z-order
+  const restartPreviewAnimations = (updatedMasks?: SegmentedMask[]) => {
+    if (!editor?.canvas) return;
+    
+    // Use provided masks or current state
+    const masksToUse = updatedMasks || segmentedMasks;
+    
+    // Check if any animations are currently playing
+    const hasActiveAnimations = Object.keys(activeAnimations).length > 0;
+    
+    if (hasActiveAnimations) {
+      // Stop all existing animations
+      Object.values(activeAnimations).forEach(animation => {
+        animation.stop();
+      });
+      
+      // Start animations again with updated z-order
+      const newActiveAnimations: {[key: string]: {stop: () => void; isPlaying: boolean}} = {};
+      
+      // Sort masks by z-index before creating animations
+      const masksWithTrajectories = masksToUse
+        .filter(mask => !mask.inProgress && mask.url && mask.trajectory?.points && mask.trajectory.points.length > 0)
+        .sort((a, b) => (a.zIndex ?? 0) - (b.zIndex ?? 0));
+      
+      masksWithTrajectories.forEach(mask => {
+        const animation = createTrajectoryAnimation(
+          editor,
+          mask.url,
+          mask.trajectory!.points,
+          mask.rotationTrajectory,
+          mask.scaleTrajectory,
+          mask.zIndex
+        );
+        
+        if (animation) {
+          animation.start();
+          newActiveAnimations[mask.url] = {
+            stop: animation.stop,
+            isPlaying: true
+          };
+        }
+      });
       
       setActiveAnimations(newActiveAnimations);
     }
@@ -1814,7 +1949,7 @@ export const AnimateRightSidebar = ({
                             </Button> 
                           </div>
                         ) : (
-                          <div className="flex items-center space-x-2">
+                          <div className="flex items-center space-x-0">
                             <span className="text-sm">{mask.name}</span>
                             <Button
                               variant="ghost"
@@ -1823,7 +1958,7 @@ export const AnimateRightSidebar = ({
                               className="h-8 w-8"
                               disabled={activeSegmentationTool !== "none"}
                             >
-                              <Pencil className="w-4 h-4" />
+                              <Pencil className="w-3 h-3" />
                             </Button>
                           </div>
                         )}
@@ -1839,11 +1974,47 @@ export const AnimateRightSidebar = ({
                           >
                             {mask.isApplied ? 'Applied' : 'Apply'}
                           </Button>
+                          
+                          {/* Z-index controls */}
+                          <div className="flex items-center space-x-0.5 bg-gray-200 dark:bg-gray-700 rounded px-0.5">
+                            
+                            <div className="flex flex-col">
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => handleZIndexChange(actualIndex, 'up')}
+                                className="h-4 w-3 p-0"
+                                disabled={
+                                  activeSegmentationTool !== "none" || 
+                                  mask.zIndex === segmentedMasks.filter(m => !m.inProgress && m.url).length - 1
+                                }
+                                title="Move layer up"
+                              >
+                                <ChevronUp className="w-3 h-3" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => handleZIndexChange(actualIndex, 'down')}
+                                className="h-4 w-3 p-0"
+                                disabled={activeSegmentationTool !== "none" || mask.zIndex === 0}
+                                title="Move layer down"
+                              >
+                                <ChevronDown className="w-3 h-3" />
+                              </Button>
+                            </div>
+                            
+                            <span className="text-md font-medium px-1 min-w-[8px] text-center">
+                              {(mask.zIndex ?? index) + 1}
+                            </span>
+ 
+                          </div>
+                          
                           <Button
                             variant="ghost"
                             size="icon"
                             onClick={() => handleDeleteMask(actualIndex)}
-                            className="h-8 w-8"
+                            className="h-8 w-8 hover:text-red-500 transition-colors"
                             disabled={activeSegmentationTool !== "none"}
                           >
                             <Trash2 className="w-4 h-4" />
@@ -1915,7 +2086,8 @@ export const AnimateRightSidebar = ({
                                         mask.url,
                                         mask.trajectory.points,
                                         rotationTrajectory,
-                                        mask.scaleTrajectory
+                                        mask.scaleTrajectory,
+                                        mask.zIndex
                                       );
                                       
                                       if (animation) {
@@ -1983,7 +2155,8 @@ export const AnimateRightSidebar = ({
                                         mask.url,
                                         mask.trajectory.points,
                                         mask.rotationTrajectory,
-                                        scaleTrajectory
+                                        scaleTrajectory,
+                                        mask.zIndex
                                       );
                                       
                                       if (animation) {

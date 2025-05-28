@@ -332,6 +332,7 @@ export interface SegmentedMask {
   scaleTrajectory?: number[]; // Generated from keyframes
   isTextDetailsOpen?: boolean;
   textDetails?: string;
+  zIndex?: number; // Z-dimension ordering (0 = bottom, higher = on top)
 }
 
 export interface PromptData {
