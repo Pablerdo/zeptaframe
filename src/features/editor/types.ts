@@ -267,8 +267,9 @@ export interface ImageGeneration {
 export type WorkflowMode = "text-only" | "animation";
 
 export type SupportedVideoModelId = 
-  | "cogvideox"
+  | "wan"
   | "skyreels"
+  | "cogvideox"
 
 export type BaseVideoModel = {
   id: SupportedVideoModelId;

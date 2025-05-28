@@ -133,7 +133,7 @@ const WorkbenchGenerations = ({
           <div className="space-y-1">
             {workbenchVideoGenerations.map((gen) => {
               const computeModeString = gen.computeMode ? `${gen.computeMode[0].toUpperCase() + gen.computeMode.slice(1)} Mode` : `Text-Only Mode`;
-            
+              const modelString = videoModels[gen.modelId as SupportedVideoModelId]
               return  (
               <div 
                 key={gen.id}
@@ -159,7 +159,7 @@ const WorkbenchGenerations = ({
                     "font-medium",
                     gen.id === selectedGeneration ? "text-blue-200" : "text-gray-300"
                   )}>
-                    {gen.status === 'pending' ? `Processing... (${computeModeString})` : computeModeString}
+                    {gen.status === 'pending' ? `Processing... (${computeModeString})` : `${computeModeString} | ${modelString.name}`}
                   </span>
                 </div>
                 <div className="text-gray-400">
