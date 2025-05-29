@@ -772,8 +772,8 @@ export const CameraControlRightSidebar = ({
                 rightIcon={<ArrowUpIcon className="h-5 w-5"/>}
               />
             </div>
-            <div className="mt-2 opacity-50 pointer-events-none">
-              Zoom: {dolly.toFixed(1)}
+            <div className="mt-2">
+              Zoom
               <CameraSlider
                 orientation="horizontal"
                 valueDisplay={Number(dolly.toFixed(1))}
@@ -790,7 +790,7 @@ export const CameraControlRightSidebar = ({
               />
             </div>
           
-            <div className="mt-2 opacity-50 pointer-events-none">
+            {/* <div className="mt-2 opacity-50 pointer-events-none">
               Horizontal Pan
               <CameraSlider
                 orientation="horizontal"
@@ -825,7 +825,7 @@ export const CameraControlRightSidebar = ({
                 rightIcon={<Rotate3d className="h-5 w-5"/>}
                 disabled
               />
-            </div>
+            </div> */}
           </div>
         </div>
       </div>
@@ -861,12 +861,12 @@ export const CameraControlRightSidebar = ({
         */}
 
         {/* Save button right after dot rate slider */}
-        <button
+        {/* <button
           className="w-full px-4 py-2 bg-white hover:bg-gray-100 text-gray-900 border border-gray-200 rounded-md transition-colors"
           onClick={() => {}}
         >
           <span className="font-bold">Save Camera Control</span> 
-        </button>
+        </button> */}
       </div>
 
     </aside>
