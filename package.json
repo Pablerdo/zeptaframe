@@ -39,6 +39,7 @@
     "class-variance-authority": "^0.7.0",
     "clsx": "^2.1.1",
     "comfydeploy": "^2.0.0-beta.69",
+    "cross-spawn": "^7.0.5",
     "date-fns": "^3.6.0",
     "drizzle-orm": "^0.31.4",
     "drizzle-zod": "^0.5.1",
