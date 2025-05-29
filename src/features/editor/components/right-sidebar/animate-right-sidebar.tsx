@@ -1763,7 +1763,7 @@ export const AnimateRightSidebar = ({
                 variant="outline"
                 size="sm"
                 onClick={handlePreviewAll}
-                disabled={activeSegmentationTool !== "none"}
+                disabled={activeSegmentationTool !== "none" || segmentedMasks.every(mask => mask.trajectory === undefined)}
                 className="h-7 px-3 text-xs"
               >
                 {Object.keys(activeAnimations).length > 0 ? "Stop All" : "Preview All"}
@@ -2052,7 +2052,7 @@ export const AnimateRightSidebar = ({
                               )}
                             </div>
                             {!mask.trajectory ? (
-                              <div className="text-xs text-muted-foreground p-2 border rounded border-dashed">
+                              <div className="text-xs text-muted-foreground border rounded border-dashed">
                                 Create a trajectory first to enable rotation timeline
                               </div>
                             ) : (

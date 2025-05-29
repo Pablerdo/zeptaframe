@@ -19,6 +19,7 @@ import { useSignUp } from "@/features/auth/hooks/use-sign-up";
 import { useCreateProjectForUser } from "@/features/projects/api/use-create-project";
 import { Separator } from "@/components/ui/separator";
 import { FcGoogle } from "react-icons/fc";
+import { generateProjectName } from "@/lib/utils";
 
 type AuthMode = "signin" | "signup";
 
@@ -76,7 +77,7 @@ export function AuthModal({
       
       // Create a real project in the database with specific userId using our hook
       const result = await createProjectForUserMutation.mutateAsync({
-        name: parsedData.name || "Untitled Project 1",
+        name: parsedData.name || generateProjectName(),
         json: parsedData.json,
         width: parsedData.width || 960,
         height: parsedData.height || 640,

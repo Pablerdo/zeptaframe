@@ -5,6 +5,7 @@ import { v4 as uuidv4 } from "uuid";
 import { Loader, X } from "lucide-react";
 import { CompositionStudio } from "@/features/editor/components/composition-studio";
 import { UserStatusProvider } from "@/features/auth/contexts/user-status-context";
+import { generateProjectName } from "@/lib/utils";
 
 export default function TryPage() {
   const [trialData, setTrialData] = useState<any>(null);
@@ -27,7 +28,7 @@ export default function TryPage() {
     } else {
       const newTrial = {
         id: `trial-${uuidv4()}`,
-        name: "Untitled Trial Project",
+        name: generateProjectName(),
         json: "",
         width: 960,
         height: 640,

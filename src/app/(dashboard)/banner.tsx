@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { ArrowRight, Loader2, Sparkles } from "lucide-react";
 
 import { useCreateProject } from "@/features/projects/api/use-create-project";
+import { generateProjectName } from "@/lib/utils";
 
 import { Button } from "@/components/ui/button";
 import { useState } from "react";
@@ -17,7 +18,7 @@ export const Banner = () => {
     setLoading(true);
     mutation.mutate(
       {
-        name: "Untitled project",
+        name: generateProjectName(),
         json: "",
         width: 960,
         height: 640,
