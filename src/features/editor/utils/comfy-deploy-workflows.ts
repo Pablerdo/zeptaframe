@@ -16,8 +16,8 @@ export const comfyDeployWorkflows = {
   // PROD
   // "PROD-ZEPTA-Flash": "4ecf0ca7-a168-4a76-8b7d-16a442991391",
   // "PROD-ZEPTA-Ultra": "172ea476-c6f0-461b-8793-84e2768e3a2c",
-
-  "PROD-ZEPTA-Skyreels": "8465eaa2-bd1f-4e4f-81a1-8976521a771f",
+  // "PROD-ZEPTA-Normal": "8465eaa2-bd1f-4e4f-81a1-8976521a771f"
+  "PROD-ZEPTA-Skyreels": "4ecf0ca7-a168-4a76-8b7d-16a442991391",
   "PROD-ZEPTA-CogVideoX": "dd030bb3-4bf9-4991-8669-530ab1d88e50", 
   "MP4VideoJoiner": "45e11f37-feaf-4d25-a39f-687321e9f94d",
 };

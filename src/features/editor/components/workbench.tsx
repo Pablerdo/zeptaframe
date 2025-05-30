@@ -479,7 +479,7 @@ export const Workbench = ({
       const cameraControlPayload = {
         "truck_vector": truckVector,
         "pan_vector": panVector,
-        "dolly": dolly,
+        "zoom_vector": dolly,
       }
 
       // TODO: Add pan vector and dolly to the input camera. In the ComfyUI-SubjectBackgroundMotion.
@@ -509,13 +509,12 @@ export const Workbench = ({
         "input_trajectories": JSON.stringify(trajectories),
         "input_rotations": JSON.stringify(rotations),
         "input_scalings": JSON.stringify(scalings),
-        "input_centroids": JSON.stringify(centroids),
         "input_camera": JSON.stringify(cameraControlPayload),
-        "input_boundary_degradation": JSON.stringify(boundaryDegradation),
-        "input_annulus_degradation": JSON.stringify(annulusDegradation),
+        // "input_boundary_degradation": JSON.stringify(boundaryDegradation),
+        // "input_annulus_degradation": JSON.stringify(annulusDegradation),
         "input_degradation": JSON.stringify(degradation),
-        "input_boundary_px1": JSON.stringify(boundaryPx1),
-        "input_boundary_px2": JSON.stringify(boundaryPx2),
+        // "input_boundary_px1": JSON.stringify(boundaryPx1),
+        //"input_boundary_px2": JSON.stringify(boundaryPx2),
       };
       
       console.log("videoGenData", videoGenData);

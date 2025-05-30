@@ -19,17 +19,7 @@ export async function POST(req: NextRequest) {
   try {
     let result;
 
-    if (data.workflowData.mode === "text-only") {
-      result = await cd.run.deployment.queue({
-        deploymentId: data.workflowData.workflow_id,
-        webhook: webhookUrl,
-        inputs: {
-          input_num_frames: data.videoGenData.input_num_frames,
-          input_image: data.videoGenData.input_image,
-          input_prompt: data.videoGenData.input_prompt,
-        },
-      })
-    } else if (data.workflowData.mode === "animation") {
+    if (data.workflowData.mode === "animation") {
       result = await cd.run.deployment.queue({
         deploymentId: data.workflowData.workflow_id,
         webhook: webhookUrl,
@@ -41,7 +31,6 @@ export async function POST(req: NextRequest) {
           input_trajectories: data.videoGenData.input_trajectories,
           input_rotations: data.videoGenData.input_rotations,
           input_scalings: data.videoGenData.input_scalings,
-          input_centroids: data.videoGenData.input_centroids,
           input_camera: data.videoGenData.input_camera,
           input_degradation: data.videoGenData.input_degradation,
           // input_boundary_degradation: data.videoGenData.input_boundary_degradation,

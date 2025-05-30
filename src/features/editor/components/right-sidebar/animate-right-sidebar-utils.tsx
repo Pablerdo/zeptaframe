@@ -538,8 +538,6 @@ export const ScaleTimeline = ({ mask, onScaleChange, disabled }: ScaleTimelinePr
                 y: Math.max(10, Math.min(70, endY))
               });
             }
-
-            console.log("spline", splinePoints);
             
             // Helper function for Catmull-Rom spline interpolation
             const catmullRom = (p0: number, p1: number, p2: number, p3: number, t: number) => {
