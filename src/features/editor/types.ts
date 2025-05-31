@@ -118,7 +118,8 @@ export type ActiveWorkbenchTool =
   | "animate"
   | "camera-control"
   | "prompt"
-  | "model";
+  | "model"
+  | "first-frame";
 
 export type ActiveSegmentationTool = 
   | "none"

@@ -2,7 +2,7 @@
 
 import { fabric } from "fabric";
 import { useEffect, useRef, useState, useCallback, useMemo } from "react";
-import { MessageSquare, Trash2, Video, Film, ArrowRightSquare, ArrowRightCircle, Loader2, CornerUpRight, ChevronDown, X } from "lucide-react";
+import { MessageSquare, Trash2, Video, Film, ArrowRightSquare, ArrowRightCircle, Loader2, CornerUpRight, ChevronDown, X, FileVideo } from "lucide-react";
 import { useEditor } from "@/features/editor/hooks/use-editor";
 import { ActiveSegmentationTool, ActiveTool, ActiveWorkbenchTool, BaseVideoModel, CameraControl, Editor as EditorType, JSON_KEYS, SegmentedMask, SupportedVideoModelId, VideoGeneration, WorkflowMode, RotationKeyframe, ScaleKeyframe } from "@/features/editor/types";
 import { cn } from "@/lib/utils";
@@ -11,6 +11,7 @@ import { AnimateRightSidebar } from "./right-sidebar/animate-right-sidebar";
 import { CameraControlRightSidebar } from "./right-sidebar/camera-control-right-sidebar";
 import { TextPromptRightSidebar } from "./right-sidebar/text-prompt-right-sidebar";
 import { ModelRightSidebar } from "./right-sidebar/model-right-sidebar";
+import { FirstFrameEditorRightSidebar } from "./right-sidebar/first-frame-right-sidebar";
 import { uploadToUploadThingResidual } from "@/lib/uploadthing";
 import { dataUrlToFile } from "@/lib/uploadthing";
 import { 
@@ -35,6 +36,12 @@ import { Toolbar } from "./toolbar";
 import { BuyCreditsModal } from "@/features/subscriptions/components/credits/buy-credits-modal";
 import { generationPrices } from "@/features/subscriptions/utils";
 import { videoGenUtils } from "../utils/video-gen-utils";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 interface WorkbenchProps {
   projectId: string;
@@ -1065,6 +1072,13 @@ export const Workbench = ({
               selectedModel={selectedModel}
               onSelectModel={(model: BaseVideoModel) => setSelectedModel(model)}
             />
+            <FirstFrameEditorRightSidebar
+              editor={editor}
+              activeWorkbenchTool={activeWorkbenchTool}
+              onChangeActiveWorkbenchTool={setActiveWorkbenchTool}
+              projectId={projectId}
+              setShowAuthModal={setShowAuthModal}
+            />
           </div>
         </div>
 
@@ -1077,28 +1091,56 @@ export const Workbench = ({
                 label="Animation"
                 isActive={activeWorkbenchTool === "animate"}
                 onClick={() => {
-                  setActiveWorkbenchTool("animate");
-                  onChangeActiveTool("segment");
+                  if (activeWorkbenchTool !== "first-frame") {
+                    setActiveWorkbenchTool("animate");
+                    onChangeActiveTool("segment");
+                  }
                 }}
+                disabled={activeWorkbenchTool === "first-frame"}
+                tooltip={activeWorkbenchTool === "first-frame" ? "Exit First Frame mode to use Animation" : undefined}
               />
               <RightSidebarItem
                 icon={Video}
                 label="Camera"
                 isActive={activeWorkbenchTool === "camera-control"}
-                onClick={() => setActiveWorkbenchTool("camera-control")}
+                onClick={() => {
+                  if (activeWorkbenchTool !== "first-frame") {
+                    setActiveWorkbenchTool("camera-control");
+                  }
+                }}
+                disabled={activeWorkbenchTool === "first-frame"}
+                tooltip={activeWorkbenchTool === "first-frame" ? "Exit First Frame mode to use Camera" : undefined}
               />
               <RightSidebarItem
                 icon={MessageSquare}
                 label="Prompt"
                 isActive={activeWorkbenchTool === "prompt"}
-                onClick={() => setActiveWorkbenchTool("prompt")}
+                onClick={() => {
+                  if (activeWorkbenchTool !== "first-frame") {
+                    setActiveWorkbenchTool("prompt");
+                  }
+                }}
+                disabled={activeWorkbenchTool === "first-frame"}
+                tooltip={activeWorkbenchTool === "first-frame" ? "Exit First Frame mode to use Prompt" : undefined}
               />
               <RightSidebarItem
                 icon={Film}
                 label="Model"
                 isActive={activeWorkbenchTool === "model"}
-                onClick={() => setActiveWorkbenchTool("model")}
+                onClick={() => {
+                  if (activeWorkbenchTool !== "first-frame") {
+                    setActiveWorkbenchTool("model");
+                  }
+                }}
+                disabled={activeWorkbenchTool === "first-frame"}
+                tooltip={activeWorkbenchTool === "first-frame" ? "Exit First Frame mode to use Model" : undefined}
               /> 
+              <RightSidebarItem
+                icon={FileVideo}
+                label="First Frame"
+                isActive={activeWorkbenchTool === "first-frame"}
+                onClick={() => setActiveWorkbenchTool("first-frame")}
+              />
             </ul>
             
             {/* Generate Video Submit Button */}
@@ -1137,15 +1179,22 @@ export const Workbench = ({
               </div>
               
               <button 
-                className="w-full aspect-square bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors duration-200 flex flex-col items-center justify-center gap-1 px-2 py-1"
+                className="w-full aspect-square bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors duration-200 flex flex-col items-center justify-center gap-1 px-2 py-1 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-blue-600"
                 onClick={() => handleGenerateVideo(selectedModel.id)}
-                disabled={isGenerating}
+                disabled={isGenerating || activeWorkbenchTool === "first-frame"}
+                title={activeWorkbenchTool === "first-frame" ? "Exit First Frame mode to generate video" : undefined}
               >
                 {isGenerating ? (
                   <>
                     <Loader2 className="h-6 w-6 animate-spin" />
                     <span className="text-xs">Sending request...</span>
                   </>
+                ) : activeWorkbenchTool === "first-frame" ? (
+                  <div className="flex flex-col items-center">
+                    <ArrowRightSquare className="h-6 w-6 opacity-50" />
+                    <span className="text-xs font-medium mt-1">Submit</span>
+                    <span className="text-[8px] text-blue-200/80 mt-0.5">Disabled</span>
+                  </div>
                 ) : (
                   <div className="flex flex-col items-center">
                     <ArrowRightSquare className="h-6 w-6" />
