@@ -159,7 +159,9 @@ const WorkbenchGenerations = ({
                     "font-medium",
                     gen.id === selectedGeneration ? "text-blue-200" : "text-gray-300"
                   )}>
-                    {gen.status === 'pending' ? `Processing... (${computeModeString})` : `${computeModeString} | ${modelString.name}`}
+                    {gen.status === 'pending' && (`Processing... `)} 
+                    
+                    {`${computeModeString} | ${modelString.name}`}
                   </span>
                 </div>
                 <div className="text-gray-400">
