@@ -12,6 +12,7 @@ import { toast } from "sonner";
 import { useUserStatus } from "@/features/auth/contexts/user-status-context";
 import { generationPrices } from "@/features/subscriptions/utils";
 import { BuyCreditsModal } from "@/features/subscriptions/components/credits/buy-credits-modal";
+import { dataUrlToFile, uploadToUploadThingResidual } from "@/lib/uploadthing";
 
 interface FirstFrameEditorRightSidebarProps {
   editor: Editor | undefined;
@@ -34,8 +35,10 @@ export const FirstFrameEditorRightSidebar = ({
   const [editPrompt, setEditPrompt] = useState("");
   const [isProcessing, setIsProcessing] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
+  const [generationProgress, setGenerationProgress] = useState(0);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
+  const progressIntervalRef = useRef<NodeJS.Timeout | null>(null);
   
   const { userStatus, hasEnoughCredits, deductCredits } = useUserStatus();
   const [showBuyCreditsModal, setShowBuyCreditsModal] = useState(false);
@@ -120,6 +123,27 @@ export const FirstFrameEditorRightSidebar = ({
     }
 
     setIsGenerating(true);
+    setGenerationProgress(0);
+    
+    // Reset the inpainted image URL when starting a new generation
+    // This ensures the loading state shows properly
+    setInpaintedImageUrl(null);
+    
+    // Start progress animation
+    const startTime = Date.now();
+    const duration = 15000; // 7 seconds
+    
+    progressIntervalRef.current = setInterval(() => {
+      const elapsed = Date.now() - startTime;
+      const progress = Math.min((elapsed / duration) * 100, 99);
+      setGenerationProgress(Math.floor(progress));
+      
+      if (elapsed >= duration && progressIntervalRef.current) {
+        clearInterval(progressIntervalRef.current);
+        progressIntervalRef.current = null;
+      }
+    }, 50);
+
     try {
       // Get the current canvas content as base64
       const workspace = editor?.getWorkspace();
@@ -128,98 +152,83 @@ export const FirstFrameEditorRightSidebar = ({
         return;
       }
 
-      // Get the current canvas image
+      // Get the workspace bounds
+      const workspaceBounds = workspace.getBoundingRect();
+      
+      // Get the current canvas image with correct bounds
       const currentCanvasDataUrl = editor.canvas.toDataURL({
         format: 'png',
         quality: 1,
-        left: workspace.left,
-        top: workspace.top,
-        width: workspace.width || 1184,
-        height: workspace.height || 880,
+        left: workspaceBounds.left,
+        top: workspaceBounds.top,
+        width: workspaceBounds.width,
+        height: workspaceBounds.height,
+      });
+      
+      // Convert the canvas data URL to a file
+      const canvasFile = await dataUrlToFile(currentCanvasDataUrl, `first-frame-${Date.now()}.png`);
+      
+      // Upload to UploadThing
+      const uploadedUrl = await uploadToUploadThingResidual(canvasFile);
+      
+      // Calculate aspect ratio for Replicate
+      const width = workspace.width;
+      const height = workspace.height;
+      // const aspectRatio = `${width}:${height}`;
+      
+      // Call Replicate API
+      const response = await fetch('/api/replicate/inpaint-image', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          prompt: editPrompt,
+          inputImageUrl: uploadedUrl,
+          // aspectRatio: aspectRatio,
+          projectId: projectId,
+        }),
       });
 
-      // Create a temporary canvas to resize the image to 1248x832
-      const tempCanvas = document.createElement('canvas');
-      tempCanvas.width = 1248;
-      tempCanvas.height = 832;
-      const tempCtx = tempCanvas.getContext('2d');
-
-      if (!tempCtx) {
-        toast.error("Failed to create canvas context");
-        return;
+      const data = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to generate image');
       }
-
-      // Create an image element to load the canvas data
-      const img = new Image();
-      img.onload = async () => {
-        // Calculate scaling to maintain aspect ratio
-        const sourceWidth = img.width;
-        const sourceHeight = img.height;
-        const targetWidth = 1248;
-        const targetHeight = 832;
-        
-        // Calculate scale to fit
-        const scale = Math.min(targetWidth / sourceWidth, targetHeight / sourceHeight);
-        const scaledWidth = sourceWidth * scale;
-        const scaledHeight = sourceHeight * scale;
-        
-        // Calculate position to center the image
-        const x = (targetWidth - scaledWidth) / 2;
-        const y = (targetHeight - scaledHeight) / 2;
-        
-        // Clear the canvas with a neutral background
-        tempCtx.fillStyle = '#000000'; // or use a color that matches your needs
-        tempCtx.fillRect(0, 0, targetWidth, targetHeight);
-        
-        // Draw the image centered and scaled
-        tempCtx.drawImage(img, x, y, scaledWidth, scaledHeight);
-        
-        // Get the resized image as base64
-        const resizedDataUrl = tempCanvas.toDataURL('image/png', 1);
-        const base64Image = resizedDataUrl.split(',')[1];
-
-        console.log("base64Image", base64Image); 
-        const response = await fetch('/api/runware/inpaint-image', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            positivePrompt: editPrompt,
-            referenceImage: base64Image,
-            width: 1248,
-            height: 832,
-            projectId: projectId,
-          }),
-        });
-
-        const data = await response.json();
-        if (data.images && data.images.length > 0) {
-          const newImageUrl = data.images[0].imageURL;
-          setInpaintedImageUrl(newImageUrl);
-          
-          // Add the new image to canvas
-          editor.addImage(newImageUrl);
-          
-          // Deduct credits
-          deductCredits(imagePrice);
-          
-          toast.success("Video first frame generated successfully!");
-        } else {
-          throw new Error('No images returned');
+      
+      if (data.outputUrl) {
+        // Clear the interval and set to 100%
+        if (progressIntervalRef.current) {
+          clearInterval(progressIntervalRef.current);
+          progressIntervalRef.current = null;
         }
-      };
-
-      img.onerror = () => {
-        toast.error("Failed to load canvas image");
-        setIsGenerating(false);
-      };
-
-      // Start loading the image
-      img.src = currentCanvasDataUrl;
+        setGenerationProgress(100);
+        
+        // Small delay to show 100% before showing the image
+        setTimeout(() => {
+          setInpaintedImageUrl(data.outputUrl);
+          setGenerationProgress(0);
+        }, 300);
+        
+        // Add the new image to canvas
+        editor.addImage(data.outputUrl);
+        
+        // Deduct credits
+        deductCredits(imagePrice);
+        
+        toast.success("Video first frame generated successfully!");
+      } else {
+        throw new Error('No image returned from API');
+      }
     } catch (error) {
       console.error("Error editing first frame:", error);
       toast.error("Failed to generate new video");
+      // Clear the interval on error
+      if (progressIntervalRef.current) {
+        clearInterval(progressIntervalRef.current);
+        progressIntervalRef.current = null;
+      }
+      setGenerationProgress(0);
     } finally {
       setIsGenerating(false);
     }
@@ -230,10 +239,24 @@ export const FirstFrameEditorRightSidebar = ({
     setOriginalFirstFrameDataUrl(null);
     setInpaintedImageUrl(null);
     setEditPrompt("");
+    setGenerationProgress(0);
     if (fileInputRef.current) {
       fileInputRef.current.value = "";
     }
+    if (progressIntervalRef.current) {
+      clearInterval(progressIntervalRef.current);
+      progressIntervalRef.current = null;
+    }
   };
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      if (progressIntervalRef.current) {
+        clearInterval(progressIntervalRef.current);
+      }
+    };
+  }, []);
 
   return (
     <aside
@@ -359,7 +382,7 @@ export const FirstFrameEditorRightSidebar = ({
                     <img
                       src={originalFirstFrameDataUrl}
                       alt="Original first frame"
-                      className="w-full h-32 object-cover"
+                      className="w-full h-48"
                     />
                     <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent" />
                     <span className="absolute bottom-2 left-2 text-xs text-white font-medium">
@@ -371,50 +394,78 @@ export const FirstFrameEditorRightSidebar = ({
                     placeholder="Describe how you want to edit the first frame..."
                     value={editPrompt}
                     onChange={(e) => setEditPrompt(e.target.value)}
-                    rows={4}
+                    rows={2}
                     className="resize-none"
                   />
-
-                  {/* Inpainted Result */}
-                  {inpaintedImageUrl && (
-                    <div className="relative rounded-lg overflow-hidden border">
-                      <img
-                        src={inpaintedImageUrl}
-                        alt="Generated first frame"
-                        className="w-full h-32 object-cover"
-                      />
-                      <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent" />
-                      <span className="absolute bottom-2 left-2 text-xs text-white font-medium">
-                        Generated First Frame
-                      </span>
-                    </div>
-                  )}
                 </div>
               )}
-                        {/* Content */}
-            <div className="flex-1 space-y-3">
-              <h3 className="font-medium">Generate New First Frame</h3>
-              
-              {originalFirstFrameDataUrl && (
-                <Button
-                  onClick={handleFirstFrameEdit}
-                  disabled={isGenerating || !editPrompt.trim()}
-                  className="w-full"
-                >
-                  {isGenerating ? (
-                    <>
-                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                      Generating New First Frame...
-                    </>
-                  ) : (
-                    <>
-                      <Wand2 className="h-4 w-4 mr-2" />
-                      New First Frame
-                    </>
-                  )}
-                </Button>
-              )}
-            </div>
+              {/* Content */}
+              <div className="flex-1 space-y-3">
+                <h4 className="font-medium">Generate New First Frame</h4>
+                
+                {originalFirstFrameDataUrl && (
+                  <Button
+                    onClick={handleFirstFrameEdit}
+                    disabled={isGenerating || !editPrompt.trim()}
+                    className="w-full"
+                  >
+                    {isGenerating ? (
+                      <>
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                        Generating New First Frame...
+                      </>
+                    ) : (
+                      <>
+                        <Wand2 className="h-4 w-4 mr-2" />
+                        New First Frame
+                      </>
+                    )}
+                  </Button>
+                )}
+
+                {/* Inpainted Result */}
+                {(isGenerating || inpaintedImageUrl) && (
+                  <div className="relative rounded-lg overflow-hidden border">
+                    {isGenerating && !inpaintedImageUrl ? (
+                      <>
+                        {/* Swirling gradient background */}
+                        <div className="w-full h-48 relative">
+
+                          {/* Progress counter */}
+                          <div className="absolute inset-0 flex items-center justify-center">
+                            <div className="text-center">
+                              <div className="text-5xl font-bold text-white mb-2">
+                                {generationProgress}%
+                              </div>
+                              <div className="text-sm text-white/80">
+                                Generating...
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                        
+                        {/* Overlay gradient */}
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
+                        <span className="absolute bottom-2 left-2 text-xs text-white font-medium">
+                          Generating First Frame
+                        </span>
+                      </>
+                    ) : inpaintedImageUrl ? (
+                      <>
+                        <img
+                          src={inpaintedImageUrl}
+                          alt="Generated first frame"
+                          className="w-full h-48"
+                        />
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent" />
+                        <span className="absolute bottom-2 left-2 text-xs text-white font-medium">
+                          Generated First Frame
+                        </span>
+                      </>
+                    ) : null}
+                  </div>
+                )}
+              </div>
             </div>
 
   

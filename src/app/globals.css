@@ -166,3 +166,32 @@ body {
 .custom-scrollbar::-webkit-scrollbar-thumb:hover {
   background: rgba(120, 120, 120, 0.8);
 }
+
+/* Swirling gradient animation for first frame generation */
+@keyframes gradient-xy {
+  0%, 100% {
+    transform: translateX(0%) translateY(0%);
+  }
+  25% {
+    transform: translateX(-25%) translateY(25%);
+  }
+  50% {
+    transform: translateX(25%) translateY(-25%);
+  }
+  75% {
+    transform: translateX(-25%) translateY(-25%);
+  }
+}
+
+.animate-gradient-xy {
+  background-size: 400% 400%;
+  animation: gradient-xy 8s ease infinite;
+}
+
+.animation-delay-2000 {
+  animation-delay: -2s;
+}
+
+.animation-delay-4000 {
+  animation-delay: -4s;
+}
