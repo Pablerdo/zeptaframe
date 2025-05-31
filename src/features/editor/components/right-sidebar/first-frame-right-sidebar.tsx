@@ -31,6 +31,7 @@ export const FirstFrameEditorRightSidebar = ({
 }: FirstFrameEditorRightSidebarProps) => {
   const [uploadedVideo, setUploadedVideo] = useState<File | null>(null);
   const [originalFirstFrameDataUrl, setOriginalFirstFrameDataUrl] = useState<string | null>(null);
+  const [originalCanvasCapture, setOriginalCanvasCapture] = useState<string | null>(null);
   const [inpaintedImageUrl, setInpaintedImageUrl] = useState<string | null>(null);
   const [editPrompt, setEditPrompt] = useState("");
   const [isProcessing, setIsProcessing] = useState(false);
@@ -72,7 +73,30 @@ export const FirstFrameEditorRightSidebar = ({
           
           // Add the first frame to the canvas
           if (editor) {
+            console.log("Adding image to canvas");
             editor.addImage(dataUrl);
+            
+            // Wait for the next render cycle and then capture
+            requestAnimationFrame(() => {
+              // Add a small delay to ensure the image is fully rendered
+              setTimeout(() => {
+                console.log("Capturing canvas state");
+                const workspace = editor.getWorkspace();
+                if (workspace) {
+                  const workspaceBounds = workspace.getBoundingRect();
+                  const canvasCapture = editor.canvas.toDataURL({
+                    format: 'png',
+                    quality: 1,
+                    left: workspaceBounds.left,
+                    top: workspaceBounds.top,
+                    width: workspaceBounds.width,
+                    height: workspaceBounds.height,
+                  });
+                  setOriginalCanvasCapture(canvasCapture);
+                  console.log("Canvas state captured");
+                }
+              }, 500); // Increased delay to 500ms to be safe
+            });
           }
           
           URL.revokeObjectURL(video.src);
@@ -102,7 +126,7 @@ export const FirstFrameEditorRightSidebar = ({
   };
 
   const handleFirstFrameEdit = async () => {
-    if (!originalFirstFrameDataUrl || !editPrompt.trim()) {
+    if (!originalCanvasCapture || !editPrompt.trim()) {
       toast.error("Please provide a prompt for editing");
       return;
     }
@@ -124,14 +148,11 @@ export const FirstFrameEditorRightSidebar = ({
 
     setIsGenerating(true);
     setGenerationProgress(0);
-    
-    // Reset the inpainted image URL when starting a new generation
-    // This ensures the loading state shows properly
     setInpaintedImageUrl(null);
     
     // Start progress animation
     const startTime = Date.now();
-    const duration = 15000; // 7 seconds
+    const duration = 15000; // 15 seconds
     
     progressIntervalRef.current = setInterval(() => {
       const elapsed = Date.now() - startTime;
@@ -145,36 +166,11 @@ export const FirstFrameEditorRightSidebar = ({
     }, 50);
 
     try {
-      // Get the current canvas content as base64
-      const workspace = editor?.getWorkspace();
-      if (!workspace || !editor) {
-        toast.error("No workspace found");
-        return;
-      }
-
-      // Get the workspace bounds
-      const workspaceBounds = workspace.getBoundingRect();
-      
-      // Get the current canvas image with correct bounds
-      const currentCanvasDataUrl = editor.canvas.toDataURL({
-        format: 'png',
-        quality: 1,
-        left: workspaceBounds.left,
-        top: workspaceBounds.top,
-        width: workspaceBounds.width,
-        height: workspaceBounds.height,
-      });
-      
-      // Convert the canvas data URL to a file
-      const canvasFile = await dataUrlToFile(currentCanvasDataUrl, `first-frame-${Date.now()}.png`);
+      // Convert the original canvas capture to a file
+      const canvasFile = await dataUrlToFile(originalCanvasCapture, `first-frame-${Date.now()}.png`);
       
       // Upload to UploadThing
       const uploadedUrl = await uploadToUploadThingResidual(canvasFile);
-      
-      // Calculate aspect ratio for Replicate
-      const width = workspace.width;
-      const height = workspace.height;
-      // const aspectRatio = `${width}:${height}`;
       
       // Call Replicate API
       const response = await fetch('/api/replicate/inpaint-image', {
@@ -185,7 +181,6 @@ export const FirstFrameEditorRightSidebar = ({
         body: JSON.stringify({
           prompt: editPrompt,
           inputImageUrl: uploadedUrl,
-          // aspectRatio: aspectRatio,
           projectId: projectId,
         }),
       });
@@ -208,22 +203,23 @@ export const FirstFrameEditorRightSidebar = ({
         setTimeout(() => {
           setInpaintedImageUrl(data.outputUrl);
           setGenerationProgress(0);
+          
+          // Add the new image to canvas
+          if (editor) {
+            editor.addImage(data.outputUrl);
+          }
+          
+          // Deduct credits
+          deductCredits(imagePrice);
+          
+          toast.success("Video first frame generated successfully!");
         }, 300);
-        
-        // Add the new image to canvas
-        editor.addImage(data.outputUrl);
-        
-        // Deduct credits
-        deductCredits(imagePrice);
-        
-        toast.success("Video first frame generated successfully!");
       } else {
         throw new Error('No image returned from API');
       }
     } catch (error) {
       console.error("Error editing first frame:", error);
       toast.error("Failed to generate new video");
-      // Clear the interval on error
       if (progressIntervalRef.current) {
         clearInterval(progressIntervalRef.current);
         progressIntervalRef.current = null;
@@ -237,6 +233,7 @@ export const FirstFrameEditorRightSidebar = ({
   const resetUpload = () => {
     setUploadedVideo(null);
     setOriginalFirstFrameDataUrl(null);
+    setOriginalCanvasCapture(null);
     setInpaintedImageUrl(null);
     setEditPrompt("");
     setGenerationProgress(0);
