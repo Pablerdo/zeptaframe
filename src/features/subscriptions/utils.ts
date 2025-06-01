@@ -7,4 +7,6 @@ export const generationPrices = {
   flashVideoCredits: 15,
   normalVideoCredits: 25,
   ultraVideoCredits: 35,
+  ffeVideoCredits: 50,
+  ffeFirstFrameCredits: 5,
 }

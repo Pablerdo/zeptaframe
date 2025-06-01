@@ -40,6 +40,17 @@ export async function POST(req: NextRequest) {
           // input_boundary_px2: data.videoGenData.input_boundary_px2,
         },
       })
+    } else if (data.workflowData.mode === "ffe") {
+      result = await cd.run.deployment.queue({
+        deploymentId: data.workflowData.workflow_id,
+        webhook: webhookUrl,
+        inputs: {
+          input_num_frames: data.videoGenData.input_num_frames,
+          input_video: data.videoGenData.input_video,
+          input_image: data.videoGenData.input_image,
+          input_degradation: data.videoGenData.input_degradation,
+        },
+      })
     }
 
     if (result) {

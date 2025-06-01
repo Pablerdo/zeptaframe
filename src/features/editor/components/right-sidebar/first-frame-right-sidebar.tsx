@@ -2,40 +2,52 @@ import { useState, useRef, useEffect } from "react";
 import { 
   ActiveWorkbenchTool, 
   Editor,
+  SupportedVideoModelId,
+  WorkflowMode,
+  ComputeMode,
 } from "@/features/editor/types";
 import { ToolSidebarHeader } from "@/features/editor/components/tool-sidebar-header";
 import { cn } from "@/lib/utils";
-import { X, Upload, Film, Wand2, Loader2, RefreshCw, Play } from "lucide-react";
+import { X, Upload, Film, Wand2, Loader2, RefreshCw, Play, ArrowRightSquare } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import { useUserStatus } from "@/features/auth/contexts/user-status-context";
 import { generationPrices } from "@/features/subscriptions/utils";
 import { BuyCreditsModal } from "@/features/subscriptions/components/credits/buy-credits-modal";
-import { dataUrlToFile, uploadToUploadThingResidual } from "@/lib/uploadthing";
+import { dataUrlToFile, uploadToUploadThingResidual, uploadToUploadThingVideo } from "@/lib/uploadthing";
+import { comfyDeployWorkflows } from "../../utils/comfy-deploy-workflows";
+import { comfyDeployGenerateVideo } from "../../services/generate-video";
+import { videoModels } from "../../utils/video-models";
 
 interface FirstFrameEditorRightSidebarProps {
   editor: Editor | undefined;
+  workbenchId: string;
   activeWorkbenchTool: ActiveWorkbenchTool;
   onChangeActiveWorkbenchTool: (tool: ActiveWorkbenchTool) => void;
   projectId: string;
   setShowAuthModal: (showAuthModal: boolean) => void;
+  degradation: number;
 };
 
 export const FirstFrameEditorRightSidebar = ({
   editor,
+  workbenchId,
   activeWorkbenchTool,
   onChangeActiveWorkbenchTool,
   projectId,
   setShowAuthModal,
+  degradation
 }: FirstFrameEditorRightSidebarProps) => {
   const [uploadedVideo, setUploadedVideo] = useState<File | null>(null);
+  const [videoUploadThingUrl, setVideoUploadThingUrl] = useState<string | null>(null);
   const [originalFirstFrameDataUrl, setOriginalFirstFrameDataUrl] = useState<string | null>(null);
   const [originalCanvasCapture, setOriginalCanvasCapture] = useState<string | null>(null);
   const [inpaintedImageUrl, setInpaintedImageUrl] = useState<string | null>(null);
   const [editPrompt, setEditPrompt] = useState("");
   const [isProcessing, setIsProcessing] = useState(false);
-  const [isGenerating, setIsGenerating] = useState(false);
+  const [isGeneratingFirstFrame, setIsGeneratingFirstFrame] = useState(false);
+  const [isGeneratingVideo, setIsGeneratingVideo] = useState(false);
   const [generationProgress, setGenerationProgress] = useState(0);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -120,9 +132,26 @@ export const FirstFrameEditorRightSidebar = ({
       return;
     }
 
-    setUploadedVideo(file);
-    setInpaintedImageUrl(null); // Reset any previous inpainted image
-    await extractFirstFrame(file);
+    setIsProcessing(true);
+    try {
+      // Upload to UploadThing
+      const uploadedUrl = await uploadToUploadThingVideo(file);
+      setVideoUploadThingUrl(uploadedUrl);
+      setUploadedVideo(file);
+      setInpaintedImageUrl(null); // Reset any previous inpainted image
+      await extractFirstFrame(file);
+      toast.success("Video uploaded successfully");
+    } catch (error) {
+      console.error("Error uploading video:", error);
+      if (error instanceof Error && error.message.includes("File too large")) {
+        toast.error("Video size exceeds the 16MB limit");
+      } else {
+        toast.error("Failed to upload video");
+      }
+      resetUpload();
+    } finally {
+      setIsProcessing(false);
+    }
   };
 
   const handleFirstFrameEdit = async () => {
@@ -138,15 +167,15 @@ export const FirstFrameEditorRightSidebar = ({
     }
 
     // Check credits
-    const imagePrice = generationPrices.image;
-    if (!hasEnoughCredits(imagePrice)) {
-      const needed = imagePrice - userStatus.credits;
+    const ffeFirstFramePrice = generationPrices.ffeFirstFrameCredits;
+    if (!hasEnoughCredits(ffeFirstFramePrice)) {
+      const needed = ffeFirstFramePrice - userStatus.credits;
       setRequiredCredits(needed);
       setShowBuyCreditsModal(true);
       return;
     }
 
-    setIsGenerating(true);
+    setIsGeneratingFirstFrame(true);
     setGenerationProgress(0);
     setInpaintedImageUrl(null);
     
@@ -210,28 +239,36 @@ export const FirstFrameEditorRightSidebar = ({
           }
           
           // Deduct credits
-          deductCredits(imagePrice);
+          deductCredits(generationPrices.ffeFirstFrameCredits);
           
-          toast.success("Video first frame generated successfully!");
+          toast.success("Inpainted first frame generated successfully!");
         }, 300);
       } else {
         throw new Error('No image returned from API');
       }
     } catch (error) {
       console.error("Error editing first frame:", error);
-      toast.error("Failed to generate new video");
+      console.log("Is it type Error?", error instanceof Error);
+      if (error instanceof Error && error.message.includes("FileSizeMismatch")) {
+        toast.error("File size exceeds the 16MB limit");
+      } else if (error instanceof Error && error.message.includes("E005")) {
+        toast.error("First frame generation prompt flagged as sensitive, please try again");
+      } else {
+        toast.error("Failed to generate first frame");
+      }
       if (progressIntervalRef.current) {
         clearInterval(progressIntervalRef.current);
         progressIntervalRef.current = null;
       }
       setGenerationProgress(0);
     } finally {
-      setIsGenerating(false);
+      setIsGeneratingFirstFrame(false);
     }
   };
 
   const resetUpload = () => {
     setUploadedVideo(null);
+    setVideoUploadThingUrl(null);
     setOriginalFirstFrameDataUrl(null);
     setOriginalCanvasCapture(null);
     setInpaintedImageUrl(null);
@@ -254,6 +291,71 @@ export const FirstFrameEditorRightSidebar = ({
       }
     };
   }, []);
+
+  const handleGenerateVideo = async () => {
+    if (!editor) return;
+
+    // Check permissions based on user status
+    if (!userStatus.isAuthenticated) {
+      // Show authentication modal instead of redirecting
+      setShowAuthModal(true);
+      return;
+    }
+
+    // // Check if user has enough credits
+    const ffeVideoPrice = generationPrices.ffeVideoCredits;
+    if (!hasEnoughCredits(ffeVideoPrice)) {
+      // Calculate needed credits
+      const needed = ffeVideoPrice - userStatus.credits;
+      setRequiredCredits(needed);
+      setShowBuyCreditsModal(true);
+      return;
+    }
+    
+    try {
+      setIsGeneratingVideo(true);
+      
+      // Upload the workbench image to UploadThing
+      let workbenchImageUrl = "";
+      if (editor.workspaceURL) {
+        const workbenchFile = await dataUrlToFile(editor.workspaceURL, "workspace.png");
+        workbenchImageUrl = await uploadToUploadThingResidual(workbenchFile);
+      } else {
+        throw new Error("No workbench image available");
+      }
+
+      const workflowData = {
+        "mode": "ffe",
+        "workflow_id": comfyDeployWorkflows["PROD-ZEPTA-FFE-CogVideoX"],
+      }
+
+      const videoGenData = {
+        "input_num_frames": videoModels["cogvideox"].durations[0],
+        "input_video": videoUploadThingUrl,
+        "input_image": JSON.stringify([workbenchImageUrl]),
+        "input_degradation": JSON.stringify(degradation),
+      };
+
+      console.log("videoGenData from ffe: ", videoGenData);
+        
+      const comfyDeployData = {
+        workflowData,
+        videoGenData
+      }
+
+      comfyDeployGenerateVideo({projectId, workbenchId, modelId: "cogvideox", computeMode: "normal", comfyDeployData});
+
+      // When successful, deduct credits
+      deductCredits(generationPrices.ffeVideoCredits);
+      toast.success("Video submitted successfully!");
+    } catch (error) {
+      console.error("Error generating video:", error);
+      console.log("Is it type Error?", error instanceof Error);
+
+    } finally {
+      setIsGeneratingVideo(false);
+    }
+  };
 
   return (
     <aside
@@ -310,17 +412,32 @@ export const FirstFrameEditorRightSidebar = ({
                   onChange={handleVideoUpload}
                   className="hidden"
                   id="video-upload"
+                  disabled={isProcessing}
                 />
                 
                 {!uploadedVideo ? (
                   <label
                     htmlFor="video-upload"
-                    className="cursor-pointer flex flex-col items-center gap-2 p-4"
+                    className={cn(
+                      "cursor-pointer flex flex-col items-center gap-2 p-4",
+                      isProcessing && "opacity-50 pointer-events-none"
+                    )}
                   >
-                    <Upload className="h-8 w-8 text-gray-400" />
-                    <span className="text-sm text-gray-600 dark:text-gray-400">
-                      Click to upload video
-                    </span>
+                    {isProcessing ? (
+                      <>
+                        <Loader2 className="h-8 w-8 text-gray-400 animate-spin" />
+                        <span className="text-sm text-gray-600 dark:text-gray-400">
+                          Uploading video...
+                        </span>
+                      </>
+                    ) : (
+                      <>
+                        <Upload className="h-8 w-8 text-gray-400" />
+                        <span className="text-sm text-gray-600 dark:text-gray-400">
+                          Click to upload video
+                        </span>
+                      </>
+                    )}
                   </label>
                 ) : (
                   <div className="space-y-2">
@@ -333,17 +450,11 @@ export const FirstFrameEditorRightSidebar = ({
                       variant="outline"
                       onClick={resetUpload}
                       className="mt-2"
+                      disabled={isProcessing}
                     >
                       <RefreshCw className="h-3 w-3 mr-1" />
                       Upload Different Video
                     </Button>
-                  </div>
-                )}
-                
-                {isProcessing && (
-                  <div className="mt-2 flex items-center justify-center gap-2">
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                    <span className="text-sm">Processing video...</span>
                   </div>
                 )}
               </div>
@@ -398,15 +509,13 @@ export const FirstFrameEditorRightSidebar = ({
               )}
               {/* Content */}
               <div className="flex-1 space-y-3">
-                <h4 className="font-medium">Generate New First Frame</h4>
-                
                 {originalFirstFrameDataUrl && (
                   <Button
                     onClick={handleFirstFrameEdit}
-                    disabled={isGenerating || !editPrompt.trim()}
+                    disabled={isGeneratingFirstFrame || !editPrompt.trim()}
                     className="w-full"
                   >
-                    {isGenerating ? (
+                    {isGeneratingFirstFrame ? (
                       <>
                         <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                         Generating New First Frame...
@@ -421,9 +530,9 @@ export const FirstFrameEditorRightSidebar = ({
                 )}
 
                 {/* Inpainted Result */}
-                {(isGenerating || inpaintedImageUrl) && (
+                {(isGeneratingFirstFrame || inpaintedImageUrl) && (
                   <div className="relative rounded-lg overflow-hidden border">
-                    {isGenerating && !inpaintedImageUrl ? (
+                    {isGeneratingFirstFrame && !inpaintedImageUrl ? (
                       <>
                         {/* Swirling gradient background */}
                         <div className="w-full h-48 relative">
@@ -486,11 +595,20 @@ export const FirstFrameEditorRightSidebar = ({
             </div>
 
             {/* Content */}
-            <div className="flex-1 space-y-3">
+            <div className="flex-1 space-y-3 w-full">
               <h3 className="font-medium">Generate New Video</h3>
-              <Button>
-                <Play className="h-4 w-4 mr-2" />
-                Generate New Video
+              <Button className="w-full h-16 mb-10" onClick={() => handleGenerateVideo()} disabled={isGeneratingVideo}>
+                {isGeneratingVideo ? (
+                  <>
+                    <Loader2 className="h-6 w-6 animate-spin" />
+                    <span className="text-xs">Sending request...</span>
+                  </>
+                ) : (
+                  <>
+                    <ArrowRightSquare className="h-6 w-6 mr-2" />
+                    Generate First Frame Edited Video
+                  </>
+                )}
               </Button>
             </div>
             

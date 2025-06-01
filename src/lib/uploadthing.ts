@@ -56,4 +56,22 @@ export async function uploadToUploadThingResidual(file: File): Promise<string> {
   }
 }
 
+/**
+ * Uploads a video file to UploadThing's videoUploader endpoint
+ * @param file - The video file to upload
+ * @returns A Promise that resolves to the uploaded file URL
+ */
+export async function uploadToUploadThingVideo(file: File): Promise<string> {
+  try {
+    const res = await uploadFiles("videoUploader", { files: [file] });
+    if (res[0]?.url) {
+      return res[0].url;
+    }
+    throw new Error("Failed to get URL from uploaded file");
+  } catch (error) {
+    console.error("Error uploading file:", error);
+    throw error;
+  }
+}
+
 

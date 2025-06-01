@@ -8,7 +8,7 @@ const f = createUploadthing();
 
 // FileRouter for your app, can contain multiple FileRoutes
 export const ourFileRouter = {
-  imageUploader: f({ image: { maxFileSize: "4MB" } })
+  imageUploader: f({ image: { maxFileSize: "8MB" } })
     .middleware(async ({ req }) => {
       const session = await auth();
 
@@ -28,7 +28,7 @@ export const ourFileRouter = {
       
       return { url: file.url };
     }),
-  residualUploader: f({ image: { maxFileSize: "4MB" } })
+  residualUploader: f({ image: { maxFileSize: "8MB" } })
     .middleware(async ({ req }) => {
       const session = await auth();
 
@@ -40,7 +40,18 @@ export const ourFileRouter = {
     .onUploadComplete(async ({ metadata, file }) => {
       return 
     }),
+  videoUploader: f({ video: { maxFileSize: "16MB" } })
+    .middleware(async ({ req }) => {
+      const session = await auth();
 
+      if (!session) throw new UploadThingError("Unauthorized");
+      if (!session.user?.id) throw new UploadThingError("Unauthorized");
+
+      return { userId: session.user.id };
+    })
+    .onUploadComplete(async ({ metadata, file }) => {      
+      return { url: file.url };
+    }),
 } satisfies FileRouter;
 
 export type OurFileRouter = typeof ourFileRouter;

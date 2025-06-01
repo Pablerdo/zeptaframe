@@ -4,7 +4,7 @@ import { fabric } from "fabric";
 import { useEffect, useRef, useState, useCallback, useMemo } from "react";
 import { MessageSquare, Trash2, Video, Film, ArrowRightSquare, ArrowRightCircle, Loader2, CornerUpRight, ChevronDown, X, FileVideo } from "lucide-react";
 import { useEditor } from "@/features/editor/hooks/use-editor";
-import { ActiveSegmentationTool, ActiveTool, ActiveWorkbenchTool, BaseVideoModel, CameraControl, Editor as EditorType, JSON_KEYS, SegmentedMask, SupportedVideoModelId, VideoGeneration, WorkflowMode, RotationKeyframe, ScaleKeyframe } from "@/features/editor/types";
+import { ActiveSegmentationTool, ActiveTool, ActiveWorkbenchTool, BaseVideoModel, CameraControl, Editor as EditorType, JSON_KEYS, SegmentedMask, SupportedVideoModelId, VideoGeneration, WorkflowMode, RotationKeyframe, ScaleKeyframe, ComputeMode } from "@/features/editor/types";
 import { cn } from "@/lib/utils";
 import { RightSidebarItem } from "./right-sidebar-item";
 import { AnimateRightSidebar } from "./right-sidebar/animate-right-sidebar";
@@ -42,6 +42,8 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { generateRotationTrajectory, generateScaleTrajectory } from "../utils";
+import { comfyDeployGenerateVideo } from "../services/generate-video";
 
 interface WorkbenchProps {
   projectId: string;
@@ -149,7 +151,6 @@ export const Workbench = ({
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
-  type ComputeMode = "ultra" | "normal" | "flash" ;
 
   const [computeMode, setComputeMode] = useState<ComputeMode>("normal");
   const [degradation, setDegradation] = useState<number>(0.6);
@@ -296,7 +297,7 @@ export const Workbench = ({
     }
   };
 
-  const handleGenerateVideo = async (modelId?: SupportedVideoModelId) => {
+  const handleGenerateVideo = async (modelId?: SupportedVideoModelId, mode: WorkflowMode = "animation") => {
     if (!editor) return;
 
     // Check permissions based on user status
@@ -335,253 +336,124 @@ export const Workbench = ({
         throw new Error("No workbench image available");
       }
 
-      const workflowData = {
-        "mode": "",
-        "workflow_id": "",
-      }
+      let workflowId;
 
-      switch (selectedModel.id) {
-        case "cogvideox":
-          workflowData.workflow_id = comfyDeployWorkflows["PROD-ZEPTA-CogVideoX"] || "";
-          break;
-        case "skyreels":
-            workflowData.workflow_id = comfyDeployWorkflows["PROD-ZEPTA-Skyreels"] || "";
-          break;
-        default:
-          throw new Error("Invalid model ID");
-      }
+      if (mode === "animation") {
 
-      workflowData.mode = "animation" as WorkflowMode;
-
-      const validMasks = segmentedMasks.filter(mask => mask.id && mask.id.trim() !== '');
-      
-      // Sort masks by z-index (lower z-index = bottom layer, higher = top layer)
-      const sortedMasks = [...validMasks].sort((a, b) => (a.zIndex ?? 0) - (b.zIndex ?? 0));
-      
-      // Helper function to generate rotation array from keyframes
-      const generateRotationTrajectory = (keyframes: RotationKeyframe[], frameCount: number): number[] => {
-        if (keyframes.length === 0) {
-          return new Array(frameCount).fill(0);
+        switch (selectedModel.id) {
+          case "cogvideox":
+            workflowId = comfyDeployWorkflows["PROD-ZEPTA-CogVideoX"] || "";
+            break;
+          case "skyreels":
+            workflowId = comfyDeployWorkflows["PROD-ZEPTA-Skyreels"] || "";
+            break;
+          default:
+            throw new Error("Invalid model ID");
         }
         
-        if (keyframes.length === 1) {
-          return new Array(frameCount).fill(Math.round(keyframes[0].rotation));
+        const workflowData = {
+          "mode": mode,
+          "workflow_id": workflowId,
         }
+
+        const validMasks = segmentedMasks.filter(mask => mask.id && mask.id.trim() !== '');
+      
+        // Sort masks by z-index (lower z-index = bottom layer, higher = top layer)
+        const sortedMasks = [...validMasks].sort((a, b) => (a.zIndex ?? 0) - (b.zIndex ?? 0));
         
-        const rotationTrajectory: number[] = [];
-        
-        for (let i = 0; i < frameCount; i++) {
-          const progress = frameCount > 1 ? i / (frameCount - 1) : 0;
-          
-          // Find the two keyframes to interpolate between
-          let prevKeyframe = keyframes[0];
-          let nextKeyframe = keyframes[keyframes.length - 1];
-          
-          for (let j = 0; j < keyframes.length - 1; j++) {
-            if (progress >= keyframes[j].trajectoryProgress && progress <= keyframes[j + 1].trajectoryProgress) {
-              prevKeyframe = keyframes[j];
-              nextKeyframe = keyframes[j + 1];
-              break;
-            }
-          }
-          
-          // Linear interpolation between keyframes
-          if (prevKeyframe === nextKeyframe) {
-            rotationTrajectory.push(Math.round(prevKeyframe.rotation));
+        const trajectories = sortedMasks.map(mask => mask.trajectory?.points || []);
+  
+        // Generate frame-by-frame rotation and scale arrays from keyframes
+        const rotations = sortedMasks.map(mask => {
+          if (mask.rotationKeyframes && mask.rotationKeyframes.length > 0) {
+            return generateRotationTrajectory(mask.rotationKeyframes, videoGenUtils.totalFrames);
           } else {
-            const localProgress = (progress - prevKeyframe.trajectoryProgress) / 
-              (nextKeyframe.trajectoryProgress - prevKeyframe.trajectoryProgress);
-            const interpolatedRotation = prevKeyframe.rotation + 
-              (nextKeyframe.rotation - prevKeyframe.rotation) * localProgress;
-            rotationTrajectory.push(Math.round(interpolatedRotation));
+            // Fallback to single value if no keyframes (rounded to integer)
+            return new Array(videoGenUtils.totalFrames).fill(0);
           }
-        }
-        
-        return rotationTrajectory;
-      };
+        });
 
-      // Helper function to generate scale array from keyframes
-      const generateScaleTrajectory = (keyframes: ScaleKeyframe[], frameCount: number): number[] => {
-        if (keyframes.length === 0) {
-          return new Array(frameCount).fill(1.0);
-        }
-        
-        if (keyframes.length === 1) {
-          return new Array(frameCount).fill(Math.round(keyframes[0].scale * 100) / 100);
-        }
-        
-        const scaleTrajectory: number[] = [];
-        
-        for (let i = 0; i < frameCount; i++) {
-          const progress = frameCount > 1 ? i / (frameCount - 1) : 0;
-          
-          // Find the two keyframes to interpolate between
-          let prevKeyframe = keyframes[0];
-          let nextKeyframe = keyframes[keyframes.length - 1];
-          
-          for (let j = 0; j < keyframes.length - 1; j++) {
-            if (progress >= keyframes[j].trajectoryProgress && progress <= keyframes[j + 1].trajectoryProgress) {
-              prevKeyframe = keyframes[j];
-              nextKeyframe = keyframes[j + 1];
-              break;
-            }
-          }
-          
-          // Linear interpolation between keyframes
-          if (prevKeyframe === nextKeyframe) {
-            scaleTrajectory.push(Math.round(prevKeyframe.scale * 100) / 100);
+        // Generate frame-by-frame rotation and scale arrays from keyframes
+        const scalings = sortedMasks.map(mask => {
+          if (mask.scaleKeyframes && mask.scaleKeyframes.length > 0) {
+            return generateScaleTrajectory(mask.scaleKeyframes, videoGenUtils.totalFrames);
           } else {
-            const localProgress = (progress - prevKeyframe.trajectoryProgress) / 
-              (nextKeyframe.trajectoryProgress - prevKeyframe.trajectoryProgress);
-            const interpolatedScale = prevKeyframe.scale + 
-              (nextKeyframe.scale - prevKeyframe.scale) * localProgress;
-            scaleTrajectory.push(Math.round(interpolatedScale * 100) / 100);
+            // Fallback to single value if no keyframes (rounded to 2 decimal places)
+            return new Array(videoGenUtils.totalFrames).fill(1.00);
           }
-        }
-        
-        return scaleTrajectory;
-      };
-      
-      const trajectories = sortedMasks.map(mask => mask.trajectory?.points || []);
-
-      // Generate frame-by-frame rotation and scale arrays from keyframes
-      const rotations = sortedMasks.map(mask => {
-        if (mask.rotationKeyframes && mask.rotationKeyframes.length > 0) {
-          return generateRotationTrajectory(mask.rotationKeyframes, videoGenUtils.totalFrames);
-        } else {
-          // Fallback to single value if no keyframes (rounded to integer)
-          return new Array(videoGenUtils.totalFrames).fill(0);
-        }
-      });
-      // Generate frame-by-frame rotation and scale arrays from keyframes
-      const scalings = sortedMasks.map(mask => {
-        if (mask.scaleKeyframes && mask.scaleKeyframes.length > 0) {
-          return generateScaleTrajectory(mask.scaleKeyframes, videoGenUtils.totalFrames);
-        } else {
-          // Fallback to single value if no keyframes (rounded to 2 decimal places)
-          return new Array(videoGenUtils.totalFrames).fill(1.00);
-        }
-      });
-      
-      // Generate centroids array - each mask gets its centroid repeated for all frames
-      const centroids = sortedMasks.map(mask => {
-        const centroid = mask.centroid || { x: 480, y: 320 }; // Default to center if no centroid
-        return new Array(videoGenUtils.totalFrames).fill(centroid);
-      });
-      
-      // Upload all mask images to UploadThing
-      const maskUploadPromises = sortedMasks.map(async (mask, index) => {
-        if (!mask.binaryUrl) return "";
-        
-        const maskFile = await dataUrlToFile(mask.binaryUrl, `mask-${index}.png`);
-        return uploadToUploadThingResidual(maskFile);
-      });
-      
-      const uploadedMaskUrls = await Promise.all(maskUploadPromises);
-
-      const truckVector = {"x": -cameraControl.horizontalTruck, "y": cameraControl.verticalTruck};
-      const panVector = {"x": cameraControl.horizontalPan, "y": cameraControl.verticalPan};
-      const dolly = cameraControl.dolly;
-
-      const cameraControlPayload = {
-        "truck_vector": truckVector,
-        "pan_vector": panVector,
-        "zoom_vector": dolly,
-      }
-
-      // TODO: Add pan vector and dolly to the input camera. In the ComfyUI-SubjectBackgroundMotion.
-
-      // GOOD TUNING VALUES
-      // const boundaryDegradation = 0.75;
-      // const secondaryBoundaryDegradation = 0.7;
-      // const degradation = 0.50;
-
-      // Further trials
-      const boundaryDegradation = 0.9;
-      const annulusDegradation = 0.8;
-
-      const boundaryPx1 = 30;
-      const boundaryPx2 = 50;
-
-      // Replace hardcoded value with state variable
-      // const degradation = 0.6;
-
-      // TODO: Pass number of steps for sampler, as well as resolution, depending on compute mode.
-
-      const videoGenData = {
-        "input_num_frames": JSON.stringify(videoGenUtils.totalFrames),
-        "input_image": JSON.stringify([workbenchImageUrl]),
-        "input_masks": JSON.stringify(uploadedMaskUrls),
-        "input_prompt": generalTextPrompt,
-        "input_trajectories": JSON.stringify(trajectories),
-        "input_rotations": JSON.stringify(rotations),
-        "input_scalings": JSON.stringify(scalings),
-        "input_camera": JSON.stringify(cameraControlPayload),
-        // "input_boundary_degradation": JSON.stringify(boundaryDegradation),
-        // "input_annulus_degradation": JSON.stringify(annulusDegradation),
-        "input_degradation": JSON.stringify(degradation),
-        // "input_boundary_px1": JSON.stringify(boundaryPx1),
-        //"input_boundary_px2": JSON.stringify(boundaryPx2),
-      };
-      
-      console.log("videoGenData", videoGenData);
-      workflowData.mode = "animation" as WorkflowMode;
-
-      const comfyDeployData = {
-        workflowData,
-        videoGenData
-      }
-
-      // STEP 1: Call ComfyDeploy to start the generation
-      const response = await fetch("/api/comfydeploy/generate-video", {
-        method: "POST",
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(comfyDeployData),
-      });
-      
-      const data = await response.json();
-      
-      if (data.runId) {
-        // STEP 2: Store the generation information in our database
-        const dbResponse = await fetch("/api/video-generations", {
-          method: "POST",
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            projectId: projectId,
-            workbenchId: workbenchId,
-            runId: data.runId,
-            status: "pending",
-            modelId: modelId,
-            computeMode: computeMode,
-          }),
         });
         
-        const dbData = await dbResponse.json();
-        // ("dbData", dbData);
-      } else {
-        throw new Error("No video runId received");
-      }
-      
-      
-      // When successful, deduct credits
-      if (computeMode === "flash") {
-        deductCredits(generationPrices.flashVideoCredits);
-      } else if (computeMode === "normal") {
+        // Upload all mask images to UploadThing
+        const maskUploadPromises = sortedMasks.map(async (mask, index) => {
+          if (!mask.binaryUrl) return "";
+          
+          const maskFile = await dataUrlToFile(mask.binaryUrl, `mask-${index}.png`);
+          return uploadToUploadThingResidual(maskFile);
+        });
+        
+        const uploadedMaskUrls = await Promise.all(maskUploadPromises);
+  
+        const truckVector = {"x": -cameraControl.horizontalTruck, "y": cameraControl.verticalTruck};
+        const panVector = {"x": cameraControl.horizontalPan, "y": cameraControl.verticalPan};
+        const dolly = cameraControl.dolly;
+  
+        const cameraControlPayload = {
+          "truck_vector": truckVector,
+          "pan_vector": panVector,
+          "zoom_vector": dolly,
+        }
+  
+        // TODO: Add pan vector and dolly to the input camera. In the ComfyUI-SubjectBackgroundMotion.
+  
+        // GOOD TUNING VALUES
+        // const boundaryDegradation = 0.75;
+        // const secondaryBoundaryDegradation = 0.7;
+        // const degradation = 0.50;
+  
+        // Further trials
+        const boundaryDegradation = 0.9;
+        const annulusDegradation = 0.8;
+  
+        const boundaryPx1 = 30;
+        const boundaryPx2 = 50;
+  
+        // Replace hardcoded value with state variable
+        // const degradation = 0.6;
+  
+        // TODO: Pass number of steps for sampler, as well as resolution, depending on compute mode.
+  
+        const videoGenData = {
+          "input_num_frames": JSON.stringify(videoGenUtils.totalFrames),
+          "input_image": JSON.stringify([workbenchImageUrl]),
+          "input_masks": JSON.stringify(uploadedMaskUrls),
+          "input_prompt": generalTextPrompt,
+          "input_trajectories": JSON.stringify(trajectories),
+          "input_rotations": JSON.stringify(rotations),
+          "input_scalings": JSON.stringify(scalings),
+          "input_camera": JSON.stringify(cameraControlPayload),
+          // "input_boundary_degradation": JSON.stringify(boundaryDegradation),
+          // "input_annulus_degradation": JSON.stringify(annulusDegradation),
+          "input_degradation": JSON.stringify(degradation),
+          // "input_boundary_px1": JSON.stringify(boundaryPx1),
+          //"input_boundary_px2": JSON.stringify(boundaryPx2),
+        };
+        
+        console.log("videoGenData", videoGenData);
+  
+        const comfyDeployData = {
+          workflowData,
+          videoGenData
+        }
+  
+        comfyDeployGenerateVideo({projectId, workbenchId, modelId: modelId || "cogvideox", computeMode, comfyDeployData});
+  
+        // ALL ANIMATION GENERATIONS SHOULD BE NORMAL MODE
         deductCredits(generationPrices.normalVideoCredits);
-      } else if (computeMode === "ultra") {
-        deductCredits(generationPrices.ultraVideoCredits);
       }
-      
       toast.success("Video generation started successfully. Check timeline for progress.");
-      // console.log("Video generation started. Please wait...");
 
     } catch (error) {
       console.error("Error:", error);
-      //console.log("Error generating video");
       toast.error("Error generating video. Please try again.");
     } finally {
       setIsGenerating(false);
@@ -1074,10 +946,12 @@ export const Workbench = ({
             />
             <FirstFrameEditorRightSidebar
               editor={editor}
+              workbenchId={workbenchId}
               activeWorkbenchTool={activeWorkbenchTool}
               onChangeActiveWorkbenchTool={setActiveWorkbenchTool}
               projectId={projectId}
               setShowAuthModal={setShowAuthModal}
+              degradation={degradation}
             />
           </div>
         </div>
@@ -1180,7 +1054,7 @@ export const Workbench = ({
               
               <button 
                 className="w-full aspect-square bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors duration-200 flex flex-col items-center justify-center gap-1 px-2 py-1 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-blue-600"
-                onClick={() => handleGenerateVideo(selectedModel.id)}
+                onClick={() => handleGenerateVideo(selectedModel.id, "animation")}
                 disabled={isGenerating || activeWorkbenchTool === "first-frame"}
                 title={activeWorkbenchTool === "first-frame" ? "Exit First Frame mode to generate video" : undefined}
               >

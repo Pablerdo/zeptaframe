@@ -1,6 +1,7 @@
 import { uuid } from "uuidv4";
 import { fabric } from "fabric";
 import type { RGBColor } from "react-color";
+import { RotationKeyframe, ScaleKeyframe } from "./types";
 
 export function transformText(objects: any) {
   if (!objects) return;
@@ -226,4 +227,88 @@ export const smoothTrajectory = (points: Array<{x: number, y: number}>, smoothin
 
   smoothed.push(points[points.length - 1]); // Keep last point
   return smoothed;
+};
+
+// Helper function to generate scale array from keyframes
+export const generateScaleTrajectory = (keyframes: ScaleKeyframe[], frameCount: number): number[] => {
+  if (keyframes.length === 0) {
+    return new Array(frameCount).fill(1.0);
+  }
+  
+  if (keyframes.length === 1) {
+    return new Array(frameCount).fill(Math.round(keyframes[0].scale * 100) / 100);
+  }
+  
+  const scaleTrajectory: number[] = [];
+  
+  for (let i = 0; i < frameCount; i++) {
+    const progress = frameCount > 1 ? i / (frameCount - 1) : 0;
+    
+    // Find the two keyframes to interpolate between
+    let prevKeyframe = keyframes[0];
+    let nextKeyframe = keyframes[keyframes.length - 1];
+    
+    for (let j = 0; j < keyframes.length - 1; j++) {
+      if (progress >= keyframes[j].trajectoryProgress && progress <= keyframes[j + 1].trajectoryProgress) {
+        prevKeyframe = keyframes[j];
+        nextKeyframe = keyframes[j + 1];
+        break;
+      }
+    }
+    
+    // Linear interpolation between keyframes
+    if (prevKeyframe === nextKeyframe) {
+      scaleTrajectory.push(Math.round(prevKeyframe.scale * 100) / 100);
+    } else {
+      const localProgress = (progress - prevKeyframe.trajectoryProgress) / 
+        (nextKeyframe.trajectoryProgress - prevKeyframe.trajectoryProgress);
+      const interpolatedScale = prevKeyframe.scale + 
+        (nextKeyframe.scale - prevKeyframe.scale) * localProgress;
+      scaleTrajectory.push(Math.round(interpolatedScale * 100) / 100);
+    }
+  }
+
+  return scaleTrajectory;
+};
+
+// Helper function to generate rotation array from keyframes
+export const generateRotationTrajectory = (keyframes: RotationKeyframe[], frameCount: number): number[] => {
+  if (keyframes.length === 0) {
+    return new Array(frameCount).fill(0);
+  }
+  
+  if (keyframes.length === 1) {
+    return new Array(frameCount).fill(Math.round(keyframes[0].rotation));
+  }
+  
+  const rotationTrajectory: number[] = [];
+  
+  for (let i = 0; i < frameCount; i++) {
+    const progress = frameCount > 1 ? i / (frameCount - 1) : 0;
+    
+    // Find the two keyframes to interpolate between
+    let prevKeyframe = keyframes[0];
+    let nextKeyframe = keyframes[keyframes.length - 1];
+    
+    for (let j = 0; j < keyframes.length - 1; j++) {
+      if (progress >= keyframes[j].trajectoryProgress && progress <= keyframes[j + 1].trajectoryProgress) {
+        prevKeyframe = keyframes[j];
+        nextKeyframe = keyframes[j + 1];
+        break;
+      }
+    }
+    
+    // Linear interpolation between keyframes
+    if (prevKeyframe === nextKeyframe) {
+      rotationTrajectory.push(Math.round(prevKeyframe.rotation));
+    } else {
+      const localProgress = (progress - prevKeyframe.trajectoryProgress) / 
+        (nextKeyframe.trajectoryProgress - prevKeyframe.trajectoryProgress);
+      const interpolatedRotation = prevKeyframe.rotation + 
+        (nextKeyframe.rotation - prevKeyframe.rotation) * localProgress;
+      rotationTrajectory.push(Math.round(interpolatedRotation));
+    }
+  }
+  
+  return rotationTrajectory;
 };

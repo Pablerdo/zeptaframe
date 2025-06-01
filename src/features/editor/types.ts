@@ -265,7 +265,7 @@ export interface ImageGeneration {
   updatedAt?: string | Date;
 }
 
-export type WorkflowMode = "text-only" | "animation";
+export type WorkflowMode = "text-only" | "animation" | "ffe";
 
 export type SupportedVideoModelId = 
   | "wan"
@@ -275,6 +275,7 @@ export type SupportedVideoModelId =
 export type BaseVideoModel = {
   id: SupportedVideoModelId;
   name: string;
+  durations: number[];
 };
   
 export type CameraControl = {
@@ -309,6 +310,8 @@ export interface SegmentedObject {
   url: string;
   name: string;
 }
+
+export type ComputeMode = "ultra" | "normal" | "flash";
 
 export interface SegmentedMask {
   id: string;

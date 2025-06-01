@@ -1,5 +1,4 @@
 
-
 export const comfyDeployWorkflows = {
   // "GWF-ZEPTA-SkyReels": "434a1501-0adf-4dc9-b3ef-a86f20225083",
   // "GWF-ZEPTA-HunyuanVideo": "ee7b971a-0b60-459d-a0cc-504fe21fccc2",
@@ -20,6 +19,7 @@ export const comfyDeployWorkflows = {
   "PROD-ZEPTA-Skyreels": "4ecf0ca7-a168-4a76-8b7d-16a442991391",
   "PROD-ZEPTA-CogVideoX": "dd030bb3-4bf9-4991-8669-530ab1d88e50", 
   "MP4VideoJoiner": "45e11f37-feaf-4d25-a39f-687321e9f94d",
+  "PROD-ZEPTA-FFE-CogVideoX": "2608d449-c4ed-49cc-9e6c-96294771fc77"
 };
 
 
