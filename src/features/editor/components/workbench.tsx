@@ -315,7 +315,7 @@ export const Workbench = ({
 
     // Check if text prompt is required but missing
     // Check if user has enough credits
-    const videoPrice = generationPrices.video;
+    const videoPrice = generationPrices.normalVideoCredits;
     if (!hasEnoughCredits(videoPrice)) {
       // Calculate needed credits
       const needed = videoPrice - userStatus.credits;

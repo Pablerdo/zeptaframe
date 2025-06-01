@@ -76,7 +76,7 @@ export function UserStatusProvider({
   // Check if user can generate video based on credits
   const canGenerateVideo = () => {
     if (!userStatus.isAuthenticated) return false;
-    return hasEnoughCredits(generationPrices.video);
+    return hasEnoughCredits(generationPrices.normalVideoCredits);
   };
 
   // Check if user can generate image based on credits
