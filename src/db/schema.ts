@@ -21,7 +21,8 @@ export const users = pgTable("user", {
   emailVerified: timestamp("emailVerified", { mode: "date" }),
   image: text("image"),
   password: text("password"), 
-  credits: integer("credits").notNull().default(55),
+  credits: integer("credits").notNull().default(15),
+  conferenceCode: text("conferenceCode"),
 });
 
 export const usersRelations = relations(users, ({ many }) => ({

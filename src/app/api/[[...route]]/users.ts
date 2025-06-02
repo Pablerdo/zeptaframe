@@ -16,11 +16,12 @@ const app = new Hono()
       z.object({
         name: z.string(),
         email: z.string().email(),
-        password: z.string().min(3).max(20),
+        password: z.string().min(6).max(30),
+        conferenceCode: z.string().optional(),
       })
     ),
     async (c) => {
-      const { name, email, password } = c.req.valid("json");
+      const { name, email, password, conferenceCode } = c.req.valid("json");
 
       const hashedPassword = await bcrypt.hash(password, 12);
 
@@ -33,10 +34,18 @@ const app = new Hono()
         return c.json({ error: "Email already in use" }, 400);
       }
 
+      // Determine credits based on conference code
+      let credits = 15; // Default credits
+      if (conferenceCode === "CVPR2025") {
+        credits = 400; // 400 free credits for CVPR attendees
+      }
+
       await db.insert(users).values({
         email,
         name,
         password: hashedPassword,
+        credits,
+        conferenceCode: conferenceCode || null,
       });
       
       // Fetch the newly created user to get their ID
