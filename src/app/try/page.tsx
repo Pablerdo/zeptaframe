@@ -163,8 +163,8 @@ export default function TryPage() {
                   {/* Conference Code Section */}
                   <div className="mb-4 p-4 bg-zinc-800 rounded-lg border border-zinc-700">
                     <h3 className="text-sm font-medium mb-2 text-zinc-300">CVPR 2025 Attendee?</h3>
-                    <p className="text-xs text-zinc-400 mb-3">
-                      Enter the code <b>"CVPR2025"</b> for free access
+                    <p className="text-xs text-white mb-3">
+                      Enter the code <b>CVPR2025</b> for free access
                     </p>
                     <input
                       type="text"
@@ -220,7 +220,7 @@ export default function TryPage() {
                   <div className="mb-6 p-4 bg-green-900/20 border border-green-700 rounded-lg">
                     <h3 className="text-lg font-medium mb-2 text-red-300">Save These Credentials!</h3>
                     <p className="text-sm text-zinc-300 mb-3">
-                      This is the ONLY time you'll see them. Your conference account expires June 20th.
+                      This is the ONLY time you will see them. Your conference account expires June 20th.
                     </p>
                     <div className="bg-zinc-800 p-3 rounded-md text-left space-y-2 font-mono text-sm">
                       <div>
