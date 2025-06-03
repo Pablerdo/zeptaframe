@@ -51,12 +51,12 @@ export const CameraControlRightSidebar = ({
   
   const [horizontalTruck, setHorizontalTruck] = useState(0); // -1 to 1 (center is 0)
   const [verticalTruck, setVerticalTruck] = useState(0);     // -1 to 1 (center is 0)
-  const [dolly, setDolly] = useState(0);                   // -1 to 1 (center is 0)
+  const [zoom, setZoom] = useState(0);                   // -1 to 1 (center is 0)
   const [horizontalPan, setHorizontalPan] = useState(0); // -1 to 1 (center is 0)
   const [verticalPan, setVerticalPan] = useState(0);     // -1 to 1 (center is 0)
   const [maxDotRate, setMaxDotRate] = useState(30);       // Max dots to create/destroy per frame
   
-  // Track camera offset (pan) and scale (dolly)
+  // Track camera offset (pan) and scale (zoom)
   const cameraOffsetRef = useRef({ x: 0, y: 0 });
   const lastCameraOffsetRef = useRef({ x: 0, y: 0 });
   const cameraScaleRef = useRef(1);
@@ -305,10 +305,10 @@ export const CameraControlRightSidebar = ({
   }, [canvasInitialized]);
   
   // Calculate scaled target dots based on expansion/contraction
-  const calculateScaledTargetDots = useCallback((dollyValue: number, baseDots: number) => {
-    // Scale factor ranges from 0.5 (at dolly = -1) to 2.0 (at dolly = 1)
+  const calculateScaledTargetDots = useCallback((zoomValue: number, baseDots: number) => {
+    // Scale factor ranges from 0.5 (at zoom = -1) to 2.0 (at zoom = 1)
     // This creates a dynamic range of 50% to 200% of the base dot count
-    const scaleFactor = 1.0 + dollyValue;
+    const scaleFactor = 1.0 + zoomValue;
     densityFactorRef.current = scaleFactor;
     
     // Calculate scaled target - constrain to reasonable limits
@@ -335,8 +335,8 @@ export const CameraControlRightSidebar = ({
     // Get count of dots inside frame
     const dotsInFrame = visibleDotsRef.current;
     
-    // Calculate scaled target based on current dolly value
-    const scaledTarget = calculateScaledTargetDots(dolly, baseTargetDots);
+    // Calculate scaled target based on current zoom value
+    const scaledTarget = calculateScaledTargetDots(zoom, baseTargetDots);
     
     // Check if we need to adjust dots to match target count
     if (dotsInFrame < scaledTarget) {
@@ -375,12 +375,12 @@ export const CameraControlRightSidebar = ({
       // Calculate how many dots to remove
       const dotsToRemove = Math.min(
         // Use higher removal rate during contraction
-        dolly < 0 ? maxDotRate * 2 : maxDotRate, 
+        zoom < 0 ? maxDotRate * 2 : maxDotRate, 
         dotsInFrame - scaledTarget
       );
       
       // During contraction, increase removal probability
-      const removalBase = Math.max(0.1, dolly < 0 ? Math.abs(dolly) * 0.5 : 0.1);
+      const removalBase = Math.max(0.1, zoom < 0 ? Math.abs(zoom) * 0.5 : 0.1);
       const removalProbability = (dotsToRemove / 60) * removalBase;
       
       if (Math.random() < removalProbability && dotsRef.current.length > 10) {
@@ -394,7 +394,7 @@ export const CameraControlRightSidebar = ({
         if (visibleDots.length > 0) {
           // Prioritize removing dots that are closer to center during contraction
           // This creates a more natural "zooming out" effect
-          if (dolly < 0) {
+          if (zoom < 0) {
             // Sort by distance from center (closest first)
             visibleDots.sort((a, b) => {
               const aDistSq = Math.pow(a.x - cameraOffsetRef.current.x, 2) + 
@@ -409,11 +409,11 @@ export const CameraControlRightSidebar = ({
             
             for (let i = 0; i < dotsToRemove; i++) {
               // Get a dot to remove (prefer center dots during contraction)
-              const indexToRemove = dolly < 0 ? i : Math.floor(Math.random() * visibleDots.length);
+              const indexToRemove = zoom < 0 ? i : Math.floor(Math.random() * visibleDots.length);
               const dotToRemove = visibleDots[indexToRemove];
               
               // Remove from visible dots array to avoid selecting it again
-              if (dolly >= 0) {
+              if (zoom >= 0) {
                 visibleDots.splice(indexToRemove, 1);
               }
               
@@ -466,7 +466,7 @@ export const CameraControlRightSidebar = ({
     
     // Continue dot population management
     populationRef.current = requestAnimationFrame(manageDotPopulation);
-  }, [dolly, maxDotRate, canvasInitialized, dotVelocityConstant, baseTargetDots, calculateScaledTargetDots]);
+  }, [zoom, maxDotRate, canvasInitialized, dotVelocityConstant, baseTargetDots, calculateScaledTargetDots]);
 
   // Update the maxDotRate handler to set the base target
   const handleMaxDotRateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -474,17 +474,17 @@ export const CameraControlRightSidebar = ({
     setMaxDotRate(value);
     setBaseTargetDots(value); // Store this as the base (unscaled) target
     
-    // Calculate the actual target based on current dolly value
-    const scaledTarget = calculateScaledTargetDots(dolly, value);
+    // Calculate the actual target based on current zoom value
+    const scaledTarget = calculateScaledTargetDots(zoom, value);
     setTargetDotsInFrame(scaledTarget);
   };
   
-  // Add effect to update target dots when dolly changes
+  // Add effect to update target dots when zoom changes
   useEffect(() => {
-    // Calculate scaled target dots based on current dolly value
-    const scaledTarget = calculateScaledTargetDots(dolly, baseTargetDots);
+    // Calculate scaled target dots based on current zoom value
+    const scaledTarget = calculateScaledTargetDots(zoom, baseTargetDots);
     setTargetDotsInFrame(scaledTarget);
-  }, [dolly, baseTargetDots, calculateScaledTargetDots]);
+  }, [zoom, baseTargetDots, calculateScaledTargetDots]);
 
   // Animate dots - focuses only on movement and expansion/contraction of existing dots
   const animateDots = useCallback(() => {
@@ -637,14 +637,14 @@ export const CameraControlRightSidebar = ({
     setCameraControl(updatedCameraControl);
   }, [cameraControl, setCameraControl]);
 
-  const handleDollyChange = useCallback((value: number[]) => {
+  const handleZoomChange = useCallback((value: number[]) => {
     const newValue = value[0];
-    setDolly(newValue);
+    setZoom(newValue);
     
-    // Set target expansion rate based on dolly value - same approach as with movement
+    // Set target expansion rate based on zoom value - same approach as with movement
     targetExpansionRateRef.current = newValue * expansionVelocityConstant;
     
-    const updatedCameraControl = { ...cameraControl, dolly: newValue };
+    const updatedCameraControl = { ...cameraControl, zoom: newValue };
     setCameraControl(updatedCameraControl);
   }, [cameraControl, setCameraControl]);
 
@@ -668,7 +668,7 @@ export const CameraControlRightSidebar = ({
       setCameraControl({
         horizontalTruck: 0,
         verticalTruck: 0,
-        dolly: 0,
+        zoom: 0,
         horizontalPan: 0,
         verticalPan: 0
       });
@@ -676,12 +676,12 @@ export const CameraControlRightSidebar = ({
       // Sync local state with props
       const hPan = cameraControl.horizontalTruck || 0;
       const vPan = cameraControl.verticalTruck || 0;
-      const dly = cameraControl.dolly || 0;
+      const zm = cameraControl.zoom || 0;
 
       // Round to nearest 0.1 step      
       setHorizontalTruck(hPan);
       setVerticalTruck(vPan);
-      setDolly(dly);
+      setZoom(zm);
       setHorizontalPan(cameraControl.horizontalPan || 0);
       setVerticalPan(cameraControl.verticalPan || 0);
       
@@ -689,8 +689,8 @@ export const CameraControlRightSidebar = ({
       targetVelocityRef.current.x = hPan * cameraVelocityConstant;
       targetVelocityRef.current.y = vPan * -cameraVelocityConstant;
       
-      // Initialize expansion rate based on dolly value
-      targetExpansionRateRef.current = dly * expansionVelocityConstant;
+      // Initialize expansion rate based on zoom value
+      targetExpansionRateRef.current = zm * expansionVelocityConstant;
     }
   }, [cameraControl, setCameraControl]);
 
@@ -776,14 +776,14 @@ export const CameraControlRightSidebar = ({
               Zoom
               <CameraSlider
                 orientation="horizontal"
-                valueDisplay={Number(dolly.toFixed(1))}
-                label="Dolly"
-                value={[dolly]}
-                min={0}
+                valueDisplay={Number(zoom.toFixed(1))}
+                label="Zoom"
+                value={[zoom]}
+                min={-1}
                 max={1}
                 step={0.1}
-                onValueChange={handleDollyChange}
-                onValueDisplayChange={(value) => handleDollyChange([value])}
+                onValueChange={handleZoomChange}
+                onValueDisplayChange={(value) => handleZoomChange([value])}
                 showEndIcons
                 leftIcon={<ZoomOut className="h-5 w-5"/>}
                 rightIcon={<ZoomIn className="h-5 w-5"/>}
@@ -830,7 +830,6 @@ export const CameraControlRightSidebar = ({
         </div>
       </div>
 
-      {/* Dolly slider stays in original position for now */}
       <div className="px-4 py-2 mt-4">
         {/* Commented out Max Dot Rate Slider 
         <div className="mb-3">

@@ -139,7 +139,7 @@ export const Workbench = ({
   const [cameraControl, setCameraControl] = useState<CameraControl>({
     horizontalTruck: 0,
     verticalTruck: 0,
-    dolly: 0,
+    zoom: 0,
     horizontalPan: 0,
     verticalPan: 0,
   });
@@ -399,16 +399,14 @@ export const Workbench = ({
   
         const truckVector = {"x": -cameraControl.horizontalTruck, "y": cameraControl.verticalTruck};
         const panVector = {"x": cameraControl.horizontalPan, "y": cameraControl.verticalPan};
-        const dolly = cameraControl.dolly;
+        const zoom = cameraControl.zoom * 100;
   
         const cameraControlPayload = {
           "truck_vector": truckVector,
           "pan_vector": panVector,
-          "zoom_vector": dolly,
+          "zoom_vector": zoom,
         }
-  
-        // TODO: Add pan vector and dolly to the input camera. In the ComfyUI-SubjectBackgroundMotion.
-  
+    
         // GOOD TUNING VALUES
         // const boundaryDegradation = 0.75;
         // const secondaryBoundaryDegradation = 0.7;

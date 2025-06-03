@@ -281,7 +281,7 @@ export type BaseVideoModel = {
 export type CameraControl = {
   horizontalTruck: number;
   verticalTruck: number;
-  dolly: number;
+  zoom: number;
   horizontalPan: number;
   verticalPan: number;
 }
