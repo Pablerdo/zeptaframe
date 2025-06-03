@@ -330,8 +330,12 @@ export const Workbench = ({
       // Upload the workbench image to UploadThing
       let workbenchImageUrl = "";
       if (editor.workspaceURL) {
+        console.log("base64img", editor.workspaceURL);
+
         const workbenchFile = await dataUrlToFile(editor.workspaceURL, "workspace.png");
         workbenchImageUrl = await uploadToUploadThingResidual(workbenchFile);
+
+        // workbenchImageUrl = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAgAAAAIAQMAAAD+wSzIAAAABlBMVEX///+/v7+jQ3Y5AAAADklEQVQI12P4AIX8EAgALgAD/aNpbtEAAAAASUVORK5CYII" // editor.workspaceURL;
       } else {
         throw new Error("No workbench image available");
       }
