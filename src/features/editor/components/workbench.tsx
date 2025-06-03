@@ -330,7 +330,7 @@ export const Workbench = ({
       // Upload the workbench image to UploadThing
       let workbenchImageUrl = "";
       if (editor.workspaceURL) {
-        console.log("base64img", editor.workspaceURL);
+        // console.log("base64img", editor.workspaceURL);
 
         const workbenchFile = await dataUrlToFile(editor.workspaceURL, "workspace.png");
         workbenchImageUrl = await uploadToUploadThingResidual(workbenchFile);
@@ -362,40 +362,76 @@ export const Workbench = ({
 
         const validMasks = segmentedMasks.filter(mask => mask.id && mask.id.trim() !== '');
       
+        // Handle case when there are no masks - create a default black mask
+        let masksToProcess = validMasks;
+        let shouldUseDefaultMask = false;
+        
+        if (validMasks.length === 0) {
+          shouldUseDefaultMask = true;
+          // We'll handle the default mask creation after sorting
+        }
+        
         // Sort masks by z-index (lower z-index = bottom layer, higher = top layer)
-        const sortedMasks = [...validMasks].sort((a, b) => (a.zIndex ?? 0) - (b.zIndex ?? 0));
+        const sortedMasks = [...masksToProcess].sort((a, b) => (a.zIndex ?? 0) - (b.zIndex ?? 0));
         
-        const trajectories = sortedMasks.map(mask => mask.trajectory?.points || []);
-  
-        // Generate frame-by-frame rotation and scale arrays from keyframes
-        const rotations = sortedMasks.map(mask => {
-          if (mask.rotationKeyframes && mask.rotationKeyframes.length > 0) {
-            return generateRotationTrajectory(mask.rotationKeyframes, videoGenUtils.totalFrames);
-          } else {
-            // Fallback to single value if no keyframes (rounded to integer)
-            return new Array(videoGenUtils.totalFrames).fill(0);
-          }
-        });
-
-        // Generate frame-by-frame rotation and scale arrays from keyframes
-        const scalings = sortedMasks.map(mask => {
-          if (mask.scaleKeyframes && mask.scaleKeyframes.length > 0) {
-            return generateScaleTrajectory(mask.scaleKeyframes, videoGenUtils.totalFrames);
-          } else {
-            // Fallback to single value if no keyframes (rounded to 2 decimal places)
-            return new Array(videoGenUtils.totalFrames).fill(1.00);
-          }
-        });
+        let trajectories, rotations, scalings, uploadedMaskUrls;
         
-        // Upload all mask images to UploadThing
-        const maskUploadPromises = sortedMasks.map(async (mask, index) => {
-          if (!mask.binaryUrl) return "";
+        if (shouldUseDefaultMask) {
+          // Create a completely black mask image
+          const blackMaskCanvas = document.createElement('canvas');
+          blackMaskCanvas.width = 960;
+          blackMaskCanvas.height = 640;
+          const blackMaskCtx = blackMaskCanvas.getContext('2d');
+          if (blackMaskCtx) {
+            // Fill with black
+            blackMaskCtx.fillStyle = 'black';
+            blackMaskCtx.fillRect(0, 0, 960, 640);
+          }
           
-          const maskFile = await dataUrlToFile(mask.binaryUrl, `mask-${index}.png`);
-          return uploadToUploadThingResidual(maskFile);
-        });
-        
-        const uploadedMaskUrls = await Promise.all(maskUploadPromises);
+          // Convert to data URL and upload
+          const blackMaskDataUrl = blackMaskCanvas.toDataURL('image/png');
+          const blackMaskFile = await dataUrlToFile(blackMaskDataUrl, 'default-black-mask.png');
+          const blackMaskUrl = await uploadToUploadThingResidual(blackMaskFile);
+          
+          // Create default arrays with single black mask
+          trajectories = [new Array(videoGenUtils.totalFrames).fill({ x: 480, y: 320 })]; // Stationary trajectory at center
+          rotations = [new Array(videoGenUtils.totalFrames).fill(0)]; // No rotation
+          scalings = [new Array(videoGenUtils.totalFrames).fill(1.00)]; // No scaling
+          uploadedMaskUrls = [blackMaskUrl];
+        } else {
+          // Original logic for when there are valid masks
+          trajectories = sortedMasks.map(mask => mask.trajectory?.points || []);
+
+          // Generate frame-by-frame rotation and scale arrays from keyframes
+          rotations = sortedMasks.map(mask => {
+            if (mask.rotationKeyframes && mask.rotationKeyframes.length > 0) {
+              return generateRotationTrajectory(mask.rotationKeyframes, videoGenUtils.totalFrames);
+            } else {
+              // Fallback to single value if no keyframes (rounded to integer)
+              return new Array(videoGenUtils.totalFrames).fill(0);
+            }
+          });
+
+          // Generate frame-by-frame rotation and scale arrays from keyframes
+          scalings = sortedMasks.map(mask => {
+            if (mask.scaleKeyframes && mask.scaleKeyframes.length > 0) {
+              return generateScaleTrajectory(mask.scaleKeyframes, videoGenUtils.totalFrames);
+            } else {
+              // Fallback to single value if no keyframes (rounded to 2 decimal places)
+              return new Array(videoGenUtils.totalFrames).fill(1.00);
+            }
+          });
+          
+          // Upload all mask images to UploadThing
+          const maskUploadPromises = sortedMasks.map(async (mask, index) => {
+            if (!mask.binaryUrl) return "";
+            
+            const maskFile = await dataUrlToFile(mask.binaryUrl, `mask-${index}.png`);
+            return uploadToUploadThingResidual(maskFile);
+          });
+          
+          uploadedMaskUrls = await Promise.all(maskUploadPromises);
+        }
   
         const truckVector = {"x": -cameraControl.horizontalTruck, "y": cameraControl.verticalTruck};
         const panVector = {"x": cameraControl.horizontalPan, "y": cameraControl.verticalPan};
