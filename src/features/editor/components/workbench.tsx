@@ -1024,7 +1024,7 @@ export const Workbench = ({
             {/* Generate Video Submit Button */}
             <div className="mt-auto">
               {/* Compute Mode Toggle */}
-              <div className={`mt-auto opacity-50`}>
+              {/* <div className={`mt-auto opacity-50`}>
                 <div className="flex flex-col w-full overflow-hidden mb-2">
                   <button 
                     className={`py-2 font-medium text-sm rounded-t-md w-full transition-colors duration-200 ${
@@ -1054,7 +1054,7 @@ export const Workbench = ({
                     Flash
                   </button>
                 </div>
-              </div>
+              </div> */}
               
               <button 
                 className="w-full aspect-square bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors duration-200 flex flex-col items-center justify-center gap-1 px-2 py-1 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-blue-600"

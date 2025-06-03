@@ -600,7 +600,7 @@ export const FirstFrameEditorRightSidebar = ({
               <Button className="w-full h-16 mb-10" onClick={() => handleGenerateVideo()} disabled={isGeneratingVideo}>
                 {isGeneratingVideo ? (
                   <>
-                    <Loader2 className="h-6 w-6 animate-spin" />
+                    <Loader2 className="h-6 w-6 animate-spin mr-2" />
                     <span className="text-xs">Sending request...</span>
                   </>
                 ) : (
