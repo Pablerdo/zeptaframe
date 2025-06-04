@@ -89,6 +89,54 @@ export const AnimateRightSidebar = ({
   // Add ref for trajectory length tracking
   const trajectoryLengthRef = useRef(0);
 
+  // Helper function to generate next mask name with consistent numbering
+  const generateNextMaskName = (type: 'auto' | 'manual'): string => {
+    const validMasks = segmentedMasks.filter(mask => !mask.inProgress && mask.url);
+    const typePrefix = type === 'manual' ? 'Manual Mask' : 'Object';
+    
+    // Get existing numbers for this type
+    const existingNumbers = validMasks
+      .filter(mask => mask.name.startsWith(typePrefix))
+      .map(mask => {
+        const match = mask.name.match(new RegExp(`${typePrefix}\\s+(\\d+)`));
+        return match ? parseInt(match[1], 10) : 0;
+      })
+      .filter(num => num > 0);
+    
+    // Find the next available number
+    let nextNumber = 1;
+    while (existingNumbers.includes(nextNumber)) {
+      nextNumber++;
+    }
+    
+    return `${typePrefix} ${nextNumber}`;
+  };
+
+  // Helper function to get next z-index
+  const getNextZIndex = (): number => {
+    const validMasks = segmentedMasks.filter(mask => !mask.inProgress && mask.url);
+    return validMasks.length;
+  };
+
+  // Helper function to normalize z-indices after deletion
+  const normalizeZIndices = (masks: SegmentedMask[]): SegmentedMask[] => {
+    const validMasks = masks.filter(mask => !mask.inProgress && mask.url);
+    
+    // Sort by current z-index to maintain order
+    const sortedMasks = [...validMasks].sort((a, b) => (a.zIndex ?? 0) - (b.zIndex ?? 0));
+    
+    // Reassign z-indices sequentially
+    const normalizedMasks = masks.map(mask => {
+      if (!mask.inProgress && mask.url) {
+        const sortedIndex = sortedMasks.findIndex(sorted => sorted.id === mask.id);
+        return { ...mask, zIndex: sortedIndex };
+      }
+      return mask;
+    });
+    
+    return normalizedMasks;
+  };
+
   // Helper function to calculate centroid from binary mask
   const calculateCentroidFromBinaryMask = (binaryCanvas: HTMLCanvasElement): { x: number; y: number } | null => {
     const ctx = binaryCanvas.getContext('2d');
@@ -292,24 +340,6 @@ export const AnimateRightSidebar = ({
         }
       });
       
-      const updatedMasks = [
-        ...segmentedMasks,
-        {
-          id: 'manual-mask-in-progress',
-          name: 'Manual Mask (in progress)',
-          url: '',
-          binaryUrl: '',
-          inProgress: true,
-          isApplied: false
-        }
-      ];
-
-      // Force update by creating a new array
-      setSegmentedMasks([...updatedMasks]);
-      
-      // Reset any current mask
-      setMask(null);
-      
       // Set cursor to crosshair for manual drawing
       editor.canvas.defaultCursor = 'crosshair';
     }
@@ -360,24 +390,6 @@ export const AnimateRightSidebar = ({
         restartPreviewAnimations(updatedMasks);
       }
     }
-  };
-
-  // Helper function to ensure all masks have proper z-indices
-  const ensureZIndices = (masks: SegmentedMask[]): SegmentedMask[] => {
-    // Get all valid masks (not in progress and have URLs)
-    const validMaskIndices = masks
-      .map((mask, idx) => ({ mask, idx }))
-      .filter(({ mask }) => !mask.inProgress && mask.url)
-      .map(({ idx }) => idx);
-    
-    // Assign z-indices based on position in array
-    let zIndex = 0;
-    return masks.map((mask, idx) => {
-      if (!mask.inProgress && mask.url) {
-        return { ...mask, zIndex: mask.zIndex ?? zIndex++ };
-      }
-      return mask;
-    });
   };
 
   const handleSaveInProgressManualMask = () => {
@@ -518,29 +530,22 @@ export const AnimateRightSidebar = ({
         // Calculate centroid from the binary mask
         const calculatedCentroid = calculateCentroidFromBinaryMask(binaryCanvas);
         
-        // Get count of actual saved masks (excluding the stub)
-        const savedMasksCount = segmentedMasks.filter(mask => !mask.inProgress && mask.url).length;
-        
-        // Add the new mask to segmentedMasks
+        // Add the new mask to segmentedMasks with clean numbering
         const newMaskId = `mask-${Date.now()}`;
         const newMask: SegmentedMask = {
           id: newMaskId,
-          name: `Manual Mask ${segmentedMasks.length + 1}`,
+          name: generateNextMaskName('manual'),
           url: tempCanvas.toDataURL(),
           binaryUrl: binaryCanvas.toDataURL(),
           isApplied: true,
           trajectory: undefined,
           rotation: 0,
-          centroid: calculatedCentroid || undefined, // Add the calculated centroid
-          zIndex: savedMasksCount // Assign z-index based on count of saved masks
+          centroid: calculatedCentroid || undefined,
+          zIndex: getNextZIndex()
         };
         
-        // Remove the 'in progress' mask and add the new one
-        const updatedMasks = [newMask].concat(
-          segmentedMasks.filter(mask => mask.id !== 'manual-mask-in-progress')
-        );
-        
-        setSegmentedMasks(updatedMasks);
+        // Simply add the new mask to the existing array
+        setSegmentedMasks([...segmentedMasks, newMask]);
 
         // Apply the mask to the canvas
         fabric.Image.fromURL(tempCanvas.toDataURL(), (maskImage) => {
@@ -585,10 +590,6 @@ export const AnimateRightSidebar = ({
       const existingPaths = editor.canvas.getObjects().filter(obj => obj.data?.isManualMaskPath);
       existingPaths.forEach(path => editor.canvas.remove(path));
       
-      // Remove the in-progress mask from the list
-      const updatedMasks = segmentedMasks.filter(mask => mask.id !== 'manual-mask-in-progress');
-      setSegmentedMasks(updatedMasks);
-      
       // Reset canvas state
       editor.canvas.defaultCursor = 'default';
       
@@ -612,16 +613,6 @@ export const AnimateRightSidebar = ({
     setActiveSegmentationTool("auto");
     
     if (editor) {
-      // Create a completely new array with a unique ID for the in-progress mask
-      const updatedMasks = [
-        { id: crypto.randomUUID(), url: '', binaryUrl: '', name: 'New Object', inProgress: true },
-        ...segmentedMasks.map(mask => ({ ...mask, isApplied: false }))
-      ];
-
-      // Force update by creating a new array
-      setSegmentedMasks([...updatedMasks]);
-      
-      
       // Reset any current mask
       setMask(null);
       
@@ -636,29 +627,21 @@ export const AnimateRightSidebar = ({
       const maskBinaryDataUrl = maskBinary.toDataURL('image/png');
       const newMaskId = crypto.randomUUID();
       
-      // Get count of actual saved masks (excluding the stub)
-      const savedMasksCount = segmentedMasks.filter(mask => mask.url).length;
+      // Create new mask with clean numbering
+      const newMask: SegmentedMask = {
+        id: newMaskId,
+        name: generateNextMaskName('auto'),
+        url: maskDataUrl,
+        binaryUrl: maskBinaryDataUrl,
+        isApplied: true,
+        centroid: maskCentroid || undefined,
+        zIndex: getNextZIndex()
+      };
 
-      // First update the state with a new array
+      // Add to existing masks and unapply others
       const updatedMasks = [
-        { id: "", url: '', binaryUrl: '', name: 'New Object', inProgress: false }, // New stub at top
-        ...segmentedMasks.map((mask, index) => 
-          index === 0 ? 
-          { 
-            ...mask, 
-            id: newMaskId,
-            url: maskDataUrl, 
-            binaryUrl: maskBinaryDataUrl,
-            inProgress: false, 
-            isApplied: true,
-            name: `Object ${savedMasksCount + 1}`,
-            centroid: maskCentroid || undefined, // Save the centroid from the mask detection
-            zIndex: savedMasksCount // Assign z-index based on count of saved masks
-          } : {
-            ...mask,
-            isApplied: false
-          }
-        ).filter(mask => !mask.inProgress)
+        ...segmentedMasks.map(mask => ({ ...mask, isApplied: false })),
+        newMask
       ];
       setSegmentedMasks(updatedMasks);
       
@@ -693,8 +676,6 @@ export const AnimateRightSidebar = ({
           // Add to canvas and ensure data is set
           editor.canvas.add(maskImage);
           
-          // Double check the data is set
-          const addedObject = editor.canvas.getObjects().find(obj => obj.data?.isMask);
           setActiveSegmentationTool("none");
           editor.canvas.renderAll();
         });
@@ -721,15 +702,6 @@ export const AnimateRightSidebar = ({
     setPrevMaskArray(null);
     pointsRef.current = [];
     setActiveSegmentationTool("none");
-    
-    // Reset the top stub to "New Mask" state
-    if (editor) {
-      const updatedMasks = [
-        { id: "", url: '', binaryUrl: '', name: 'New Object', inProgress: false },
-        ...segmentedMasks.filter(mask => !mask.inProgress)
-      ];
-      setSegmentedMasks(updatedMasks);
-    }
   };
 
   const handleApplyMask = (maskUrl: string, startAnimation: boolean = true) => {
@@ -912,19 +884,13 @@ export const AnimateRightSidebar = ({
       });
     }
     
-    // Continue with deletion
+    // Remove the mask from the array
     const updatedMasks = segmentedMasks.filter((_, i) => i !== index);
     
-    // Reassign z-indices to remaining masks
-    let zIndex = 0;
-    const reindexedMasks = updatedMasks.map(mask => {
-      if (!mask.inProgress && mask.url) {
-        return { ...mask, zIndex: zIndex++ };
-      }
-      return mask;
-    });
+    // Normalize z-indices to maintain proper order
+    const normalizedMasks = normalizeZIndices(updatedMasks);
     
-    setSegmentedMasks(reindexedMasks);
+    setSegmentedMasks(normalizedMasks);
     
     if (editor.canvas) {
       const existingMasks = editor.canvas.getObjects().filter(obj => obj.data?.isMask);
@@ -1773,122 +1739,93 @@ export const AnimateRightSidebar = ({
         
           {/* Segmented masks list */}
           <div className="space-y-2">
-            {/* Always show the "New Object" stub at the top */}
-            <div className="flex items-center bg-gray-100 dark:bg-[#111530] p-2 border border-gray-300 dark:border-blue-800 rounded-md">
-              <div className="flex items-center justify-between w-full">
-                {activeSegmentationTool !== "auto" ? (
-                  /* Add loading and status indicator */
-                  <>
-                    <Button
-                      variant="default"
-                      size="sm"
-                      onClick={handleNewMask}
-                      className="bg-blue-600 hover:bg-blue-700 text-white"
-                      disabled={samWorkerLoading || activeSegmentationTool === "manual"}
-                    >
-                      {samWorkerLoading ? (
-                        <Loader2 className="w-4 h-4 mr-1 animate-spin" />
-                      ) : (
-                        <Plus className="w-4 h-4 mr-1" />
-                      )}
-                        New Auto Mask
-                    </Button>
-                  </>
-                ) : (
-                  <div className="flex flex-col gap-2 w-full">
-                    <div className="w-full text-md text-center pl-1 animate-[pulse_1s_ease-in-out_infinite]">Select the object to animate</div>
-                    <div className="flex gap-2 w-full">
-                      <Button
-                        variant="default"
-                        size="sm"
-                        onClick={handleSaveInProgressMask}
-                        disabled={!mask}
-                        className="flex-1 bg-green-600 hover:bg-green-700 text-white"
-                      >
-                        <Check className="w-4 h-4 mr-1" />
-                        Save Mask as Object
-                      </Button>
-                      <Button
-                        variant="default"
-                        size="sm"
-                        onClick={handleCancelInProgressMask}
-                        className="flex-1 bg-red-500 hover:bg-red-600 text-white"
-                      >
-                        <X className="w-4 h-4 mr-1" />
-                        Cancel
-                      </Button>
-                    </div>
+            {/* Show mask creation buttons when no segmentation is active */}
+            {activeSegmentationTool === "none" && (
+              <div className="grid grid-cols-2 gap-2">
+                <Button
+                  variant="default"
+                  size="sm"
+                  onClick={handleNewMask}
+                  className="bg-blue-600 hover:bg-blue-700 text-white"
+                  disabled={samWorkerLoading}
+                >
+                  {samWorkerLoading ? (
+                    <Loader2 className="w-4 h-4 mr-1 animate-spin" />
+                  ) : (
+                    <Plus className="w-4 h-4 mr-1" />
+                  )}
+                  Auto Mask
+                </Button>
+                <Button
+                  variant="default"
+                  size="sm"
+                  onClick={handleNewManualMask}
+                  className="bg-blue-600 hover:bg-blue-700 text-white"
+                >
+                  <Plus className="w-4 h-4 mr-1" />
+                  Manual Mask
+                </Button>
+              </div>
+            )}
+
+            {/* Show segmentation-in-progress UI */}
+            {activeSegmentationTool === "auto" && (
+              <div className="bg-blue-50 dark:bg-blue-900/20 p-3 border border-blue-300 dark:border-blue-700 rounded-md">
+                <div className="text-center space-y-3">
+                  <div className="text-sm font-medium text-blue-800 dark:text-blue-200 animate-pulse">
+                    Click on the object you want to animate
                   </div>
-                )}
-              </div>
-            </div>
-
-            {/* Add a manual animation button */}
-
-            <div className="flex items-center bg-gray-200 dark:bg-[#111530] justify-between p-2 border border-gray-300 dark:border-blue-800 rounded-md w-full">
-              <div className="flex items-center space-x-2 w-full">
-                {activeSegmentationTool !== "manual" ? (
-                  /* Add loading and status indicator */
-                  <>
+                  <div className="flex gap-2">
                     <Button
                       variant="default"
-                      className="bg-blue-600 hover:bg-blue-700 text-white"
                       size="sm"
-                      onClick={() => handleNewManualMask()}
-                      disabled={activeSegmentationTool === "auto"}
+                      onClick={handleSaveInProgressMask}
+                      disabled={!mask}
+                      className="flex-1 bg-green-600 hover:bg-green-700 text-white"
                     >
-                      <Plus className="w-4 h-4 mr-1" />
-                      New Manual Mask
+                      <Check className="w-4 h-4 mr-1" />
+                      Save Object
                     </Button>
-                  </>
-                ) : (
-                  <>   
-                    <div className="flex flex-col gap-2 w-full">
-                      <div className="text-md text-center pl-1 text-white animate-[pulse_1s_ease-in-out_infinite]">
-                        Encircle the object to create a mask. 
-                      </div>
-                      <Button
-                        variant="default" 
-                        size="sm"
-                        onClick={handleCancelInProgressManualMask}
-                        className="w-full bg-red-500 hover:bg-red-600 text-white"
-                      >
-                        <X className="w-4 h-4" />
-                        Cancel
-                      </Button>
-                    </div>
-                  </>
-                )}
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={handleCancelInProgressMask}
+                      className="flex-1"
+                    >
+                      <X className="w-4 h-4 mr-1" />
+                      Cancel
+                    </Button>
+                  </div>
+                </div>
               </div>
-            </div>
+            )}
 
-
-
-            {/* Degradation Slider
-            <div className="bg-gray-100 dark:bg-[#111530] p-3 border border-gray-300 dark:border-blue-800 rounded-md mb-2">
-              <div className="flex items-center justify-between mb-2">
-                <Label htmlFor="degradation-slider" className="text-sm font-medium">
-                  Mask Degradation: {degradation.toFixed(2)}
-                </Label>
+            {activeSegmentationTool === "manual" && (
+              <div className="bg-purple-50 dark:bg-purple-900/20 p-3 border border-purple-300 dark:border-purple-700 rounded-md">
+                <div className="text-center space-y-3">
+                  <div className="text-sm font-medium text-purple-800 dark:text-purple-200 animate-pulse">
+                    Draw around the object to create a mask
+                  </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleCancelInProgressManualMask}
+                    className="w-full"
+                  >
+                    <X className="w-4 h-4 mr-1" />
+                    Cancel
+                  </Button>
+                </div>
               </div>
-              <Slider
-                id="degradation-slider"
-                min={0}
-                max={1}
-                step={0.05}
-                value={[degradation]}
-                onValueChange={(values) => setDegradation(values[0])}
-                className="w-full"
-              />
-              <div className="flex justify-between text-xs text-muted-foreground mt-1">
-                <span>0</span>
-                <span>1</span>
-              </div>
-            </div> */}
-            {/* add a separator */}
-            <div className="h-px bg-gray-300 dark:bg-gray-700 w-full my-2" />
+            )}
+
+            {/* Separator */}
+            {(activeSegmentationTool !== "none" || segmentedMasks.length > 0) && (
+              <div className="h-px bg-gray-300 dark:bg-gray-700 w-full my-2" />
+            )}
+
             {/* Empty state message */}
-            {segmentedMasks.length === 0 && (
+            {segmentedMasks.length === 0 && activeSegmentationTool === "none" && (
               <div className="p-6 text-center border border-dashed border-gray-300 dark:border-gray-700 rounded-md mt-3 bg-gradient-to-b from-background to-muted/30 flex flex-col items-center justify-center space-y-3">
                 <div className="w-16 h-16 rounded-full bg-muted/40 flex items-center justify-center">
                   <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 text-muted-foreground" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
@@ -1901,371 +1838,369 @@ export const AnimateRightSidebar = ({
                   </svg>
                 </div>
                 <div>
-                  <h4 className="text-base font-medium text-foreground">No animations yet</h4>
+                  <h4 className="text-base font-medium text-foreground">No objects yet</h4>
                   <p className="text-sm text-muted-foreground mt-1 max-w-xs mx-auto">
-                    Create your first object by clicking &quot;New Mask&quot; above to start segmenting content.
+                    Create your first animated object using the buttons above
                   </p>
                 </div>
               </div>
             )}
 
-            {/* Show saved masks */}
-            {segmentedMasks
-              .filter(mask => !mask.inProgress && mask.url)
-              .map((mask, index) => {
-                // Get the actual index in the full array
-                const actualIndex = segmentedMasks.findIndex(m => m.url === mask.url);
-                const isEditingMaskName = editingMaskId === mask.url;
-                const isRetracing = recordingMotion === mask.url;
-                const hasTrajectory = !!mask.trajectory;
-                
-                return (
-                  <div key={mask.url} className={`flex flex-col p-2 border border-gray-300 dark:border-blue-700 rounded-md space-y-2 dark:bg-[#111530] ${activeSegmentationTool !== "none" ? 'opacity-50' : ''} ${mask.isApplied ? 'border-green-700 dark:border-green-700' : ''}`}>
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center space-x-2">
-                        <img 
-                          src={mask.binaryUrl} 
-                          alt={mask.name} 
-                          className="w-12 h-12 object-contain"
-                        />
-                        {isEditingMaskName ? (
-                          <div className="flex items-center space-x-2">
-                            <Input
-                              value={tempMaskName}
-                              onChange={(e) => setTempMaskName(e.target.value)}
-                              onKeyPress={(e) => handleKeyPress(e, actualIndex)}
-                              className="h-8 w-40 text-sm"
-                              autoFocus
-                              disabled={activeSegmentationTool !== "none"}
-                            />
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={() => handleFinishRename(actualIndex, tempMaskName)}
-                              className="h-8 w-8"
-                              disabled={activeSegmentationTool !== "none"}
-                            >
-                              <Check className="w-4 h-4" />
-                            </Button> 
-                          </div>
-                        ) : (
-                          <div className="flex items-center space-x-0">
-                            <span className="text-sm">{mask.name}</span>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={() => handleStartRename(actualIndex)}
-                              className="h-8 w-8"
-                              disabled={activeSegmentationTool !== "none"}
-                            >
-                              <Pencil className="w-3 h-3" />
-                            </Button>
-                          </div>
-                        )}
-                      </div>
-                      {!isEditingMaskName && (
+            {/* Show all masks */}
+            {segmentedMasks.map((mask, index) => {
+              // Get the actual index in the full array
+              const actualIndex = segmentedMasks.findIndex(m => m.url === mask.url);
+              const isEditingMaskName = editingMaskId === mask.url;
+              const isRetracing = recordingMotion === mask.url;
+              const hasTrajectory = !!mask.trajectory;
+              
+              return (
+                <div key={mask.url} className={`flex flex-col p-2 border border-gray-300 dark:border-blue-700 rounded-md space-y-2 dark:bg-[#111530] ${activeSegmentationTool !== "none" ? 'opacity-50' : ''} ${mask.isApplied ? 'border-green-700 dark:border-green-700' : ''}`}>
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center space-x-2">
+                      <img 
+                        src={mask.binaryUrl} 
+                        alt={mask.name} 
+                        className="w-12 h-12 object-contain"
+                      />
+                      {isEditingMaskName ? (
                         <div className="flex items-center space-x-2">
-                          <Button
-                            variant="default"
-                            size="sm"
-                            onClick={() => handleApplyMask(mask.url)}
-                            className={mask.isApplied ? "bg-green-600 hover:bg-green-700 text-white" : "bg-blue-700 hover:bg-blue-800 text-white"}
+                          <Input
+                            value={tempMaskName}
+                            onChange={(e) => setTempMaskName(e.target.value)}
+                            onKeyPress={(e) => handleKeyPress(e, actualIndex)}
+                            className="h-8 w-40 text-sm"
+                            autoFocus
                             disabled={activeSegmentationTool !== "none"}
-                          >
-                            {mask.isApplied ? 'Applied' : 'Apply'}
-                          </Button>
-                          
-                          {/* Z-index controls */}
-                          <div className="flex items-center space-x-0.5 bg-gray-200 dark:bg-gray-700 rounded px-0.5">
-                            
-                            <div className="flex flex-col">
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                onClick={() => handleZIndexChange(actualIndex, 'up')}
-                                className="h-4 w-3 p-0"
-                                disabled={
-                                  activeSegmentationTool !== "none" || 
-                                  mask.zIndex === segmentedMasks.filter(m => !m.inProgress && m.url).length - 1
-                                }
-                                title="Move layer up"
-                              >
-                                <ChevronUp className="w-3 h-3" />
-                              </Button>
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                onClick={() => handleZIndexChange(actualIndex, 'down')}
-                                className="h-4 w-3 p-0"
-                                disabled={activeSegmentationTool !== "none" || mask.zIndex === 0}
-                                title="Move layer down"
-                              >
-                                <ChevronDown className="w-3 h-3" />
-                              </Button>
-                            </div>
-                            
-                            <span className="text-md font-medium px-1 min-w-[8px] text-center">
-                              {(mask.zIndex ?? index) + 1}
-                            </span>
- 
-                          </div>
-                          
+                          />
                           <Button
                             variant="ghost"
                             size="icon"
-                            onClick={() => handleDeleteMask(actualIndex)}
-                            className="h-8 w-8 hover:text-red-500 transition-colors"
+                            onClick={() => handleFinishRename(actualIndex, tempMaskName)}
+                            className="h-8 w-8"
                             disabled={activeSegmentationTool !== "none"}
                           >
-                            <Trash2 className="w-4 h-4" />
-                          </Button>
+                            <Check className="w-4 h-4" />
+                          </Button> 
                         </div>
-                      )}
-                    </div>
-                    <div className="rounded-md bg-gray-100 dark:bg-gray-800 p-2">
-                      <div className="flex items-center space-x-2 cursor-pointer select-none" 
-                          onClick={() => {
-                            if (editor && activeSegmentationTool === "none") {
-                              const updatedMasks = segmentedMasks.map((m, i) => 
-                                m.url === mask.url ? { ...m, isTextDetailsOpen: !m.isTextDetailsOpen } : m
-                              );
-                              setSegmentedMasks(updatedMasks);
-                            }
-                          }}>
-                        <ChevronRight
-                          className={`w-4 h-4 transition-transform ${mask.isTextDetailsOpen ? 'rotate-90' : ''}`}
-                        />
-                        <span className="text-sm font-medium">Advanced Options</span>
-                      </div>
-                      {mask.isTextDetailsOpen && (
-                        <div className="mt-2 space-y-4">
-                          {/* Rotation Timeline Section */}
-                          <div className="flex flex-col bg-gray-100 dark:bg-gray-800 p-1 border border-gray-300 dark:border-gray-500 rounded-md">
-                            <div className="flex items-center justify-between">
-                              <Label className="text-sm font-medium text-gray-800 dark:text-gray-100 pl-1">
-                                Rotation Timeline
-                              </Label>
-                              {mask.rotationKeyframes && mask.rotationKeyframes.length > 1 && (
-                                <span className="text-xs bg-purple-100 dark:bg-purple-900 text-purple-700 dark:text-purple-300 px-2 py-1 mt-1 mr-1 rounded">
-                                  {mask.rotationKeyframes.length - 1} keyframes
-                                </span>
-                              )}
-                            </div>
-                            {!mask.trajectory ? (
-                              <div className="text-xs text-muted-foreground border rounded border-dashed">
-                                Create a trajectory first to enable rotation timeline
-                              </div>
-                            ) : (
-                              <RotationTimeline
-                                mask={mask}
-                                onRotationChange={(rotationKeyframes) => {
-                                  if (editor && activeSegmentationTool === "none") {
-                                    // Generate rotation trajectory from keyframes
-                                    const frameCount = mask.trajectory?.points.length || videoGenUtils.totalFrames;
-                                    const rotationTrajectory = generateRotationTrajectory(rotationKeyframes, frameCount);
-                                    
-                                    const updatedMasks = segmentedMasks.map((m, i) => 
-                                      m.url === mask.url ? { 
-                                        ...m, 
-                                        rotationKeyframes,
-                                        rotationTrajectory 
-                                      } : m
-                                    );
-                                    setSegmentedMasks(updatedMasks);
-                                    
-                                    // If mask is applied and has a trajectory, restart the animation with new values
-                                    if (mask.isApplied && mask.trajectory) {
-                                      // Stop existing animation if any
-                                      if (activeAnimations[mask.url]) {
-                                        activeAnimations[mask.url].stop();
-                                      }
-                                      
-                                      // Create and start new animation with updated values
-                                      const animation = createTrajectoryAnimation(
-                                        editor,
-                                        mask.url,
-                                        mask.trajectory.points,
-                                        rotationTrajectory,
-                                        mask.scaleTrajectory,
-                                        mask.zIndex
-                                      );
-                                      
-                                      if (animation) {
-                                        animation.start();
-                                        setActiveAnimations(prev => ({
-                                          ...prev,
-                                          [mask.url]: {
-                                            stop: animation.stop,
-                                            isPlaying: true
-                                          }
-                                        }));
-                                      }
-                                    }
-                                  }
-                                }}
-                                disabled={activeSegmentationTool !== "none"}
-                              />
-                            )}
-                          </div>
-
-                          {/* Scale Timeline Section */}
-                          <div className="flex flex-col bg-gray-100 dark:bg-gray-800 p-1 border border-gray-300 dark:border-gray-600 rounded-md">
-                            <div className="flex items-center justify-between">
-                              <Label className="text-sm font-medium text-gray-800 dark:text-gray-100 pl-1">
-                                Scale Timeline
-                              </Label>
-                              {mask.scaleKeyframes && mask.scaleKeyframes.length > 1 && (
-                                <span className="text-xs bg-emerald-100 dark:bg-emerald-900 text-emerald-700 dark:text-emerald-300 px-2 py-1 rounded">
-                                  {mask.scaleKeyframes.length - 1} keyframes
-                                </span>
-                              )}
-                            </div>
-                            {!mask.trajectory ? (
-                              <div className="text-xs text-muted-foreground border rounded border-dashed">
-                                Create a trajectory first to enable scale timeline
-                              </div>
-                            ) : (
-                              <ScaleTimeline
-                                mask={mask}
-                                onScaleChange={(scaleKeyframes) => {
-                                  if (editor && activeSegmentationTool === "none") {
-                                    // Generate scale trajectory from keyframes
-                                    const frameCount = mask.trajectory?.points.length || videoGenUtils.totalFrames;
-                                    const scaleTrajectory = generateScaleTrajectory(scaleKeyframes, frameCount);
-                                    
-                                    const updatedMasks = segmentedMasks.map((m, i) => 
-                                      m.url === mask.url ? { 
-                                        ...m, 
-                                        scaleKeyframes,
-                                        scaleTrajectory 
-                                      } : m
-                                    );
-                                    setSegmentedMasks(updatedMasks);
-                                    
-                                    // If mask is applied and has a trajectory, restart the animation with new values
-                                    if (mask.isApplied && mask.trajectory) {
-                                      // Stop existing animation if any
-                                      if (activeAnimations[mask.url]) {
-                                        activeAnimations[mask.url].stop();
-                                      }
-                                      
-                                      // Create and start new animation with updated values
-                                      const animation = createTrajectoryAnimation(
-                                        editor,
-                                        mask.url,
-                                        mask.trajectory.points,
-                                        mask.rotationTrajectory,
-                                        scaleTrajectory,
-                                        mask.zIndex
-                                      );
-                                      
-                                      if (animation) {
-                                        animation.start();
-                                        setActiveAnimations(prev => ({
-                                          ...prev,
-                                          [mask.url]: {
-                                            stop: animation.stop,
-                                            isPlaying: true
-                                          }
-                                        }));
-                                      }
-                                    }
-                                  }
-                                }}
-                                disabled={activeSegmentationTool !== "none"}
-                              />
-                            )}
-                          </div>
-
-                          {/* Text Details Section */}
-                          <div className="flex flex-col bg-gray-100 dark:bg-gray-800 p-1 border border-gray-300 dark:border-gray-600 rounded-md">
-                            <Label className="text-sm font-medium text-gray-800 dark:text-gray-100 pl-1 my-1">
-                                Text Details
-                            </Label>
-                            <textarea
-                              className="w-full p-2 text-sm border rounded-md min-h-[60px] resize-y"
-                              placeholder="Add specific object motion details to help with generation"
-                              value={mask.textDetails || ""}
-                              onChange={(e) => {
-                                if (editor && activeSegmentationTool === "none") {
-                                  const updatedMasks = segmentedMasks.map((m, i) => 
-                                    m.url === mask.url ? { ...m, textDetails: e.target.value } : m
-                                  );
-                                  setSegmentedMasks(updatedMasks);
-                                }
-                              }}
-                              rows={2}
-                              disabled={activeSegmentationTool !== "none"}
-                            />
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                    
-                    {/* Trajectory interaction buttons - 3 states:
-                        1. Retracing (show Save/Cancel)
-                        2. Has trajectory (show Show/Hide + Retrace)
-                        3. No trajectory (show Trace Trajectory) */}
-                    {isRetracing ? (
-                      <div className="flex space-x-2">
-                        {hasFinishedDragging ? ( 
+                      ) : (
+                        <div className="flex items-center space-x-0">
+                          <span className="text-sm">{mask.name}</span>
                           <Button
-                            className="flex-1 bg-green-600 hover:bg-green-700 text-white"
-                            size="sm"
-                            onClick={handleSaveMotion}
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => handleStartRename(actualIndex)}
+                            className="h-8 w-8"
                             disabled={activeSegmentationTool !== "none"}
                           >
-                            <Check className="w-4 h-4 mr-1" />
-                            Save Motion
+                            <Pencil className="w-3 h-3" />
                           </Button>
-                        ) : (
-                          <span className="text-sm text-muted-foreground animate-pulse">
-                            Drag and drop the object to create a trajectory
-                          </span>    
-                        )}
+                        </div>
+                      )}
+                    </div>
+                    {!isEditingMaskName && (
+                      <div className="flex items-center space-x-2">
                         <Button
-                              className="flex-1 bg-red-600 hover:bg-red-700 text-white"
-                              size="sm"
-                              onClick={handleCancelMotion}
-                              disabled={activeSegmentationTool !== "none"}
-                            >
-                              <X className="w-4 h-4 mr-1" />
-                              Cancel
-                        </Button>
-                      </div>
-                    ) : hasTrajectory && mask.trajectory ? (
-                      <div className="flex space-x-2">
-                        <Button
-                          className="flex-1 bg-purple-700 hover:bg-purple-800 text-white"
+                          variant="default"
                           size="sm"
-                          onClick={() => handleRedoTrajectory(mask.url)}
+                          onClick={() => handleApplyMask(mask.url)}
+                          className={mask.isApplied ? "bg-green-600 hover:bg-green-700 text-white" : "bg-blue-700 hover:bg-blue-800 text-white"}
                           disabled={activeSegmentationTool !== "none"}
                         >
-                          <Hand className="w-4 h-4 mr-1" />
-                          Retrace Trajectory
+                          {mask.isApplied ? 'Applied' : 'Apply'}
                         </Button>
-                      </div>
-                    ) : (
-                      <Button
-                        className="w-full bg-purple-700 hover:bg-purple-800 text-white"
-                        size="sm"
-                        disabled={!mask.isApplied || activeSegmentationTool !== "none"}
-                        onClick={() => handleControlMotion(mask.id, mask.url)}
-                      >
-                        <Hand className="w-4 h-4 mr-1" />
-                        Trace Trajectory
-                      </Button>
-                    )}
-                    
-                    {/* Show trajectory limit reached message */}
-                    {isRetracing && trajectoryLimitReached && (
-                      <div className="mt-2 text-sm text-amber-500 font-medium">
-                        Trajectory length limit reached
+                        
+                        {/* Z-index controls */}
+                        <div className="flex items-center space-x-0.5 bg-gray-200 dark:bg-gray-700 rounded px-0.5">
+                          
+                          <div className="flex flex-col">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => handleZIndexChange(actualIndex, 'up')}
+                              className="h-4 w-3 p-0"
+                              disabled={
+                                activeSegmentationTool !== "none" || 
+                                mask.zIndex === segmentedMasks.filter(m => !m.inProgress && m.url).length - 1
+                              }
+                              title="Move layer up"
+                            >
+                              <ChevronUp className="w-3 h-3" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => handleZIndexChange(actualIndex, 'down')}
+                              className="h-4 w-3 p-0"
+                              disabled={activeSegmentationTool !== "none" || mask.zIndex === 0}
+                              title="Move layer down"
+                            >
+                              <ChevronDown className="w-3 h-3" />
+                            </Button>
+                          </div>
+                          
+                          <span className="text-md font-medium px-1 min-w-[8px] text-center">
+                            {(mask.zIndex ?? index) + 1}
+                          </span>
+
+                        </div>
+                        
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => handleDeleteMask(actualIndex)}
+                          className="h-8 w-8 hover:text-red-500 transition-colors"
+                          disabled={activeSegmentationTool !== "none"}
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
                       </div>
                     )}
                   </div>
-                );
-              })}
+                  <div className="rounded-md bg-gray-100 dark:bg-gray-800 p-2">
+                    <div className="flex items-center space-x-2 cursor-pointer select-none" 
+                        onClick={() => {
+                          if (editor && activeSegmentationTool === "none") {
+                            const updatedMasks = segmentedMasks.map((m, i) => 
+                              m.url === mask.url ? { ...m, isTextDetailsOpen: !m.isTextDetailsOpen } : m
+                            );
+                            setSegmentedMasks(updatedMasks);
+                          }
+                        }}>
+                      <ChevronRight
+                        className={`w-4 h-4 transition-transform ${mask.isTextDetailsOpen ? 'rotate-90' : ''}`}
+                      />
+                      <span className="text-sm font-medium">Advanced Options</span>
+                    </div>
+                    {mask.isTextDetailsOpen && (
+                      <div className="mt-2 space-y-4">
+                        {/* Rotation Timeline Section */}
+                        <div className="flex flex-col bg-gray-100 dark:bg-gray-800 p-1 border border-gray-300 dark:border-gray-500 rounded-md">
+                          <div className="flex items-center justify-between">
+                            <Label className="text-sm font-medium text-gray-800 dark:text-gray-100 pl-1">
+                              Rotation Timeline
+                            </Label>
+                            {mask.rotationKeyframes && mask.rotationKeyframes.length > 1 && (
+                              <span className="text-xs bg-purple-100 dark:bg-purple-900 text-purple-700 dark:text-purple-300 px-2 py-1 mt-1 mr-1 rounded">
+                                {mask.rotationKeyframes.length - 1} keyframes
+                              </span>
+                            )}
+                          </div>
+                          {!mask.trajectory ? (
+                            <div className="text-xs text-muted-foreground border rounded border-dashed">
+                              Create a trajectory first to enable rotation timeline
+                            </div>
+                          ) : (
+                            <RotationTimeline
+                              mask={mask}
+                              onRotationChange={(rotationKeyframes) => {
+                                if (editor && activeSegmentationTool === "none") {
+                                  // Generate rotation trajectory from keyframes
+                                  const frameCount = mask.trajectory?.points.length || videoGenUtils.totalFrames;
+                                  const rotationTrajectory = generateRotationTrajectory(rotationKeyframes, frameCount);
+                                  
+                                  const updatedMasks = segmentedMasks.map((m, i) => 
+                                    m.url === mask.url ? { 
+                                      ...m, 
+                                      rotationKeyframes,
+                                      rotationTrajectory 
+                                    } : m
+                                  );
+                                  setSegmentedMasks(updatedMasks);
+                                  
+                                  // If mask is applied and has a trajectory, restart the animation with new values
+                                  if (mask.isApplied && mask.trajectory) {
+                                    // Stop existing animation if any
+                                    if (activeAnimations[mask.url]) {
+                                      activeAnimations[mask.url].stop();
+                                    }
+                                    
+                                    // Create and start new animation with updated values
+                                    const animation = createTrajectoryAnimation(
+                                      editor,
+                                      mask.url,
+                                      mask.trajectory.points,
+                                      rotationTrajectory,
+                                      mask.scaleTrajectory,
+                                      mask.zIndex
+                                    );
+                                    
+                                    if (animation) {
+                                      animation.start();
+                                      setActiveAnimations(prev => ({
+                                        ...prev,
+                                        [mask.url]: {
+                                          stop: animation.stop,
+                                          isPlaying: true
+                                        }
+                                      }));
+                                    }
+                                  }
+                                }
+                              }}
+                              disabled={activeSegmentationTool !== "none"}
+                            />
+                          )}
+                        </div>
+
+                        {/* Scale Timeline Section */}
+                        <div className="flex flex-col bg-gray-100 dark:bg-gray-800 p-1 border border-gray-300 dark:border-gray-600 rounded-md">
+                          <div className="flex items-center justify-between">
+                            <Label className="text-sm font-medium text-gray-800 dark:text-gray-100 pl-1">
+                              Scale Timeline
+                            </Label>
+                            {mask.scaleKeyframes && mask.scaleKeyframes.length > 1 && (
+                              <span className="text-xs bg-emerald-100 dark:bg-emerald-900 text-emerald-700 dark:text-emerald-300 px-2 py-1 rounded">
+                                {mask.scaleKeyframes.length - 1} keyframes
+                              </span>
+                            )}
+                          </div>
+                          {!mask.trajectory ? (
+                            <div className="text-xs text-muted-foreground border rounded border-dashed">
+                              Create a trajectory first to enable scale timeline
+                            </div>
+                          ) : (
+                            <ScaleTimeline
+                              mask={mask}
+                              onScaleChange={(scaleKeyframes) => {
+                                if (editor && activeSegmentationTool === "none") {
+                                  // Generate scale trajectory from keyframes
+                                  const frameCount = mask.trajectory?.points.length || videoGenUtils.totalFrames;
+                                  const scaleTrajectory = generateScaleTrajectory(scaleKeyframes, frameCount);
+                                  
+                                  const updatedMasks = segmentedMasks.map((m, i) => 
+                                    m.url === mask.url ? { 
+                                      ...m, 
+                                      scaleKeyframes,
+                                      scaleTrajectory 
+                                    } : m
+                                  );
+                                  setSegmentedMasks(updatedMasks);
+                                  
+                                  // If mask is applied and has a trajectory, restart the animation with new values
+                                  if (mask.isApplied && mask.trajectory) {
+                                    // Stop existing animation if any
+                                    if (activeAnimations[mask.url]) {
+                                      activeAnimations[mask.url].stop();
+                                    }
+                                    
+                                    // Create and start new animation with updated values
+                                    const animation = createTrajectoryAnimation(
+                                      editor,
+                                      mask.url,
+                                      mask.trajectory.points,
+                                      mask.rotationTrajectory,
+                                      scaleTrajectory,
+                                      mask.zIndex
+                                    );
+                                    
+                                    if (animation) {
+                                      animation.start();
+                                      setActiveAnimations(prev => ({
+                                        ...prev,
+                                        [mask.url]: {
+                                          stop: animation.stop,
+                                          isPlaying: true
+                                        }
+                                      }));
+                                    }
+                                  }
+                                }
+                              }}
+                              disabled={activeSegmentationTool !== "none"}
+                            />
+                          )}
+                        </div>
+
+                        {/* Text Details Section */}
+                        <div className="flex flex-col bg-gray-100 dark:bg-gray-800 p-1 border border-gray-300 dark:border-gray-600 rounded-md">
+                          <Label className="text-sm font-medium text-gray-800 dark:text-gray-100 pl-1 my-1">
+                              Text Details
+                          </Label>
+                          <textarea
+                            className="w-full p-2 text-sm border rounded-md min-h-[60px] resize-y"
+                            placeholder="Add specific object motion details to help with generation"
+                            value={mask.textDetails || ""}
+                            onChange={(e) => {
+                              if (editor && activeSegmentationTool === "none") {
+                                const updatedMasks = segmentedMasks.map((m, i) => 
+                                  m.url === mask.url ? { ...m, textDetails: e.target.value } : m
+                                );
+                                setSegmentedMasks(updatedMasks);
+                              }
+                            }}
+                            rows={2}
+                            disabled={activeSegmentationTool !== "none"}
+                          />
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                  
+                  {/* Trajectory interaction buttons - 3 states:
+                      1. Retracing (show Save/Cancel)
+                      2. Has trajectory (show Show/Hide + Retrace)
+                      3. No trajectory (show Trace Trajectory) */}
+                  {isRetracing ? (
+                    <div className="flex space-x-2">
+                      {hasFinishedDragging ? ( 
+                        <Button
+                          className="flex-1 bg-green-600 hover:bg-green-700 text-white"
+                          size="sm"
+                          onClick={handleSaveMotion}
+                          disabled={activeSegmentationTool !== "none"}
+                        >
+                          <Check className="w-4 h-4 mr-1" />
+                          Save Motion
+                        </Button>
+                      ) : (
+                        <span className="text-sm text-muted-foreground animate-pulse">
+                          Drag and drop the object to create a trajectory
+                        </span>    
+                      )}
+                      <Button
+                            className="flex-1 bg-red-600 hover:bg-red-700 text-white"
+                            size="sm"
+                            onClick={handleCancelMotion}
+                            disabled={activeSegmentationTool !== "none"}
+                          >
+                            <X className="w-4 h-4 mr-1" />
+                            Cancel
+                      </Button>
+                    </div>
+                  ) : hasTrajectory && mask.trajectory ? (
+                    <div className="flex space-x-2">
+                      <Button
+                        className="flex-1 bg-purple-700 hover:bg-purple-800 text-white"
+                        size="sm"
+                        onClick={() => handleRedoTrajectory(mask.url)}
+                        disabled={activeSegmentationTool !== "none"}
+                      >
+                        <Hand className="w-4 h-4 mr-1" />
+                        Retrace Trajectory
+                      </Button>
+                    </div>
+                  ) : (
+                    <Button
+                      className="w-full bg-purple-700 hover:bg-purple-800 text-white"
+                      size="sm"
+                      disabled={!mask.isApplied || activeSegmentationTool !== "none"}
+                      onClick={() => handleControlMotion(mask.id, mask.url)}
+                    >
+                      <Hand className="w-4 h-4 mr-1" />
+                      Trace Trajectory
+                    </Button>
+                  )}
+                  
+                  {/* Show trajectory limit reached message */}
+                  {isRetracing && trajectoryLimitReached && (
+                    <div className="mt-2 text-sm text-amber-500 font-medium">
+                      Trajectory length limit reached
+                    </div>
+                  )}
+                </div>
+              );
+            })}
           </div>
         </div>
       </ScrollArea>
