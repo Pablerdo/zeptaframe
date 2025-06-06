@@ -433,7 +433,7 @@ export const Workbench = ({
           uploadedMaskUrls = await Promise.all(maskUploadPromises);
         }
   
-        const truckVector = {"x": cameraControl.horizontalTruck, "y": cameraControl.verticalTruck};
+        const truckVector = {"x": cameraControl.horizontalTruck, "y": -cameraControl.verticalTruck};
         const panVector = {"x": cameraControl.horizontalPan, "y": cameraControl.verticalPan};
         const zoom = cameraControl.zoom;
   
