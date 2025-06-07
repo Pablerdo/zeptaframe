@@ -1819,6 +1819,27 @@ export const AnimateRightSidebar = ({
               </div>
             )}
 
+            <div className="bg-gray-100 dark:bg-[#111530] p-3 border border-gray-300 dark:border-blue-800 rounded-md mb-2">
+              <div className="flex items-center justify-between mb-2">
+                <Label htmlFor="degradation-slider" className="text-sm font-medium">
+                  Mask Degradation: {degradation.toFixed(2)}
+                </Label>
+              </div>
+              <Slider
+                id="degradation-slider"
+                min={0}
+                max={1}
+                step={0.05}
+                value={[degradation]}
+                onValueChange={(values) => setDegradation(values[0])}
+                className="w-full"
+              />
+              <div className="flex justify-between text-xs text-muted-foreground mt-1">
+                <span>0</span>
+                <span>1</span>
+              </div>
+            </div> 
+            
             {/* Separator */}
             {(activeSegmentationTool !== "none" || segmentedMasks.length > 0) && (
               <div className="h-px bg-gray-300 dark:bg-gray-700 w-full my-2" />

@@ -990,6 +990,7 @@ export const Workbench = ({
               projectId={projectId}
               setShowAuthModal={setShowAuthModal}
               degradation={degradation}
+              setDegradation={setDegradation}
             />
           </div>
         </div>

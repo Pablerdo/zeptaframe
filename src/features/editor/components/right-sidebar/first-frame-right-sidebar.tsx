@@ -19,6 +19,8 @@ import { dataUrlToFile, uploadToUploadThingResidual, uploadToUploadThingVideo } 
 import { comfyDeployWorkflows } from "../../utils/comfy-deploy-workflows";
 import { comfyDeployGenerateVideo } from "../../services/generate-video";
 import { videoModels } from "../../utils/video-models";
+import { Label } from "@/components/ui/label";
+import { Slider } from "@/components/ui/slider";
 
 interface FirstFrameEditorRightSidebarProps {
   editor: Editor | undefined;
@@ -28,6 +30,7 @@ interface FirstFrameEditorRightSidebarProps {
   projectId: string;
   setShowAuthModal: (showAuthModal: boolean) => void;
   degradation: number;
+  setDegradation: (degradation: number) => void;
 };
 
 export const FirstFrameEditorRightSidebar = ({
@@ -37,7 +40,8 @@ export const FirstFrameEditorRightSidebar = ({
   onChangeActiveWorkbenchTool,
   projectId,
   setShowAuthModal,
-  degradation
+  degradation,
+  setDegradation
 }: FirstFrameEditorRightSidebarProps) => {
   const [uploadedVideo, setUploadedVideo] = useState<File | null>(null);
   const [videoUploadThingUrl, setVideoUploadThingUrl] = useState<string | null>(null);
@@ -597,6 +601,26 @@ export const FirstFrameEditorRightSidebar = ({
             {/* Content */}
             <div className="flex-1 space-y-3 w-full">
               <h3 className="font-medium">Generate New Video</h3>
+              <div className="bg-gray-100 dark:bg-[#111530] p-3 border border-gray-300 dark:border-blue-800 rounded-md mb-2">
+                <div className="flex items-center justify-between mb-2">
+                  <Label htmlFor="degradation-slider" className="text-sm font-medium">
+                    Mask Degradation: {degradation.toFixed(2)}
+                  </Label>
+                </div>
+                <Slider
+                  id="degradation-slider"
+                  min={0}
+                  max={1}
+                  step={0.05}
+                  value={[degradation]}
+                  onValueChange={(values) => setDegradation(values[0])}
+                  className="w-full"
+                />
+                <div className="flex justify-between text-xs text-muted-foreground mt-1">
+                  <span>0</span>
+                  <span>1</span>
+                </div>
+              </div> 
               <Button className="w-full h-16 mb-10" onClick={() => handleGenerateVideo()} disabled={isGeneratingVideo}>
                 {isGeneratingVideo ? (
                   <>
