@@ -21,7 +21,7 @@ export async function POST(request: Request) {
 
     // Run the model
     const output = await replicate.run(
-      "black-forest-labs/flux-kontext-pro",
+      "black-forest-labs/flux-kontext-max",
       { input }
     );
 
