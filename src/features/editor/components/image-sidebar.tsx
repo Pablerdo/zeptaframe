@@ -64,6 +64,9 @@ export const ImageSidebar = ({ editor, activeTool, onChangeActiveTool }: ImageSi
             toast.success("Image uploaded successfully");
             refetchImages();
           }}
+          onUploadError={(error) => {
+            toast.error("Failed to upload image: maximum size exceeded");
+          }}
         />
       </div>
       {isLoading && (
