@@ -8,7 +8,7 @@ import {
 } from "@/features/editor/types";
 import { ToolSidebarHeader } from "@/features/editor/components/tool-sidebar-header";
 import { cn } from "@/lib/utils";
-import { X, Upload, Film, Wand2, Loader2, RefreshCw, Play, ArrowRightSquare } from "lucide-react";
+import { X, Upload, Film, Wand2, Loader2, RefreshCw, Play, ArrowRightSquare, Move } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
@@ -89,7 +89,6 @@ export const FirstFrameEditorRightSidebar = ({
           
           // Add the first frame to the canvas
           if (editor) {
-            console.log("Adding image to canvas");
             editor.addImage(dataUrl);
             
             // Wait for the next render cycle and then capture
@@ -571,6 +570,17 @@ export const FirstFrameEditorRightSidebar = ({
                         <span className="absolute bottom-2 left-2 text-xs text-white font-medium">
                           Generated First Frame
                         </span>
+                        <button
+                          onClick={() => {
+                            if (editor && inpaintedImageUrl) {
+                              editor.addImage(inpaintedImageUrl);
+                              toast.success("Generated first frame added to canvas");
+                            }
+                          }}
+                          className="absolute top-2 right-2 text-white/80 hover:text-white text-xs underline cursor-pointer transition-colors"
+                        >
+                          Place in Workbench
+                        </button>
                       </>
                     ) : null}
                   </div>
