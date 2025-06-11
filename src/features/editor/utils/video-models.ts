@@ -7,4 +7,4 @@ export const videoModels: Record<SupportedVideoModelId, BaseVideoModel> = {
   "wan": { id: "wan" as SupportedVideoModelId, name: "Wan2.1", durations: [49, 65, 97]},
 };
 
-export const defaultVideoModelId: SupportedVideoModelId = "skyreels";
+export const defaultVideoModelId: SupportedVideoModelId = "cogvideox";

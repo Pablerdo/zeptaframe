@@ -273,7 +273,7 @@ export const Navbar = ({
                   // }
                 }}
               >
-                <span className="text-sm">What the hell is this?</span>
+                <span className="text-sm">What&apos;s this?</span>
               </div>
             </PopoverTrigger><PopoverContent 
               className="max-w-[350px] text-white bg-slate-800 border-slate-800"
