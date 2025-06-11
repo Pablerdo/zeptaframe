@@ -37,7 +37,7 @@ const app = new Hono()
       // Determine credits based on conference code
       let credits = 15; // Default credits
       if (conferenceCode === "CVPR2025") {
-        credits = 400; // 400 free credits for CVPR attendees
+        credits = 100; // 100 free credits for CVPR attendees
       }
 
       await db.insert(users).values({

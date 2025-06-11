@@ -17,12 +17,13 @@ import { cn } from "@/lib/utils";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { X, Check, Loader2, Trash2, Pencil, Plus, ChevronRight, ChevronDown, Move, Hand, ChevronUp } from "lucide-react";
+import { X, Check, Loader2, Trash2, Pencil, Plus, ChevronRight, ChevronDown, Move, Hand, ChevronUp, Info } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { interpolatePoints, interpolatePosition, smoothTrajectory } from "@/features/editor/utils";
 import { videoGenUtils } from "../../utils/video-gen-utils";
 import { Card } from "@/components/ui/card";
 import { Slider } from "@/components/ui/slider";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 interface AnimateRightSidebarProps {
   editor: Editor | undefined;
@@ -1821,9 +1822,25 @@ export const AnimateRightSidebar = ({
 
             <div className="bg-gray-100 dark:bg-[#111530] p-3 border border-gray-300 dark:border-blue-800 rounded-md mb-2">
               <div className="flex items-center justify-between mb-2">
-                <Label htmlFor="degradation-slider" className="text-sm font-medium">
-                  Mask Degradation: {degradation.toFixed(2)}
-                </Label>
+                <div className="flex items-center space-x-2">
+                  <Label htmlFor="degradation-slider" className="text-sm font-medium">
+                    Mask Degradation: {degradation.toFixed(2)}
+                  </Label>
+                  <TooltipProvider>
+                    <Tooltip delayDuration={0}>
+                      <TooltipTrigger asChild>
+                        <div className="cursor-help">
+                          <Info className="w-4 h-4 text-muted-foreground hover:text-foreground transition-colors" />
+                        </div>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>Degradation controls how faithfully the motion follows the mask trajectories.<br />
+                        As degradation increases, the motion information is destroyed<br />
+                        </p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                </div>
               </div>
               <Slider
                 id="degradation-slider"
