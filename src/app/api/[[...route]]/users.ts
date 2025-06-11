@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { Hono } from "hono";
 import bcrypt from "bcryptjs";
-import { eq } from "drizzle-orm";
+import { eq, count } from "drizzle-orm";
 import { zValidator } from "@hono/zod-validator";
 import { verifyAuth } from "@hono/auth-js";
 
@@ -34,9 +34,23 @@ const app = new Hono()
         return c.json({ error: "Email already in use" }, 400);
       }
 
-      // Determine credits based on conference code
+      // Check CVPR2025 account limit
       let credits = 15; // Default credits
+      let finalConferenceCode = conferenceCode || null;
+      
       if (conferenceCode === "CVPR2025") {
+        // Count existing CVPR2025 users
+        const cvprUserCount = await db
+          .select({ count: count() })
+          .from(users)
+          .where(eq(users.conferenceCode, "CVPR2025"));
+        
+        if (cvprUserCount[0].count >= 100) {  // Hard limiting at 100 accounts for Wednesday 11th June 2025
+          return c.json({ 
+            error: "CVPR2025 account limit reached. Maximum 400 accounts allowed." 
+          }, 400);
+        }
+        
         credits = 100; // 100 free credits for CVPR attendees
       }
 
@@ -45,7 +59,7 @@ const app = new Hono()
         name,
         password: hashedPassword,
         credits,
-        conferenceCode: conferenceCode || null,
+        conferenceCode: finalConferenceCode,
       });
       
       // Fetch the newly created user to get their ID
