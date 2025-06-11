@@ -4,7 +4,7 @@
 
 # Zeptaframe
 
-Zeptaframe is an AI-native video editor that allows you to create precise AI-generated movies with a visual-first approach, minimizing the need for text prompts.
+Zeptaframe is an AI-native video editor that allows you to create precise AI-generated movies with a visual-first approach, minimizing the need for text prompts. It implements the [Go-with-the-flow](https://github.com/Eyeline-Research/Go-with-the-Flow) technique for precise video generation. Try it at CVPR 2025.
 
 ## Overview
 
