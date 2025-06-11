@@ -67,7 +67,7 @@ export const BuyCreditsModal = ({
           <li className="flex items-center">
             <CheckCircle2 className="size-5 mr-2 fill-blue-500 text-white" />
             <p className="text-sm text-muted-foreground">
-              Generate images: {generationPrices.image} credit per image
+              Generate images with SOTA models!
             </p>
           </li>
           <li className="flex items-center">
