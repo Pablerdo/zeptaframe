@@ -8,9 +8,20 @@ Zeptaframe is an AI-native video editor that allows you to create precise AI-gen
 
 This repository only contains the front-end interface. The backend, along with the custom ComfyUI nodes and pipelines, are deployed using ComfyDeploy.
 
-Watch a a short demo here: https://www.youtube.com/watch?v=AHrVIavRmkk
+### Multi Subject Motion Demos 
+---
 
-Watch the First Frame Editing demo here: https://www.youtube.com/watch?v=1FiS_prWGio
+[![IMAGE ALT TEXT HERE](https://img.youtube.com/vi/AHrVIavRmkk/0.jpg)](https://www.youtube.com/watch?v=AHrVIavRmkk)
+
+[![IMAGE ALT TEXT HERE](https://img.youtube.com/vi/0soR0Vyc698/0.jpg)](https://www.youtube.com/watch?v=0soR0Vyc698)
+
+
+### First Frame Editing Demo
+---
+
+[![IMAGE ALT TEXT HERE](https://img.youtube.com/vi/1FiS_prWGio/0.jpg)](https://www.youtube.com/watch?v=1FiS_prWGio)
+
+### Website
 
 The site is live at https://zeptaframe.com.
 
