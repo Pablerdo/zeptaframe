@@ -36,6 +36,8 @@ export const SignUpCard = () => {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [conferenceCode, setConferenceCode] = useState("");
+  const [codeError, setCodeError] = useState("");
 
   const onProviderSignUp = (provider: "github" | "google") => {
     setLoading(true);
@@ -48,13 +50,22 @@ export const SignUpCard = () => {
   const onCredentialSignUp = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setLoading(true);
+    setCodeError("");
+
+    // Validate conference code if provided
+    if (conferenceCode && conferenceCode !== "CVPR2025") {
+      setCodeError("Invalid conference code. Please check and try again.");
+      setLoading(false);
+      return;
+    }
 
     mutation.mutate(
       {
         name,
         email,
         password,
-        fromTrial: fromTrial, // Pass this to the API
+        fromTrial: fromTrial,
+        conferenceCode: conferenceCode || undefined,
       },
       {
         onSuccess: () => {
@@ -73,6 +84,9 @@ export const SignUpCard = () => {
             callbackUrl: "/",
           });
         },
+        onError: () => {
+          setLoading(false);
+        }
       }
     );
   };
@@ -94,6 +108,24 @@ export const SignUpCard = () => {
         </div>
       )}
       <CardContent className="space-y-5 px-0 pb-0">
+        {/* Conference Code Section */}
+        <div className="p-4 bg-zinc-800 rounded-lg border border-zinc-700">
+          <h3 className="text-sm font-medium mb-2 text-zinc-300">CVPR 2025 Attendee?</h3>
+          <p className="text-xs text-zinc-200 mb-3">
+            Enter the code <b>CVPR2025</b> for free access
+          </p>
+          <Input
+            disabled={mutation.isPending || loading}
+            value={conferenceCode}
+            onChange={(e) => setConferenceCode(e.target.value.toUpperCase())}
+            placeholder="Enter code (optional)"
+            type="text"
+          />
+          {codeError && (
+            <p className="text-red-400 text-xs mt-2">{codeError}</p>
+          )}
+        </div>
+
         <form onSubmit={onCredentialSignUp} className="space-y-2.5">
           <Input
             disabled={mutation.isPending || loading}

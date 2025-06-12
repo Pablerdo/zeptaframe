@@ -43,6 +43,8 @@ export function AuthModal({
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [conferenceCode, setConferenceCode] = useState("");
+  const [codeError, setCodeError] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -102,6 +104,7 @@ export function AuthModal({
   const toggleMode = () => {
     setMode(mode === "signin" ? "signup" : "signin");
     setError(null);
+    setCodeError("");
   };
 
   const toggleShowPassword = () => {
@@ -135,6 +138,12 @@ export function AuthModal({
         setError("Password must be at least 6 characters");
         return false;
       }
+
+      // Validate conference code if provided
+      if (conferenceCode && conferenceCode !== "CVPR2025") {
+        setCodeError("Invalid conference code. Please check and try again.");
+        return false;
+      }
     }
 
     return true;
@@ -145,6 +154,7 @@ export function AuthModal({
 
     setIsSubmitting(true);
     setError(null);
+    setCodeError("");
     
     // Set flag to prevent beforeunload warning
     localStorage.setItem("isAuthNavigating", "true");
@@ -155,6 +165,7 @@ export function AuthModal({
         email,
         password,
         fromTrial: isTrial,
+        conferenceCode: conferenceCode || undefined,
       },
       {
         onSuccess: async (response) => {
@@ -311,6 +322,29 @@ export function AuthModal({
           </Button>
         </div>
         <Separator />
+
+        {/* Conference Code Section - Only show for signup mode */}
+        {mode === "signup" && (
+          <>
+            <div className="p-4 bg-white rounded-lg border border-zinc-700">
+              <h3 className="text-sm font-medium mb-2 text-black">CVPR 2025 Attendee?</h3>
+              <p className="text-xs text-black mb-3">
+                Enter the code <b>CVPR2025</b> for free access
+              </p>
+              <Input
+                disabled={isSubmitting || signUpMutation.isPending}
+                value={conferenceCode}
+                onChange={(e) => setConferenceCode(e.target.value.toUpperCase())}
+                placeholder="Enter code (optional)"
+                type="text"
+              />
+              {codeError && (
+                <p className="text-red-400 text-xs mt-2">{codeError}</p>
+              )}
+            </div>
+            <Separator />
+          </>
+        )}
 
         <form onSubmit={handleSubmit} key={mode}>
           <div className="grid gap-4 py-4">

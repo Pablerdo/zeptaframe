@@ -11,6 +11,7 @@ interface RequestType {
   email: string;
   password: string;
   fromTrial?: boolean;
+  conferenceCode?: string;
 }
 
 export const useSignUp = () => {

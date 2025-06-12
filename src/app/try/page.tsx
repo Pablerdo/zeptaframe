@@ -17,6 +17,7 @@ export default function TryPage() {
   const [isValidatingCode, setIsValidatingCode] = useState(false);
   const [codeError, setCodeError] = useState("");
   const [userEmail, setUserEmail] = useState("");
+  const [userPassword, setUserPassword] = useState("");
   const [showGeneratedCredentials, setShowGeneratedCredentials] = useState(false);
   const [generatedEmail, setGeneratedEmail] = useState("");
   const [generatedPassword, setGeneratedPassword] = useState("");
@@ -61,10 +62,24 @@ export default function TryPage() {
         return;
       }
       
+      // Require email when conference code is provided
+      if (!userEmail.trim()) {
+        setCodeError("Email is required when using a conference code.");
+        setIsValidatingCode(false);
+        return;
+      }
+      
+      // Require password when conference code is provided
+      if (!userPassword.trim()) {
+        setCodeError("Password is required when using a conference code.");
+        setIsValidatingCode(false);
+        return;
+      }
+      
       // Generate credentials if no email provided
       const sessionId = uuidv4().substring(0, 8);
       const email = userEmail || `cvpr-${sessionId}@temp.conf`;
-      const password = `cvpr-${sessionId}-${Math.random().toString(36).substring(2, 10)}`;
+      const password = userPassword;
       
       // Create user account
       const createUserResponse = await fetch("/api/users", {
@@ -150,12 +165,6 @@ export default function TryPage() {
             <div className="bg-zinc-900 p-6 rounded-xl max-w-md w-full shadow-lg">
               <div className="flex justify-between items-center mb-4">
                 <h2 className="text-xl font-bold">Welcome to Zeptaframe</h2>
-                <button 
-                  onClick={dismissWelcomeModal}
-                  className="text-zinc-400 hover:text-white transition-colors"
-                >
-                  <X className="size-5" />
-                </button>
               </div>
               
               {!showGeneratedCredentials ? (
@@ -174,26 +183,42 @@ export default function TryPage() {
                       className="w-full px-3 py-2 bg-zinc-700 border border-zinc-600 rounded-md text-sm placeholder-zinc-500 focus:outline-none focus:border-blue-500"
                     />
                     
-                    {/* Optional Email Section */}
+                    {/* Email Section */}
                     <div className="mt-4">
                       <p className="text-xs text-zinc-400 mb-2">
-                        Enter your email to save your work permanently
+                        Email <span className="text-red-400">*</span> 
                       </p>
                       <input
                         type="email"
                         value={userEmail}
                         onChange={(e) => setUserEmail(e.target.value)}
-                        placeholder="your@email.com (optional)"
+                        placeholder="your@email.com"
                         className="w-full px-3 py-2 bg-zinc-700 border border-zinc-600 rounded-md text-sm placeholder-zinc-500 focus:outline-none focus:border-blue-500"
                       />
                     </div>
+
+                    {/* Password Section */}
+                    <div className="mt-4">
+                      <p className="text-xs text-zinc-400 mb-2">
+                        Password <span className="text-red-400">*</span> 
+                      </p>
+                      <input
+                        type="password"
+                        value={userPassword}
+                        onChange={(e) => setUserPassword(e.target.value)}
+                        placeholder="Enter password"
+                        className="w-full px-3 py-2 bg-zinc-700 border border-zinc-600 rounded-md text-sm placeholder-zinc-500 focus:outline-none focus:border-blue-500"
+                      />
+                    </div>
+
+
                     
                     {codeError && (
                       <p className="text-red-400 text-xs mt-2">{codeError}</p>
                     )}
                     <button
                       onClick={handleCodeSubmit}
-                      disabled={!conferenceCode || isValidatingCode}
+                      disabled={!conferenceCode || !userEmail.trim() || !userPassword.trim() || isValidatingCode}
                       className="mt-3 w-full bg-blue-600 hover:bg-blue-700 disabled:bg-zinc-700 disabled:cursor-not-allowed px-3 py-2 rounded-md text-sm font-medium transition-colors"
                     >
                       {isValidatingCode ? "Validating..." : "Apply Code"}
@@ -207,12 +232,13 @@ export default function TryPage() {
                     <br />
                     Happy Creating!
                   </p>
-                  <button 
+                  {/* <button 
                     onClick={dismissWelcomeModal}
-                    className="bg-blue-700 hover:bg-zinc-700 px-4 py-2 rounded-lg font-medium w-full"
+                    disabled
+                    className="bg-blue-700 disabled:bg-zinc-700 hover:bg-zinc-700 px-4 py-2 rounded-lg font-medium w-full"
                   >
                     Continue Without Code
-                  </button>
+                  </button>  */}
                 </>
               ) : (
                 /* Generated Credentials Display */
