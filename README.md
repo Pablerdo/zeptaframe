@@ -11,15 +11,21 @@ This repository only contains the front-end interface. The backend, along with t
 ### Multi Subject Motion Demos 
 ---
 
-[![IMAGE ALT TEXT HERE](https://img.youtube.com/vi/AHrVIavRmkk/0.jpg)](https://www.youtube.com/watch?v=AHrVIavRmkk)
+#### Animating a Boxer
 
-[![IMAGE ALT TEXT HERE](https://img.youtube.com/vi/0soR0Vyc698/0.jpg)](https://www.youtube.com/watch?v=0soR0Vyc698)
+[![IMAGE ALT TEXT HERE](https://img.youtube.com/vi/AHrVIavRmkk/maxresdefault.jpg)](https://www.youtube.com/watch?v=AHrVIavRmkk)
+
+#### Animating Horses
+
+[![IMAGE ALT TEXT HERE](https://img.youtube.com/vi/0soR0Vyc698/maxresdefault.jpg)](https://www.youtube.com/watch?v=0soR0Vyc698)
 
 
 ### First Frame Editing Demo
 ---
 
-[![IMAGE ALT TEXT HERE](https://img.youtube.com/vi/1FiS_prWGio/0.jpg)](https://www.youtube.com/watch?v=1FiS_prWGio)
+#### Adding a Dog
+
+[![IMAGE ALT TEXT HERE](https://img.youtube.com/vi/1FiS_prWGio/maxresdefault.jpg)](https://www.youtube.com/watch?v=1FiS_prWGio)
 
 ### Website
 
