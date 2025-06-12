@@ -53,6 +53,7 @@ export const FirstFrameEditorRightSidebar = ({
   const [isGeneratingFirstFrame, setIsGeneratingFirstFrame] = useState(false);
   const [isGeneratingVideo, setIsGeneratingVideo] = useState(false);
   const [generationProgress, setGenerationProgress] = useState(0);
+  const [videoPrompt, setVideoPrompt] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const progressIntervalRef = useRef<NodeJS.Timeout | null>(null);
@@ -337,6 +338,7 @@ export const FirstFrameEditorRightSidebar = ({
         "input_video": videoUploadThingUrl,
         "input_image": JSON.stringify([workbenchImageUrl]),
         "input_degradation": JSON.stringify(degradation),
+        "input_prompt": videoPrompt.trim() || "High quality video",
       };
 
       console.log("videoGenData from ffe: ", videoGenData);
@@ -630,7 +632,19 @@ export const FirstFrameEditorRightSidebar = ({
                   <span>0</span>
                   <span>1</span>
                 </div>
-              </div> 
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="video-prompt" className="text-sm font-medium">
+                  Text Prompt (Optional)
+                </Label>
+                <Textarea
+                  id="video-prompt"
+                  placeholder="Add an optional prompt to guide the video generation..."
+                  className="resize-none h-20"
+                  value={videoPrompt}
+                  onChange={(e) => setVideoPrompt(e.target.value)}
+                />
+              </div>
               <Button className="w-full h-16 mb-10" onClick={() => handleGenerateVideo()} disabled={isGeneratingVideo}>
                 {isGeneratingVideo ? (
                   <>
