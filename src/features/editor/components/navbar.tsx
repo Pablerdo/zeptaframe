@@ -15,6 +15,7 @@ import {
   HelpCircle
 } from "lucide-react";
 import { FaDiscord } from "react-icons/fa";
+import { FaGithub } from "react-icons/fa";
 import {
   Popover,
   PopoverContent,
@@ -301,6 +302,18 @@ export const Navbar = ({
           </Popover>
 
           <DarkModeToggle />
+          <Hint label="Star on GitHub" side="bottom" sideOffset={10}>
+            <Button
+              variant="ghost"
+              size="icon"
+              asChild
+              className="h-8 w-8 mr-2"
+            >
+              <a href="https://github.com/Pablerdo/zeptaframe" target="_blank" rel="noopener noreferrer">
+                <FaGithub className="h-5 w-5" />
+              </a>
+            </Button>
+          </Hint>
           <Hint label="Join our Discord" side="bottom" sideOffset={10}>
             <Button
               variant="ghost"
