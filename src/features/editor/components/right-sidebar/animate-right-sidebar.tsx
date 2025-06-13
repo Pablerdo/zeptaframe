@@ -90,6 +90,28 @@ export const AnimateRightSidebar = ({
   // Add ref for trajectory length tracking
   const trajectoryLengthRef = useRef(0);
 
+  // State for slow loading disclaimer
+  const [showSlowLoadingDisclaimer, setShowSlowLoadingDisclaimer] = useState(false);
+
+  // Effect to show slow loading disclaimer after 2 seconds
+  useEffect(() => {
+    let timer: NodeJS.Timeout;
+    
+    if (samWorkerLoading) {
+      timer = setTimeout(() => {
+        setShowSlowLoadingDisclaimer(true);
+      }, 4000);
+    } else {
+      setShowSlowLoadingDisclaimer(false);
+    }
+
+    return () => {
+      if (timer) {
+        clearTimeout(timer);
+      }
+    };
+  }, [samWorkerLoading]);
+
   // Helper function to generate next mask name with consistent numbering
   const generateNextMaskName = (type: 'auto' | 'manual'): string => {
     const validMasks = segmentedMasks.filter(mask => !mask.inProgress && mask.url);
@@ -1816,6 +1838,23 @@ export const AnimateRightSidebar = ({
                     <X className="w-4 h-4 mr-1" />
                     Cancel
                   </Button>
+                </div>
+              </div>
+            )}
+
+            {/* Slow loading disclaimer */}
+            {showSlowLoadingDisclaimer && samWorkerLoading && (
+              <div className="bg-amber-50 dark:bg-amber-900/20 p-3 border border-amber-300 dark:border-amber-700 rounded-md animate-in fade-in duration-500">
+                <div className="flex items-start space-x-2">
+                  <div className="w-5 h-5 rounded-full bg-amber-100 dark:bg-amber-800 flex items-center justify-center flex-shrink-0 mt-0.5">
+                    <div className="w-2 h-2 bg-amber-500 rounded-full animate-pulse"></div>
+                  </div>
+                  <div className="text-sm text-amber-800 dark:text-amber-200">
+                    <p className="font-medium mb-1">Loading Auto Mask Model...</p>
+                    <p className="text-xs opacity-80">
+                      This may take a while on slower connections as we download the SAM model.
+                    </p>
+                  </div>
                 </div>
               </div>
             )}

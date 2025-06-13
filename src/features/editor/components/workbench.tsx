@@ -329,15 +329,22 @@ export const Workbench = ({
       
       // Upload the workbench image to UploadThing
       let workbenchImageUrl = "";
-      if (editor.workspaceURL) {
-        // console.log("base64img", editor.workspaceURL);
+      let workspaceImage = editor.workspaceURL;
+      
+      // If workspaceURL is not available, generate it
+      if (!workspaceImage) {
+        workspaceImage = generateWorkspaceURL() || "";
+      }
+      
+      if (workspaceImage) {
+        // console.log("base64img", workspaceImage);
 
-        const workbenchFile = await dataUrlToFile(editor.workspaceURL, "workspace.png");
+        const workbenchFile = await dataUrlToFile(workspaceImage, "workspace.png");
         workbenchImageUrl = await uploadToUploadThingResidual(workbenchFile);
 
-        // workbenchImageUrl = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAgAAAAIAQMAAAD+wSzIAAAABlBMVEX///+/v7+jQ3Y5AAAADklEQVQI12P4AIX8EAgALgAD/aNpbtEAAAAASUVORK5CYII" // editor.workspaceURL;
+        // workbenchImageUrl = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAgAAAAIAQMAAAD+wSzIAAAABlBMVEX///+/v7+jQ3Y5AAAADklEQVQI12P4AIX8EAgALgAD/aNpbtEAAAAASUVORK5CYII" // workspaceImage;
       } else {
-        throw new Error("No workbench image available");
+        throw new Error("Unable to generate workbench image");
       }
 
       let workflowId;
@@ -497,6 +504,50 @@ export const Workbench = ({
       setIsGenerating(false);
     }
   }
+
+  // Function to generate workspace URL independently of SAM encoding
+  const generateWorkspaceURL = useCallback(() => {
+    if (!editor?.canvas) return;
+    
+    const workspace = editor?.getWorkspace();
+    if (!workspace) return;
+
+    // Get the workspace dimensions and position
+    const workspaceWidth = workspace.width || 960;
+    const workspaceHeight = workspace.height || 640;
+    const workspaceLeft = workspace.left || 0;
+    const workspaceTop = workspace.top || 0;
+    
+    // Create a temporary canvas with the workspace content
+    const tempCanvas = document.createElement('canvas');
+    tempCanvas.width = workspaceWidth;
+    tempCanvas.height = workspaceHeight;
+    const tempCtx = tempCanvas.getContext('2d');
+    
+    // Save current viewport transform and ensure it's not undefined
+    const currentViewportTransform = editor.canvas.viewportTransform || [1, 0, 0, 1, 0, 0];
+    
+    // Reset viewport transform temporarily to get accurate image
+    editor.canvas.setViewportTransform([1, 0, 0, 1, 0, 0]);
+    
+    // Generate the workspace image directly from canvas
+    const workspaceImage = editor.canvas.toDataURL({
+      format: 'png',  
+      quality: 1,
+      left: workspaceLeft,
+      top: workspaceTop,
+      width: workspaceWidth,
+      height: workspaceHeight
+    });
+
+    // Restore viewport transform
+    editor.canvas.setViewportTransform(currentViewportTransform);
+
+    // Set the workspace URL on the editor
+    editor.setWorkspaceURL(workspaceImage);
+
+    return workspaceImage;
+  }, [editor]);
 
   function handleDecodingResults(decodingResults: { 
     masks: { dims: number[]; }; 

@@ -18,12 +18,86 @@ export class SAM2 {
   sessionEncoder = null;
   sessionDecoder = null;
   image_encoded = null;
+  
+  // Add flags to prevent concurrent downloads
+  downloadingEncoder = false;
+  downloadingDecoder = false;
 
   constructor() {}
 
   async downloadModels() {
-    this.bufferEncoder = await this.downloadModel(ENCODER_URL);
-    this.bufferDecoder = await this.downloadModel(DECODER_URL);
+    // Prevent concurrent downloads by using Promise.all with individual download checks
+    const [encoderBuffer, decoderBuffer] = await Promise.all([
+      this.downloadModelSafe(ENCODER_URL, 'encoder'),
+      this.downloadModelSafe(DECODER_URL, 'decoder')
+    ]);
+    
+    this.bufferEncoder = encoderBuffer;
+    this.bufferDecoder = decoderBuffer;
+    
+    return {
+      encoder: !!encoderBuffer,
+      decoder: !!decoderBuffer
+    };
+  }
+
+  async downloadModelSafe(url, type) {
+    // Prevent concurrent downloads of the same model
+    const isDownloading = type === 'encoder' ? this.downloadingEncoder : this.downloadingDecoder;
+    if (isDownloading) {
+      console.log(`${type} model already downloading, waiting...`);
+      // Wait for current download to complete
+      while (type === 'encoder' ? this.downloadingEncoder : this.downloadingDecoder) {
+        await new Promise(resolve => setTimeout(resolve, 500));
+      }
+      return type === 'encoder' ? this.bufferEncoder : this.bufferDecoder;
+    }
+
+    // Set downloading flag
+    if (type === 'encoder') {
+      this.downloadingEncoder = true;
+    } else {
+      this.downloadingDecoder = true;
+    }
+
+    try {
+      return await this.downloadModelWithRetry(url, 3);
+    } finally {
+      // Clear downloading flag
+      if (type === 'encoder') {
+        this.downloadingEncoder = false;
+      } else {
+        this.downloadingDecoder = false;
+      }
+    }
+  }
+
+  async downloadModelWithRetry(url, maxRetries = 3) {
+    let lastError = null;
+    
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+      try {
+        console.log(`Downloading model from ${url} (attempt ${attempt}/${maxRetries})`);
+        const buffer = await this.downloadModel(url);
+        if (buffer) {
+          console.log(`Successfully downloaded model on attempt ${attempt}`);
+          return buffer;
+        }
+      } catch (error) {
+        lastError = error;
+        console.warn(`Download attempt ${attempt} failed:`, error);
+        
+        if (attempt < maxRetries) {
+          // Exponential backoff: wait 2^attempt seconds
+          const waitTime = Math.pow(2, attempt) * 1000;
+          console.log(`Waiting ${waitTime}ms before retry...`);
+          await new Promise(resolve => setTimeout(resolve, waitTime));
+        }
+      }
+    }
+    
+    console.error(`Failed to download model after ${maxRetries} attempts:`, lastError);
+    return null;
   }
 
   async alwaysDownloadModel(url) {
@@ -31,82 +105,126 @@ export class SAM2 {
     let buffer = null;
 
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 60000); // 60 seconds timeout
+    const timeoutId = setTimeout(() => controller.abort(), 120000); // Increased to 120 seconds
     
     try {
-      buffer = await fetch(url, {
-        // headers: new Headers({
-        //   Origin: location.origin,
-        // }),
+      const response = await fetch(url, {
         mode: "cors",
         redirect: "follow",
         signal: controller.signal,
-      }).then((response) => response.arrayBuffer());
+      });
+      
+      // Check if response is ok
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status} ${response.statusText}`);
+      }
+      
+      buffer = await response.arrayBuffer();
       console.log("Download completed, buffer size:", buffer.byteLength);
       return buffer;
     } catch (e) {
-      console.error("Download of " + url + " failed: ", e);
-      return null;
+      if (e.name === 'AbortError') {
+        console.error("Download of " + url + " timed out");
+      } else {
+        console.error("Download of " + url + " failed: ", e);
+      }
+      throw e; // Re-throw to allow retry logic to handle
     } finally {
       clearTimeout(timeoutId);
     }
   }
 
   async downloadModel(url) {
-    // step 1: check if cached
-    const root = await navigator.storage.getDirectory();
     const filename = path.basename(url);
 
-    console.log("Checking if file exists: " + filename);
+    // Step 1: Check if cached (with better error handling)
+    try {
+      const root = await navigator.storage.getDirectory();
+      console.log("Checking if file exists: " + filename);
 
-    let fileHandle = await root
-      .getFileHandle(filename)
-      .catch((e) => console.error("File does not exist:", filename, e));
-
-    console.log("File handle: " + fileHandle);
-    if (fileHandle) {
-      const file = await fileHandle.getFile();
-      if (file.size > 0) return await file.arrayBuffer();
+      const fileHandle = await root.getFileHandle(filename).catch(() => null);
+      
+      if (fileHandle) {
+        console.log("File found in cache");
+        const file = await fileHandle.getFile();
+        if (file.size > 0) {
+          console.log(`Loaded ${filename} from cache (${file.size} bytes)`);
+          return await file.arrayBuffer();
+        } else {
+          console.warn(`Cached file ${filename} is empty, re-downloading`);
+        }
+      } else {
+        console.log("File not found in cache");
+      }
+    } catch (storageError) {
+      console.warn("Storage API not available or failed, proceeding with direct download:", storageError);
+      // Fall back to direct download without caching
+      return await this.alwaysDownloadModel(url);
     }
 
-    // step 2: download if not cached
-    // console.log("File " + filename + " not in cache, downloading from " + url);
+    // Step 2: Download if not cached
     console.log("File not in cache, downloading from " + url);
     let buffer = null;
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 60000); // 60 seconds timeout
+    const timeoutId = setTimeout(() => controller.abort(), 120000); // Increased timeout
+    
     try {
-      buffer = await fetch(url, {
-        // headers: new Headers({
-        //   Origin: location.origin,
-        // }),
+      const response = await fetch(url, {
         mode: "cors",
         redirect: "follow",
         signal: controller.signal,
-      }).then((response) => response.arrayBuffer());
+      });
+      
+      // Check if response is ok
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status} ${response.statusText}`);
+      }
+      
+      buffer = await response.arrayBuffer();
+      console.log("Download completed, buffer size:", buffer.byteLength);
     } catch (e) {
-      console.error("Download of " + url + " failed: ", e);
-      return null;
+      if (e.name === 'AbortError') {
+        console.error("Download of " + url + " timed out");
+      } else {
+        console.error("Download of " + url + " failed: ", e);
+      }
+      throw e; // Re-throw to allow retry logic to handle
     } finally {
       clearTimeout(timeoutId);
     }
 
-    // step 3: store
+    // Step 3: Store (with better error handling)
     try {
+      const root = await navigator.storage.getDirectory();
       const fileHandle = await root.getFileHandle(filename, { create: true });
       const writable = await fileHandle.createWritable();
       await writable.write(buffer);
       await writable.close();
 
-      console.log("Stored " + filename);
+      console.log("Stored " + filename + " in cache");
     } catch (e) {
-      console.error("Storage of " + filename + " failed: ", e);
+      console.warn("Storage of " + filename + " failed (but download succeeded):", e);
+      // Don't fail the entire operation if storage fails
     }
 
     return buffer;
   }
 
   async createSessions() {
+    // First ensure models are downloaded
+    if (!this.bufferEncoder || !this.bufferDecoder) {
+      console.log("Models not loaded, downloading...");
+      const downloadResult = await this.downloadModels();
+      if (!downloadResult.encoder || !downloadResult.decoder) {
+        console.error("Failed to download required models");
+        return {
+          success: false,
+          device: null,
+          error: "Failed to download models"
+        };
+      }
+    }
+
     const success =
       (await this.getEncoderSession()) && (await this.getDecoderSession());
 
@@ -143,51 +261,54 @@ export class SAM2 {
   }
 
   async createEncoderSession() {
-    // Wait for buffer to be available with retry mechanism
-    let retries = 0;
-    const maxRetries = 5;
-    
-    while (!this.bufferEncoder && retries < maxRetries) {
-      console.log(`Encoder buffer not ready yet, waiting... (attempt ${retries + 1}/${maxRetries})`);
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      retries++;
-    }
-    
-    // Check if buffer is now available
+    // Ensure model is downloaded first
     if (!this.bufferEncoder) {
-      console.error("Failed to get encoder buffer after multiple attempts");
-      return null;
+      console.log("Encoder buffer not available, downloading...");
+      const downloadResult = await this.downloadModels();
+      if (!downloadResult.encoder) {
+        console.error("Failed to download encoder model");
+        return null;
+      }
     }
-    console.log("Creating new session");
+    
+    console.log("Creating encoder session");
     this.sessionEncoder = await this.getORTSession(this.bufferEncoder);
     return this.sessionEncoder;
   }
 
   async getEncoderSession() {
-    while (!this.sessionEncoder) {
-      let retries = 0;
-      const maxRetries = 5;
-      
-      while (!this.bufferEncoder && retries < maxRetries) {
-        console.log(`Encoder buffer not ready yet, waiting... (attempt ${retries + 1}/${maxRetries})`);
-        await new Promise(resolve => setTimeout(resolve, 1000));
-        retries++;
-      }
-      
-      // Check if buffer is now available
+    if (!this.sessionEncoder) {
+      // Ensure model is downloaded first
       if (!this.bufferEncoder) {
-        console.error("Failed to get encoder buffer after multiple attempts");
-        return null;
+        console.log("Encoder buffer not available, downloading...");
+        const downloadResult = await this.downloadModels();
+        if (!downloadResult.encoder) {
+          console.error("Failed to download encoder model");
+          return null;
+        }
       }
-      console.log("Creating new session");
+      
+      console.log("Creating encoder session");
       this.sessionEncoder = await this.getORTSession(this.bufferEncoder);
     }
     return this.sessionEncoder;
   }
 
   async getDecoderSession() {
-    if (!this.sessionDecoder)
+    if (!this.sessionDecoder) {
+      // Ensure model is downloaded first
+      if (!this.bufferDecoder) {
+        console.log("Decoder buffer not available, downloading...");
+        const downloadResult = await this.downloadModels();
+        if (!downloadResult.decoder) {
+          console.error("Failed to download decoder model");
+          return null;
+        }
+      }
+      
+      console.log("Creating decoder session");
       this.sessionDecoder = await this.getORTSession(this.bufferDecoder);
+    }
 
     return this.sessionDecoder;
   }
