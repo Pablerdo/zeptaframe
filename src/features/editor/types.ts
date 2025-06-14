@@ -275,7 +275,12 @@ export type SupportedVideoModelId =
 export type BaseVideoModel = {
   id: SupportedVideoModelId;
   name: string;
-  durations: number[];
+  frameCount: number[];
+  credits: {
+    flash: number;
+    normal: number;
+    ultra: number;
+  }
 };
   
 export type CameraControl = {

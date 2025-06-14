@@ -334,7 +334,7 @@ export const FirstFrameEditorRightSidebar = ({
       }
 
       const videoGenData = {
-        "input_num_frames": videoModels["cogvideox"].durations[0],
+        "input_num_frames": videoModels["cogvideox"].frameCount[0],
         "input_video": videoUploadThingUrl,
         "input_image": JSON.stringify([workbenchImageUrl]),
         "input_degradation": JSON.stringify(degradation),

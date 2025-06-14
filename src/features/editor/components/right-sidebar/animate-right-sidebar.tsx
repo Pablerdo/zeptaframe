@@ -1314,10 +1314,10 @@ export const AnimateRightSidebar = ({
       y: (maskObject.top || 0) + ((maskObject.height || 0) * (maskObject.scaleY || 1)) / 2
     }];
 
-    // Smooth and interpolate the trajectory
+    // Smooth the trajectory but don't interpolate yet - interpolation will be done at submission time
     if (points.length > 1) {
       points = smoothTrajectory(points); // First smooth the trajectory
-      points = interpolatePoints(points, videoGenUtils.totalFrames); // Then interpolate to exactly videoGenUtils.totalFrames points
+      // Note: Final interpolation to frame count will be done when generating video
     }
 
     // Update mask state with trajectory (visible by default when saving)
@@ -1424,7 +1424,7 @@ export const AnimateRightSidebar = ({
   const createTrajectoryAnimation = (
     editor: Editor, 
     maskUrl: string, 
-    trajectoryPoints: Array<{x: number, y: number}>,
+    rawTrajectoryPoints: Array<{x: number, y: number}>,
     rotationValues?: number[],
     scaleValues?: number[],
     zIndex?: number
@@ -1444,6 +1444,19 @@ export const AnimateRightSidebar = ({
     // Find the mask in segmentedMasks to get its centroid
     const maskData = segmentedMasks.find(mask => mask.url === maskUrl);
     const maskCentroid = maskData?.centroid;
+
+    // Interpolate trajectory points for animation preview (using videoGenUtils.totalFrames for preview)
+    let trajectoryPoints: Array<{x: number, y: number}>;
+    if (rawTrajectoryPoints.length === 0) {
+      // No trajectory - stationary at center
+      trajectoryPoints = new Array(videoGenUtils.totalFrames).fill({ x: 480, y: 320 });
+    } else if (rawTrajectoryPoints.length === 1) {
+      // Single point - replicate for all frames
+      trajectoryPoints = new Array(videoGenUtils.totalFrames).fill(rawTrajectoryPoints[0]);
+    } else {
+      // Multiple points - interpolate to preview frame count
+      trajectoryPoints = interpolatePoints(rawTrajectoryPoints, videoGenUtils.totalFrames);
+    }
 
     // Create animation canvas
     const animationCanvas = document.createElement('canvas');
@@ -2072,8 +2085,8 @@ export const AnimateRightSidebar = ({
                               mask={mask}
                               onRotationChange={(rotationKeyframes) => {
                                 if (editor && activeSegmentationTool === "none") {
-                                  // Generate rotation trajectory from keyframes
-                                  const frameCount = mask.trajectory?.points.length || videoGenUtils.totalFrames;
+                                  // Generate rotation trajectory from keyframes for preview (using preview frame count)
+                                  const frameCount = videoGenUtils.totalFrames;
                                   const rotationTrajectory = generateRotationTrajectory(rotationKeyframes, frameCount);
                                   
                                   const updatedMasks = segmentedMasks.map((m, i) => 
@@ -2141,8 +2154,8 @@ export const AnimateRightSidebar = ({
                               mask={mask}
                               onScaleChange={(scaleKeyframes) => {
                                 if (editor && activeSegmentationTool === "none") {
-                                  // Generate scale trajectory from keyframes
-                                  const frameCount = mask.trajectory?.points.length || videoGenUtils.totalFrames;
+                                  // Generate scale trajectory from keyframes for preview (using preview frame count)
+                                  const frameCount = videoGenUtils.totalFrames;
                                   const scaleTrajectory = generateScaleTrajectory(scaleKeyframes, frameCount);
                                   
                                   const updatedMasks = segmentedMasks.map((m, i) => 

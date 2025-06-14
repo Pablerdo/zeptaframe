@@ -66,12 +66,12 @@ export const Sidebar = ({
           isActive={activeTool === "draw"}
           onClick={() => onChangeActiveTool("draw")}
         />
-        <SidebarItem
+        {/* <SidebarItem
           icon={Crosshair}
           label="Crop"
           isActive={activeTool === "crop"}
           onClick={() => onChangeActiveTool("crop")}
-        />
+        /> */}
         <SidebarItem
           icon={Settings}
           label="Settings"

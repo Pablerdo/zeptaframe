@@ -42,7 +42,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { generateRotationTrajectory, generateScaleTrajectory } from "../utils";
+import { generateRotationTrajectory, generateScaleTrajectory, interpolatePoints } from "../utils";
 import { comfyDeployGenerateVideo } from "../services/generate-video";
 
 interface WorkbenchProps {
@@ -358,6 +358,9 @@ export const Workbench = ({
           case "skyreels":
             workflowId = comfyDeployWorkflows["PROD-ZEPTA-Skyreels"] || "";
             break;
+          case "wan":
+            workflowId = comfyDeployWorkflows["PROD-ZEPTA-Wan"] || "";
+            break;
           default:
             throw new Error("Invalid model ID");
         }
@@ -401,31 +404,44 @@ export const Workbench = ({
           const blackMaskUrl = await uploadToUploadThingResidual(blackMaskFile);
           
           // Create default arrays with single black mask
-          trajectories = [new Array(videoGenUtils.totalFrames).fill({ x: 480, y: 320 })]; // Stationary trajectory at center
-          rotations = [new Array(videoGenUtils.totalFrames).fill(0)]; // No rotation
-          scalings = [new Array(videoGenUtils.totalFrames).fill(1.00)]; // No scaling
+          trajectories = [new Array(selectedModel.frameCount[0]).fill({ x: 480, y: 320 })]; // Stationary trajectory at center
+          rotations = [new Array(selectedModel.frameCount[0]).fill(0)]; // No rotation
+          scalings = [new Array(selectedModel.frameCount[0]).fill(1.00)]; // No scaling
           uploadedMaskUrls = [blackMaskUrl];
         } else {
           // Original logic for when there are valid masks
-          trajectories = sortedMasks.map(mask => mask.trajectory?.points || []);
+          // Interpolate trajectories to match the selected model's frame count
+          trajectories = sortedMasks.map(mask => {
+            const rawPoints = mask.trajectory?.points || [];
+            if (rawPoints.length === 0) {
+              // Return empty array if no trajectory
+              return [];
+            } else if (rawPoints.length === 1) {
+              // Single point - replicate for all frames
+              return new Array(selectedModel.frameCount[0]).fill(rawPoints[0]);
+            } else {
+              // Multiple points - interpolate to exact frame count
+              return interpolatePoints(rawPoints, selectedModel.frameCount[0]);
+            }
+          });
 
           // Generate frame-by-frame rotation and scale arrays from keyframes
           rotations = sortedMasks.map(mask => {
             if (mask.rotationKeyframes && mask.rotationKeyframes.length > 0) {
-              return generateRotationTrajectory(mask.rotationKeyframes, videoGenUtils.totalFrames);
+              return generateRotationTrajectory(mask.rotationKeyframes, selectedModel.frameCount[0]);
             } else {
               // Fallback to single value if no keyframes (rounded to integer)
-              return new Array(videoGenUtils.totalFrames).fill(0);
+              return new Array(selectedModel.frameCount[0]).fill(0);
             }
           });
 
           // Generate frame-by-frame rotation and scale arrays from keyframes
           scalings = sortedMasks.map(mask => {
             if (mask.scaleKeyframes && mask.scaleKeyframes.length > 0) {
-              return generateScaleTrajectory(mask.scaleKeyframes, videoGenUtils.totalFrames);
+              return generateScaleTrajectory(mask.scaleKeyframes, selectedModel.frameCount[0]);
             } else {
               // Fallback to single value if no keyframes (rounded to 2 decimal places)
-              return new Array(videoGenUtils.totalFrames).fill(1.00);
+              return new Array(selectedModel.frameCount[0]).fill(1.00);
             }
           });
           
@@ -468,7 +484,7 @@ export const Workbench = ({
         // TODO: Pass number of steps for sampler, as well as resolution, depending on compute mode.
   
         const videoGenData = {
-          "input_num_frames": JSON.stringify(videoGenUtils.totalFrames),
+          "input_num_frames": JSON.stringify(selectedModel.frameCount[0]),
           "input_image": JSON.stringify([workbenchImageUrl]),
           "input_masks": JSON.stringify(uploadedMaskUrls),
           "input_prompt": generalTextPrompt,
@@ -493,7 +509,7 @@ export const Workbench = ({
         comfyDeployGenerateVideo({projectId, workbenchId, modelId: modelId || "cogvideox", computeMode, comfyDeployData});
   
         // ALL ANIMATION GENERATIONS SHOULD BE NORMAL MODE
-        deductCredits(generationPrices.normalVideoCredits);
+        deductCredits(selectedModel.credits.normal);
       }
       toast.success("Video generation started successfully. Check timeline for progress.");
 
