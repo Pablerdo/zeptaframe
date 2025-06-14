@@ -31,6 +31,21 @@ interface FirstFrameEditorRightSidebarProps {
   setShowAuthModal: (showAuthModal: boolean) => void;
   degradation: number;
   setDegradation: (degradation: number) => void;
+  // FFE state props - received from parent workbench
+  uploadedVideo: File | null;
+  setUploadedVideo: (video: File | null) => void;
+  videoUploadThingUrl: string | null;
+  setVideoUploadThingUrl: (url: string | null) => void;
+  originalFirstFrameDataUrl: string | null;
+  setOriginalFirstFrameDataUrl: (url: string | null) => void;
+  originalCanvasCapture: string | null;
+  setOriginalCanvasCapture: (capture: string | null) => void;
+  inpaintedImageUrl: string | null;
+  setInpaintedImageUrl: (url: string | null) => void;
+  editPrompt: string;
+  setEditPrompt: (prompt: string) => void;
+  videoPrompt: string;
+  setVideoPrompt: (prompt: string) => void;
 };
 
 export const FirstFrameEditorRightSidebar = ({
@@ -41,19 +56,28 @@ export const FirstFrameEditorRightSidebar = ({
   projectId,
   setShowAuthModal,
   degradation,
-  setDegradation
+  setDegradation,
+  // FFE state props from parent workbench
+  uploadedVideo,
+  setUploadedVideo,
+  videoUploadThingUrl,
+  setVideoUploadThingUrl,
+  originalFirstFrameDataUrl,
+  setOriginalFirstFrameDataUrl,
+  originalCanvasCapture,
+  setOriginalCanvasCapture,
+  inpaintedImageUrl,
+  setInpaintedImageUrl,
+  editPrompt,
+  setEditPrompt,
+  videoPrompt,
+  setVideoPrompt,
 }: FirstFrameEditorRightSidebarProps) => {
-  const [uploadedVideo, setUploadedVideo] = useState<File | null>(null);
-  const [videoUploadThingUrl, setVideoUploadThingUrl] = useState<string | null>(null);
-  const [originalFirstFrameDataUrl, setOriginalFirstFrameDataUrl] = useState<string | null>(null);
-  const [originalCanvasCapture, setOriginalCanvasCapture] = useState<string | null>(null);
-  const [inpaintedImageUrl, setInpaintedImageUrl] = useState<string | null>(null);
-  const [editPrompt, setEditPrompt] = useState("");
+  // Local component state (not workbench-specific)
   const [isProcessing, setIsProcessing] = useState(false);
   const [isGeneratingFirstFrame, setIsGeneratingFirstFrame] = useState(false);
   const [isGeneratingVideo, setIsGeneratingVideo] = useState(false);
   const [generationProgress, setGenerationProgress] = useState(0);
-  const [videoPrompt, setVideoPrompt] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const progressIntervalRef = useRef<NodeJS.Timeout | null>(null);
@@ -96,7 +120,6 @@ export const FirstFrameEditorRightSidebar = ({
             requestAnimationFrame(() => {
               // Add a small delay to ensure the image is fully rendered
               setTimeout(() => {
-                console.log("Capturing canvas state");
                 const workspace = editor.getWorkspace();
                 if (workspace) {
                   const workspaceBounds = workspace.getBoundingRect();
@@ -109,7 +132,6 @@ export const FirstFrameEditorRightSidebar = ({
                     height: workspaceBounds.height,
                   });
                   setOriginalCanvasCapture(canvasCapture);
-                  console.log("Canvas state captured");
                 }
               }, 500); // Increased delay to 500ms to be safe
             });
@@ -277,6 +299,7 @@ export const FirstFrameEditorRightSidebar = ({
     setOriginalCanvasCapture(null);
     setInpaintedImageUrl(null);
     setEditPrompt("");
+    setVideoPrompt("");
     setGenerationProgress(0);
     if (fileInputRef.current) {
       fileInputRef.current.value = "";
@@ -416,13 +439,13 @@ export const FirstFrameEditorRightSidebar = ({
                   accept="video/*"
                   onChange={handleVideoUpload}
                   className="hidden"
-                  id="video-upload"
+                  id={`video-upload-${workbenchId}`}
                   disabled={isProcessing}
                 />
                 
                 {!uploadedVideo ? (
                   <label
-                    htmlFor="video-upload"
+                    htmlFor={`video-upload-${workbenchId}`}
                     className={cn(
                       "cursor-pointer flex flex-col items-center gap-2 p-4",
                       isProcessing && "opacity-50 pointer-events-none"
@@ -615,12 +638,12 @@ export const FirstFrameEditorRightSidebar = ({
               <h3 className="font-medium">Generate New Video</h3>
               <div className="bg-gray-100 dark:bg-[#111530] p-3 border border-gray-300 dark:border-blue-800 rounded-md mb-2">
                 <div className="flex items-center justify-between mb-2">
-                  <Label htmlFor="degradation-slider" className="text-sm font-medium">
+                  <Label htmlFor={`degradation-slider-${workbenchId}`} className="text-sm font-medium">
                     Mask Degradation: {degradation.toFixed(2)}
                   </Label>
                 </div>
                 <Slider
-                  id="degradation-slider"
+                  id={`degradation-slider-${workbenchId}`}
                   min={0}
                   max={1}
                   step={0.05}
@@ -634,11 +657,11 @@ export const FirstFrameEditorRightSidebar = ({
                 </div>
               </div>
               <div className="space-y-2">
-                <Label htmlFor="video-prompt" className="text-sm font-medium">
+                <Label htmlFor={`video-prompt-${workbenchId}`} className="text-sm font-medium">
                   Text Prompt (Optional)
                 </Label>
                 <Textarea
-                  id="video-prompt"
+                  id={`video-prompt-${workbenchId}`}
                   placeholder="Add an optional prompt to guide the video generation..."
                   className="resize-none h-20"
                   value={videoPrompt}

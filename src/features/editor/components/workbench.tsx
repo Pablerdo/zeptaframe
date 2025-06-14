@@ -159,6 +159,15 @@ export const Workbench = ({
   const [showBuyCreditsModal, setShowBuyCreditsModal] = useState(false);
   const [requiredCredits, setRequiredCredits] = useState(0);
   
+  // FirstFrameEditor state - managed at workbench level like other sidebars
+  const [ffeUploadedVideo, setFfeUploadedVideo] = useState<File | null>(null);
+  const [ffeVideoUploadThingUrl, setFfeVideoUploadThingUrl] = useState<string | null>(null);
+  const [ffeOriginalFirstFrameDataUrl, setFfeOriginalFirstFrameDataUrl] = useState<string | null>(null);
+  const [ffeOriginalCanvasCapture, setFfeOriginalCanvasCapture] = useState<string | null>(null);
+  const [ffeInpaintedImageUrl, setFfeInpaintedImageUrl] = useState<string | null>(null);
+  const [ffeEditPrompt, setFfeEditPrompt] = useState("");
+  const [ffeVideoPrompt, setFfeVideoPrompt] = useState("");
+  
   // Initialize from defaultPromptData if available
   useEffect(() => {
     if (typeof defaultPromptData === 'string') {
@@ -182,6 +191,15 @@ export const Workbench = ({
           }
           
           setCameraControl(parsed.cameraControl || {});
+          
+          // Initialize FFE state from parsed data
+          setFfeEditPrompt(parsed.ffeEditPrompt || "");
+          setFfeVideoPrompt(parsed.ffeVideoPrompt || "");
+          setFfeUploadedVideo(null); // Don't persist file objects
+          setFfeVideoUploadThingUrl(parsed.ffeVideoUploadThingUrl || null);
+          setFfeOriginalFirstFrameDataUrl(parsed.ffeOriginalFirstFrameDataUrl || null);
+          setFfeOriginalCanvasCapture(parsed.ffeOriginalCanvasCapture || null);
+          setFfeInpaintedImageUrl(parsed.ffeInpaintedImageUrl || null);
         }
       } catch (e) {
         console.error("Failed to parse promptData:", e);
@@ -214,13 +232,20 @@ export const Workbench = ({
         segmentedMasks,
         cameraControl,
         generalTextPrompt,  // Save as textPrompt in JSON
-        selectedModelId: selectedModel.id
+        selectedModelId: selectedModel.id,
+        // FFE state
+        ffeEditPrompt,
+        ffeVideoPrompt,
+        ffeVideoUploadThingUrl,
+        ffeOriginalFirstFrameDataUrl,
+        ffeOriginalCanvasCapture,
+        ffeInpaintedImageUrl
       });
       
       // Save everything
       debouncedSave({ json, height, width, promptData });
     }
-  }, [segmentedMasks, generalTextPrompt, selectedModel, cameraControl, editor?.canvas]);
+  }, [segmentedMasks, generalTextPrompt, selectedModel, cameraControl, editor?.canvas, ffeEditPrompt, ffeVideoPrompt, ffeVideoUploadThingUrl, ffeOriginalFirstFrameDataUrl, ffeOriginalCanvasCapture, ffeInpaintedImageUrl]);
 
   // Initialize canvas when component mounts
   useEffect(() => {
@@ -1058,6 +1083,21 @@ export const Workbench = ({
               setShowAuthModal={setShowAuthModal}
               degradation={degradation}
               setDegradation={setDegradation}
+              // FFE state props - each workbench has its own isolated state
+              uploadedVideo={ffeUploadedVideo}
+              setUploadedVideo={setFfeUploadedVideo}
+              videoUploadThingUrl={ffeVideoUploadThingUrl}
+              setVideoUploadThingUrl={setFfeVideoUploadThingUrl}
+              originalFirstFrameDataUrl={ffeOriginalFirstFrameDataUrl}
+              setOriginalFirstFrameDataUrl={setFfeOriginalFirstFrameDataUrl}
+              originalCanvasCapture={ffeOriginalCanvasCapture}
+              setOriginalCanvasCapture={setFfeOriginalCanvasCapture}
+              inpaintedImageUrl={ffeInpaintedImageUrl}
+              setInpaintedImageUrl={setFfeInpaintedImageUrl}
+              editPrompt={ffeEditPrompt}
+              setEditPrompt={setFfeEditPrompt}
+              videoPrompt={ffeVideoPrompt}
+              setVideoPrompt={setFfeVideoPrompt}
             />
           </div>
         </div>
