@@ -2,11 +2,16 @@
 ![Alt text](./public/FullZeptaLogo.png)
 
 
-# Zeptaframe
+<h1>Zeptaframe</h1>
+
+[![Deployed Site](https://img.shields.io/badge/Deployed-Site-green?logo=googlechrome&logoColor=green)](https://zeptaframe.com)
+[![YouTube Tutorial](https://img.shields.io/badge/YouTube-Tutorial-red?logo=youtube&logoColor=red)](https://www.youtube.com/watch?v=0soR0Vyc698)
+[![Discord](https://img.shields.io/badge/Discord-Join-blue?logo=discord&logoColor=blue)](https://discord.gg/YaWtkPg2)
+
 
 Zeptaframe is an AI-native video editor that allows you to create precise AI-generated movies with a visual-first approach, minimizing the need for text prompts. It implements the [Go-with-the-flow](https://github.com/Eyeline-Research/Go-with-the-Flow) technique for precise video generation. Try it at CVPR 2025.
 
-This repository only contains the front-end interface. The backend, along with the custom ComfyUI nodes and pipelines, are deployed using ComfyDeploy.
+This repository only contains the front-end interface. The backend is hosted in cloud GPU instances loaded with ComfyUI, running custom ComfyUI nodes and pipelines.
 
 ### Multi Subject Motion Demos 
 ---
@@ -34,6 +39,16 @@ The site is live at https://zeptaframe.com.
 ## Overview
 
 Zeptaframe is a open-source web-based platform that enables users to create AI-generated videos through an intuitive visual interface. Unlike traditional video editors or AI video generators that rely heavily on text prompts, Zeptaframe allows you to upload images and directly manipulate objects on a canvas to create animations.
+
+## ComfyUI Backend
+
+The backend is hosted in cloud GPU instances loaded with ComfyUI, running custom ComfyUI nodes and pipelines. The respective Go-with-the-Flow LoRA is used in conjuction with either CogVideoX or Skyreels. Wan2.1 support is coming soon.
+
+
+### Custom ComfyUI Pipeline
+
+![ComfyUI Pipeline](./public/ComfyUIScreenshot.png)
+
 
 ## Key Features
 
@@ -66,7 +81,7 @@ Zeptaframe is a open-source web-based platform that enables users to create AI-g
 
 ### The bottom panel displays:
 
-* Generated videos
+* History of generated videos
 * Export options
 * Video playback controls
 
@@ -75,7 +90,6 @@ Zeptaframe is a open-source web-based platform that enables users to create AI-g
 ### Frontend Framework
 
 * Next.js and React for the UI
-* Tailwind CSS for styling
 * Fabric.js for canvas manipulation
 
 ### Backend Services
@@ -89,7 +103,7 @@ Zeptaframe is a open-source web-based platform that enables users to create AI-g
 
 * Segment Anything Model (SAMv2) for object segmentation
 * ComfyDeploy for GPU instances loaded with ComfyUI.
-* The back-end is using a finetuned version of SkyreelsV1 with Go-with-the-flow. This allows the model to generate videos of the 
+* The back-end is using a finetuned version of SkyreelsV1/CogVideoXwith Go-with-the-flow. This allows the model to generate videos of the 
 subject traveling as per the users delineation through the interface.
 
 
