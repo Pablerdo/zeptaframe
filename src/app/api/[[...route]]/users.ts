@@ -35,7 +35,7 @@ const app = new Hono()
       }
 
       // Check CVPR2025 account limit
-      let credits = 15; // Default credits
+      let credits = 5; // Default credits
       let finalConferenceCode = conferenceCode || null;
       
       if (conferenceCode === "CVPR2025") {
@@ -51,7 +51,7 @@ const app = new Hono()
           }, 400);
         }
         
-        credits = 100; // 100 free credits for CVPR attendees
+        credits = 50; // 100 free credits for CVPR attendees
       }
 
       await db.insert(users).values({
