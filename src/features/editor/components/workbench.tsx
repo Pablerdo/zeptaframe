@@ -83,6 +83,7 @@ interface WorkbenchProps {
   setShowAuthModal: (showAuthModal: boolean) => void;
   lastEncodedWorkbenchId: string;
   setLastEncodedWorkbenchId: (lastEncodedWorkbenchId: string) => void;
+  timelineCollapsed: boolean;
 }
 
 export const Workbench = ({
@@ -118,6 +119,7 @@ export const Workbench = ({
   setShowAuthModal,
   lastEncodedWorkbenchId,
   setLastEncodedWorkbenchId,
+  timelineCollapsed,
 }: WorkbenchProps) => {
   // Create refs for canvas and container
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -1053,6 +1055,7 @@ export const Workbench = ({
               setMaskCentroid={setMaskCentroid}
               degradation={degradation}
               setDegradation={setDegradation}
+              timelineCollapsed={timelineCollapsed}
             />
             <CameraControlRightSidebar 
               editor={editor}

@@ -46,6 +46,7 @@ interface AnimateRightSidebarProps {
   setActiveSegmentationTool: (tool: ActiveSegmentationTool) => void;
   degradation: number;
   setDegradation: (value: number) => void;
+  timelineCollapsed: boolean;
 }
 
 export const AnimateRightSidebar = ({
@@ -69,6 +70,7 @@ export const AnimateRightSidebar = ({
   setActiveSegmentationTool,
   degradation,
   setDegradation,
+  timelineCollapsed,
 }: AnimateRightSidebarProps) => {
 
   const [imageSize, setImageSize] = useState({ w: 1024, h: 1024 });
@@ -1640,6 +1642,55 @@ export const AnimateRightSidebar = ({
       setActiveAnimations({});
     }
   }, [activeWorkbenchTool]);
+
+  // Effect to restart animations when timeline is toggled
+  useEffect(() => {
+    if (!editor?.canvas || activeWorkbenchTool !== "animate") return;
+
+    // Check if there are any active animations
+    const hasActiveAnimations = Object.keys(activeAnimations).length > 0;
+    
+    if (hasActiveAnimations) {
+      // Use a timeout to allow the layout to adjust first
+      const timeoutId = setTimeout(() => {
+        // Stop all existing animations
+        Object.values(activeAnimations).forEach(animation => {
+          animation.stop();
+        });
+        
+        // Restart animations with recalculated dimensions
+        const newActiveAnimations: {[key: string]: {stop: () => void; isPlaying: boolean}} = {};
+        
+        // Sort masks by z-index before creating animations
+        const masksWithTrajectories = segmentedMasks
+          .filter(mask => !mask.inProgress && mask.url && mask.trajectory?.points && mask.trajectory.points.length > 0)
+          .sort((a, b) => (a.zIndex ?? 0) - (b.zIndex ?? 0));
+        
+        masksWithTrajectories.forEach(mask => {
+          const animation = createTrajectoryAnimation(
+            editor,
+            mask.url,
+            mask.trajectory!.points,
+            mask.rotationTrajectory,
+            mask.scaleTrajectory,
+            mask.zIndex
+          );
+          
+          if (animation) {
+            animation.start();
+            newActiveAnimations[mask.url] = {
+              stop: animation.stop,
+              isPlaying: true
+            };
+          }
+        });
+        
+        setActiveAnimations(newActiveAnimations);
+      }, 50); // Small delay to allow layout to adjust
+      
+      return () => clearTimeout(timeoutId);
+    }
+  }, [timelineCollapsed]); // Only watch timelineCollapsed changes
 
   // Add function to handle preview all animations (toggle)
   const handlePreviewAll = () => {

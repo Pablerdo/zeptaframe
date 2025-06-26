@@ -41,6 +41,7 @@ interface ScrollableWorkbenchViewerProps {
   setShowAuthModal: (showAuthModal: boolean) => void;
   lastEncodedWorkbenchId: string;
   setLastEncodedWorkbenchId: (lastEncodedWorkbenchId: string) => void;
+  timelineCollapsed: boolean;
 }
 
 export const ScrollableWorkbenchViewer = ({
@@ -73,6 +74,7 @@ export const ScrollableWorkbenchViewer = ({
   setShowAuthModal,
   lastEncodedWorkbenchId,
   setLastEncodedWorkbenchId,
+  timelineCollapsed,
 }: ScrollableWorkbenchViewerProps) => {
 
   return (
@@ -150,6 +152,7 @@ export const ScrollableWorkbenchViewer = ({
               setLastEncodedWorkbenchId={setLastEncodedWorkbenchId}
               maskCentroid={maskCentroid}
               setMaskCentroid={setMaskCentroid}
+              timelineCollapsed={timelineCollapsed}
             />
           </div>
         );

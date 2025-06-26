@@ -983,6 +983,7 @@ export const CompositionStudio = ({ initialData, isTrial }: CompositionStudioPro
                     setShowAuthModal={setShowAuthModal}
                     lastEncodedWorkbenchId={lastEncodedWorkbenchId}
                     setLastEncodedWorkbenchId={setLastEncodedWorkbenchId}
+                    timelineCollapsed={timelineCollapsed}
                   />
                   
                   {/* Add workbench button */}
