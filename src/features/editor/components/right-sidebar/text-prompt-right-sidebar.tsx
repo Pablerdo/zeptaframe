@@ -51,29 +51,22 @@ export const TextPromptRightSidebar = ({
         <div className="p-4 space-y-4">
           <div className="bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800 rounded-lg p-3">
             <p className="text-xs text-blue-700 dark:text-blue-300">
-              <strong>Note:</strong> If an animation is provided, the system will automatically generate a prompt based on your scene. Otherwise, you must provide a prompt below.
+              <strong>Note:</strong> If an animation is provided, the system will generate a complete prompt based on the movement. Otherwise, provide guidance for the system to generate a prompt.
+            
             </p>
           </div>
 
           <Textarea
-            placeholder="Enter your prompt here..."
+            placeholder="Enter your prompt here (max 25 words, the rest is automatically generated)..."
             className="min-h-[400px] resize-none"
             value={generalTextPrompt}
-            onChange={(e) => onGeneralTextPromptChange(e.target.value)}
+            onChange={(e) => {
+              const words = e.target.value.trim().split(/\s+/);
+              if (words.length <= 25 || e.target.value === '') {
+                onGeneralTextPromptChange(e.target.value);
+              }
+            }}
           />
-          <div className="flex w-full">
-            <Button 
-              onClick={() => {
-                // Ensure we force a save by making a small change then reverting
-                const originalPrompt = generalTextPrompt;
-                onGeneralTextPromptChange(originalPrompt + " ");
-                setTimeout(() => onGeneralTextPromptChange(originalPrompt), 10);
-              }}
-              className="w-full"
-            >
-              Save Prompt
-            </Button>
-          </div>
         </div>
       </ScrollArea>
     </aside>
