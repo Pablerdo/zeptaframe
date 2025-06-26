@@ -45,7 +45,7 @@ const app = new Hono()
           .from(users)
           .where(eq(users.conferenceCode, "CVPR2025"));
         
-        if (cvprUserCount[0].count >= 100) {  // Hard limiting at 100 accounts for Wednesday 11th June 2025
+        if (cvprUserCount[0].count >= 250) {  // Hard limiting at 250 accounts for CVPR2025
           return c.json({ 
             error: "CVPR2025 account limit reached. Maximum 400 accounts allowed." 
           }, 400);

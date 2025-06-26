@@ -40,7 +40,7 @@ export const ourFileRouter = {
     .onUploadComplete(async ({ metadata, file }) => {
       return 
     }),
-  videoUploader: f({ video: { maxFileSize: "16MB" } })
+  videoUploader: f({ video: { maxFileSize: "32MB" } })
     .middleware(async ({ req }) => {
       const session = await auth();
 
