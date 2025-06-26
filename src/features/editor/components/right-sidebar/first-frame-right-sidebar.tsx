@@ -158,6 +158,16 @@ export const FirstFrameEditorRightSidebar = ({
       return;
     }
 
+    // Check authentication
+    if (!userStatus.isAuthenticated) {
+      setShowAuthModal(true);
+      // Reset the file input so they can try again after logging in
+      if (fileInputRef.current) {
+        fileInputRef.current.value = "";
+      }
+      return;
+    }
+
     setIsProcessing(true);
     try {
       // Upload to UploadThing
