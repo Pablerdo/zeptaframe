@@ -304,8 +304,8 @@ export function AuthModal({
               : "Sign up to generate videos, images, and save your projects"}
           </DialogDescription>
         </DialogHeader>
-        <Separator />
-        <div className="flex flex-col gap-y-2">
+        {/* <Separator /> */}
+        {/* <div className="flex flex-col gap-y-2">
           <Button
             onClick={() => onProviderSignIn("google")}
             size="lg"
@@ -320,16 +320,16 @@ export function AuthModal({
             )}
             Continue with Google
           </Button>
-        </div>
+        </div> */}
         <Separator />
 
         {/* Conference Code Section - Only show for signup mode */}
         {mode === "signup" && (
           <>
-            <div className="p-4 bg-white rounded-lg border border-zinc-700">
-              <h3 className="text-sm font-medium mb-2 text-black">CVPR 2025 Attendee?</h3>
-              <p className="text-xs text-black mb-3">
-                Enter the code <b>CVPR2025</b> for free access
+            <div className="p-4 rounded-xl bg-gradient-to-r from-[#2e62cb] via-[#0073ff] to-[#3faff5] text-white">
+              <h3 className="text-sm font-medium mb-2">CVPR Attendee?</h3>
+              <p className="text-xs mb-3">
+                Enter the following code for free access: <b>CVPR2025</b>
               </p>
               <Input
                 disabled={isSubmitting || signUpMutation.isPending}
@@ -337,6 +337,7 @@ export function AuthModal({
                 onChange={(e) => setConferenceCode(e.target.value.toUpperCase())}
                 placeholder="Enter code (optional)"
                 type="text"
+                className="bg-white text-black placeholder:text-gray-500 focus:outline-none focus-visible:outline-none focus-visible:ring-0 focus-visible:ring-offset-0"
               />
               {codeError && (
                 <p className="text-red-400 text-xs mt-2">{codeError}</p>

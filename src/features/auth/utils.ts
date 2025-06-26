@@ -8,7 +8,6 @@ export const protectServer = async () => {
     return;
   }
 
-  // If no session, redirect to sign-in
-  // Middleware will handle first-visit logic
-  redirect("/api/auth/signin");
+  // If no session, redirect to try page
+  redirect("/try");
 };

@@ -109,9 +109,9 @@ export const SignUpCard = () => {
       )}
       <CardContent className="space-y-5 px-0 pb-0">
         {/* Conference Code Section */}
-        <div className="p-4 bg-zinc-800 rounded-lg border border-zinc-700">
-          <h3 className="text-sm font-medium mb-2 text-zinc-300">CVPR 2025 Attendee?</h3>
-          <p className="text-xs text-zinc-200 mb-3">
+        <div className="p-4 rounded-lg border border-zinc-200">
+          <h3 className="text-sm font-medium mb-2 text-zinc-800">CVPR 2025 Attendee?</h3>
+          <p className="text-xs text-zinc-600 mb-3">
             Enter the code <b>CVPR2025</b> for free access
           </p>
           <Input
