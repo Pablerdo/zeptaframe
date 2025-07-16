@@ -515,7 +515,7 @@ export default function FastPage() {
                         Processing in progress
                       </p>
                       <p className="text-sm text-amber-700 mt-1">
-                        Please keep this page open. Refreshing will lose your progress and you'll need to start over.
+                        Please keep this page open. Refreshing will lose your progress and you will need to start over.
                       </p>
                     </div>
                   </div>
