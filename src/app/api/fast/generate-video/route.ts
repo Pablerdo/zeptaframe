@@ -42,6 +42,8 @@ export async function POST(req: NextRequest) {
             input_prompt: data.videoGenData.input_prompt || "High quality video",
             input_nth_frame: data.videoGenData.input_nth_frame,
             input_fps: data.videoGenData.input_fps,
+            input_video_width: data.videoGenData.input_video_width,
+            input_video_height: data.videoGenData.input_video_height,
           },
         });
       } else {
@@ -55,6 +57,8 @@ export async function POST(req: NextRequest) {
             input_prompt: data.videoGenData.input_prompt || "High quality video",
             input_nth_frame: data.videoGenData.input_nth_frame,
             input_fps: data.videoGenData.input_fps,
+            input_video_width: data.videoGenData.input_video_width,
+            input_video_height: data.videoGenData.input_video_height,
           },
         });
       }

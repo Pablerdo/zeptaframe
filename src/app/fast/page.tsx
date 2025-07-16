@@ -15,6 +15,11 @@ interface VideoProcessingState {
   runId?: string;
 }
 
+interface VideoDimensions {
+  width: number;
+  height: number;
+}
+
 export default function FastPage() {
   const [processingState, setProcessingState] = useState<VideoProcessingState>({
     status: 'idle',
@@ -27,9 +32,11 @@ export default function FastPage() {
   const [showVideoSettings, setShowVideoSettings] = useState(false);
   const [nthFrame, setNthFrame] = useState(1);
   const [outputFps, setOutputFps] = useState(8);
+  const [degradation, setDegradation] = useState(0.2);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const firstFrameInputRef = useRef<HTMLInputElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
+  const [videoDimensions, setVideoDimensions] = useState<VideoDimensions | null>(null);
 
   // Warn user before leaving page during processing
   useEffect(() => {
@@ -48,6 +55,28 @@ export default function FastPage() {
     };
   }, [processingState.status]);
 
+  const getVideoDimensions = (videoFile: File): Promise<VideoDimensions> => {
+    return new Promise((resolve, reject) => {
+      const video = document.createElement('video');
+      video.preload = 'metadata';
+      
+      video.onloadedmetadata = () => {
+        resolve({
+          width: video.videoWidth,
+          height: video.videoHeight
+        });
+        URL.revokeObjectURL(video.src);
+      };
+      
+      video.onerror = () => {
+        reject(new Error('Failed to load video metadata'));
+        URL.revokeObjectURL(video.src);
+      };
+      
+      video.src = URL.createObjectURL(videoFile);
+    });
+  };
+
   const handleVideoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file || !file.type.startsWith('video/')) {
@@ -55,8 +84,18 @@ export default function FastPage() {
       return;
     }
 
-    setUploadedVideo(file);
-    setProcessingState({ status: 'idle', progress: 0 });
+    try {
+      // Get video dimensions
+      const dimensions = await getVideoDimensions(file);
+      setVideoDimensions(dimensions);
+      console.log("Video dimensions:", dimensions);
+      
+      setUploadedVideo(file);
+      setProcessingState({ status: 'idle', progress: 0 });
+    } catch (error) {
+      console.error("Error getting video dimensions:", error);
+      toast.error("Failed to read video metadata");
+    }
   };
 
   const handleFirstFrameUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -96,6 +135,11 @@ export default function FastPage() {
       return;
     }
 
+    if (!videoDimensions) {
+      toast.error("Video dimensions not available. Please re-upload the video.");
+      return;
+    }
+
     setProcessingState({ status: 'uploading', progress: 10 });
 
     try {
@@ -125,15 +169,17 @@ export default function FastPage() {
           mode: "ffe",
           workflow_id: comfyDeployWorkflows["PROD-ZEPTA-FFE-CogVideoX"],
         };
-  
+        console.log("videoDimensions", videoDimensions);
         const videoGenData = {
           input_num_frames: "49",
           input_video: videoUrl,
           input_image: JSON.stringify([firstFrameImageUrl]),
-          input_degradation: JSON.stringify(0.1),
+          input_degradation: JSON.stringify(degradation),
           input_prompt: "High quality video",
           input_nth_frame: JSON.stringify(nthFrame),
           input_fps: JSON.stringify(outputFps),
+          input_video_width: JSON.stringify(videoDimensions.width),
+          input_video_height: JSON.stringify(videoDimensions.height),
           modelId: "cogvideox",
           computeMode: "normal",
         };
@@ -169,10 +215,12 @@ export default function FastPage() {
         const videoGenData = {
           input_num_frames: "49",
           input_video: videoUrl,
-          input_degradation: JSON.stringify(0.6),
+          input_degradation: JSON.stringify(degradation),
           input_prompt: "High quality video",
           input_nth_frame: JSON.stringify(nthFrame),
           input_fps: JSON.stringify(outputFps),
+          input_video_width: JSON.stringify(videoDimensions.width),
+          input_video_height: JSON.stringify(videoDimensions.height),
           modelId: "cogvideox",
           computeMode: "normal",
         };
@@ -257,12 +305,14 @@ export default function FastPage() {
 
   const resetUpload = () => {
     setUploadedVideo(null);
+    setVideoDimensions(null);
     setFirstFrameImage(null);
     setFirstFramePreview(null);
     setShowFirstFrameOptions(false);
     setShowVideoSettings(false);
     setNthFrame(1);
     setOutputFps(8);
+    setDegradation(0.2);
     setProcessingState({ status: 'idle', progress: 0 });
     if (fileInputRef.current) {
       fileInputRef.current.value = "";
@@ -413,7 +463,7 @@ export default function FastPage() {
                     <div>
                       <h3 className="font-medium text-gray-900">Video Settings</h3>
                       <p className="text-sm text-gray-500">
-                        Frame selection: every {nthFrame}{nthFrame === 1 ? 'st' : nthFrame === 2 ? 'nd' : nthFrame === 3 ? 'rd' : 'th'} frame • Output: {outputFps} FPS
+                        Frame selection: every {nthFrame}{nthFrame === 1 ? 'st' : nthFrame === 2 ? 'nd' : nthFrame === 3 ? 'rd' : 'th'} frame • Output: {outputFps} FPS • Degradation: {degradation}
                       </p>
                     </div>
                   </div>
@@ -473,6 +523,24 @@ export default function FastPage() {
                         </div>
                       </div>
                     </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Degradation
+                      </label>
+                      <div className="flex items-center gap-3">
+                        <input
+                          type="range"
+                          min="0"
+                          max="1"
+                          step="0.1"
+                          value={degradation}
+                          onChange={(e) => setDegradation(parseFloat(e.target.value))}
+                          className="flex-1 h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer"
+                        />
+                        <span className="text-sm text-gray-500">{degradation}</span>
+                      </div>
+                    </div>
                   </div>
                 )}
               </div>
@@ -504,6 +572,18 @@ export default function FastPage() {
                   </div>
                 )}
               </div>
+
+              {/* Video Info */}
+              {videoDimensions && (
+                <div className="bg-gray-50 rounded-lg p-3">
+                  <p className="text-sm text-gray-600">
+                    <span className="font-medium">Uploaded Video Resolution:</span> {videoDimensions.width} × {videoDimensions.height} pixels
+                  </p>
+                  <p className="text-sm text-gray-600 mt-1">
+                    <span className="font-medium">Aspect Ratio:</span> {(videoDimensions.width / videoDimensions.height).toFixed(2)}
+                  </p>
+                </div>
+              )}
 
               {/* Processing Warning Banner */}
               {(processingState.status === 'uploading' || processingState.status === 'processing') && (
