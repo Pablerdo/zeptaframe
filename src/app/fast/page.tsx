@@ -130,7 +130,7 @@ export default function FastPage() {
           input_num_frames: "49",
           input_video: videoUrl,
           input_image: JSON.stringify([firstFrameImageUrl]),
-          input_degradation: JSON.stringify(0.6),
+          input_degradation: JSON.stringify(0.1),
           input_prompt: "High quality video",
           input_nth_frame: JSON.stringify(nthFrame),
           input_fps: JSON.stringify(outputFps),
