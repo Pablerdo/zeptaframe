@@ -74,4 +74,43 @@ export async function uploadToUploadThingVideo(file: File): Promise<string> {
   }
 }
 
+/**
+ * Uploads a video file to UploadThing's fastVideoUploader endpoint (no auth required)
+ * @param file - The video file to upload
+ * @returns A Promise that resolves to the uploaded file URL
+ */
+export async function uploadToUploadThingFastVideo(file: File): Promise<string> {
+  try {
+    const res = await uploadFiles("fastVideoUploader", { files: [file] });
+    if (res[0]?.url) {
+      return res[0].url;
+    }
+    throw new Error("Failed to get URL from uploaded file");
+  } catch (error) {
+    console.error("Error uploading file:", error);
+    throw error;
+  }
+}
+
+/**
+ * Uploads an image file to UploadThing's fastImageUploader endpoint (no auth required)
+ * @param file - The image file to upload
+ * @returns A Promise that resolves to the uploaded file URL
+ */
+export async function uploadToUploadThingFastImage(file: File): Promise<string> {
+  try {
+    const res = await uploadFiles("fastImageUploader", { files: [file] });
+    if (res[0]?.url) {
+      return res[0].url;
+    }
+    throw new Error("Failed to get URL from uploaded file");
+  } catch (error) {
+    console.error("Error uploading file:", error);
+    throw error;
+  }
+}
+
+// Export the hooks for use in components
+export { useUploadThing };
+
 

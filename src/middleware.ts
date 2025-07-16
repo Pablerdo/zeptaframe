@@ -2,12 +2,24 @@ import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/auth';
 
 export default async function middleware(request: NextRequest) {
-  const session = await auth();
+  const hostname = request.headers.get('host') || '';
+  const isFastSubdomain = hostname.startsWith('fast.');
   
   // For debugging
-  console.log('Middleware running for path:', request.nextUrl.pathname);
+  console.log('Middleware running for path:', request.nextUrl.pathname, 'hostname:', hostname);
   
-  // Check if this is a protected route
+  // If this is the fast subdomain, allow unrestricted access
+  if (isFastSubdomain) {
+    // Rewrite to fast page for the root path
+    if (request.nextUrl.pathname === '/') {
+      return NextResponse.rewrite(new URL('/fast', request.url));
+    }
+    return NextResponse.next();
+  }
+  
+  const session = await auth();
+  
+  // Check if this is a protected route on main domain
   const isProtectedRoute = 
     request.nextUrl.pathname === '/' || 
     request.nextUrl.pathname.startsWith('/dashboard') ||

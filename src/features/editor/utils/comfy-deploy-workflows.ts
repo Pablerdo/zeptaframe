@@ -20,7 +20,8 @@ export const comfyDeployWorkflows = {
   "PROD-ZEPTA-CogVideoX": "dd030bb3-4bf9-4991-8669-530ab1d88e50", 
   "PROD-ZEPTA-Wan": "8292fae6-2e4d-4d3f-acc8-5e877f119676",
   "MP4VideoJoiner": "45e11f37-feaf-4d25-a39f-687321e9f94d",
-  "PROD-ZEPTA-FFE-CogVideoX": "2608d449-c4ed-49cc-9e6c-96294771fc77"
+  "PROD-ZEPTA-FFE-CogVideoX": "2608d449-c4ed-49cc-9e6c-96294771fc77",
+  "PROD-ZEPTA-V2V-CogVideoX": "7c56c561-ae54-44d4-93cd-b6e44b204995"
 };
 
 
